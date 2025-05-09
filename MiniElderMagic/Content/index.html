@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>🧙をWASDで動かす - スムーズ移動</title>
+  <style>
+    /* 画面全体を表示領域に */
+    #game-area {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #333; /* HUD文字色が見やすいように背景を追加(任意) */
+    }
+    /* キャラクター用のスタイル */
+    .character {
+      position: absolute;
+      font-size: 50px;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+  </style>
+</head>
+<body>
+<div id="game-area"></div>
+
+<!-- スクリプトの読み込み -->
+<script type="module">
+  import { PlayerBase } from './Script/playerBase.js';
+  import { EnemyBase } from './Script/enemyBase.js';
+  import { UIHud } from './Script/UIHud.js';  // UIHud を追加
+  import { Coin } from './Script/coin_character.js';  // coin_character.jsからCoinを追加
+  import { Stair } from './Script/Stair.js';  // 新しく追加した階段クラス
+
+  const gameArea = document.getElementById('game-area');
+
+  // 押下状態を保持するためのオブジェクト
+  const pressedKeys = {};
+
+  // プレイヤーとして使用するキャラクターを生成
+  const wizard = new PlayerBase(100, 100, 3, '🧙', gameArea);
+  wizard.draw();
+
+  // 敵を生成（ランダム移動の例）
+  const enemy = new EnemyBase(300, 300, 2, '👾', gameArea);
+  enemy.draw();
+
+  // HUDの生成
+  const hud = new UIHud(gameArea);
+
+  // コインの配列を管理
+  let coins = [];
+
+  // デモ用に初期コインを生成
+  const initialCoin = new Coin(200, 200, gameArea);
+  initialCoin.draw();
+  coins.push(initialCoin);
+
+  // 階段を生成
+  const stair = new Stair(500, 400, gameArea);
+  stair.draw();
+
+  // キーの押下状態を監視
+  document.addEventListener('keydown', (event) => {
+    pressedKeys[event.key.toLowerCase()] = true;
+  });
+  document.addEventListener('keyup', (event) => {
+    pressedKeys[event.key.toLowerCase()] = false;
+  });
+
+  // 1回あたりの理想フレーム時間（ミリ秒）
+  const FPS = 60;
+  const FRAME_TIME = 1000 / FPS; // 1000ms ÷ 60fps ≈ 16.6667ms
+
+  let lastTime = performance.now();
+  let accumulatedTime = 0; // 経過時間をためるための変数
+
+  // フレームごとのループ
+  function gameLoop(timestamp) {
+    const delta = timestamp - lastTime;
+    lastTime = timestamp;
+    accumulatedTime += delta;
+
+    while (accumulatedTime >= FRAME_TIME) {
+      updateGame();
+      accumulatedTime -= FRAME_TIME;
+    }
+    requestAnimationFrame(gameLoop);
+  }
+
+  // ゲームエリア内のすべてのCoinを探す
+  function findAllCoins() {
+    // ドキュメントから追加されたコインを全て取得
+    const coinElements = document.querySelectorAll('.character');
+    coins = [];
+    
+    coinElements.forEach(element => {
+      // 絵文字が🪙のものだけがコイン
+      if (element.textContent === '🪙') {
+        // 対応するCoinオブジェクトを探す処理
+        // 簡易実装: 表示されているコインは敵が倒された時に作られるので検出不要
+      }
+    });
+  }
+
+  // ステージが変わったときに呼ばれる関数
+  function onStageChange() {
+    // 次のステージのセットアップ
+    enemy.status.hp = enemy.status.maxHP; // 敵のHPを回復
+    
+    // 階段の位置をランダムに変更
+    const maxX = gameArea.clientWidth - 100;
+    const maxY = gameArea.clientHeight - 100;
+    const newX = Math.random() * maxX + 50;
+    const newY = Math.random() * maxY + 50;
+    stair.x = newX;
+    stair.y = newY;
+    stair.draw();
+    
+    // 階段のタッチフラグをリセット
+    stair.touched = false;
+    
+    // 敵の位置もランダムに変更
+    enemy.x = Math.random() * maxX + 50;
+    enemy.y = Math.random() * maxY + 50;
+    
+    // ステージ変更エフェクト
+    const stageElement = document.createElement('div');
+    stageElement.textContent = `ステージ ${wizard.playerstatus.stage}`;
+    stageElement.style.position = 'absolute';
+    stageElement.style.top = '50%';
+    stageElement.style.left = '50%';
+    stageElement.style.transform = 'translate(-50%, -50%)';
+    stageElement.style.fontSize = '48px';
+    stageElement.style.fontWeight = 'bold';
+    stageElement.style.color = 'white';
+    stageElement.style.textShadow = '3px 3px 5px rgba(0, 0, 0, 0.8)';
+    stageElement.style.zIndex = '1000';
+    stageElement.style.opacity = '0';
+    stageElement.style.transition = 'opacity 0.5s ease-in, transform 0.5s ease-in';
+    
+    gameArea.appendChild(stageElement);
+    
+    // アニメーション
+    setTimeout(() => {
+      stageElement.style.opacity = '1';
+      stageElement.style.transform = 'translate(-50%, -50%) scale(1.2)';
+      
+      setTimeout(() => {
+        stageElement.style.opacity = '0';
+        stageElement.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        
+        setTimeout(() => {
+          if (stageElement.parentNode) {
+            stageElement.parentNode.removeChild(stageElement);
+          }
+        }, 500);
+      }, 1500);
+    }, 10);
+  }
+
+  function updateGame() {
+    // プレイヤーの入力状態をセット & 更新
+    wizard.setKeyState(pressedKeys);
+    wizard.update();
+
+    // 敵の更新（ランダム移動）
+    enemy.update();
+    
+    // 階段の更新と接触判定
+    stair.update();
+    if (stair.checkCollision(wizard)) {
+      if (stair.onTouch(wizard)) {
+        // ステージを1上げる
+        wizard.playerstatus.nextStage();
+        
+        // 新しいステージのセットアップ
+        onStageChange();
+      }
+    }
+
+    // 敵が倒されると自動的にコインが生成される
+    // ドキュメントから現在のコインを取得
+    const coinElements = document.querySelectorAll('.character');
+    coinElements.forEach(element => {
+      if (element.textContent === '🪙') {
+        // 各コインに対する参照を持つ必要があるが、
+        // ここでは簡易的に位置から判定
+        const rect = element.getBoundingClientRect();
+        const coinX = rect.left + rect.width / 2;
+        const coinY = rect.top + rect.height / 2;
+        
+        // プレイヤーの位置
+        const playerRect = wizard.element.getBoundingClientRect();
+        const playerX = playerRect.left + playerRect.width / 2;
+        const playerY = playerRect.top + playerRect.height / 2;
+        
+        // 距離を計算
+        const dx = coinX - playerX;
+        const dy = coinY - playerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // 30px以内に近づいたらコインを取得
+        if (distance < 40) {
+          // コインを非表示にする
+          element.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+          element.style.transform = 'scale(1.5)';
+          element.style.opacity = '0';
+          
+          // プレイヤーのコインを増やす
+          wizard.playerstatus.addCoins(1);
+          
+          // アニメーション後に要素を削除
+          setTimeout(() => {
+            if (element && element.parentNode) {
+              element.parentNode.removeChild(element);
+            }
+          }, 300);
+        }
+      }
+    });
+
+    // HUDを更新（プレイヤーのステータスを渡す）
+    hud.update(wizard.playerstatus);
+
+    // 衝突判定したい相手を配列にまとめる（敵が複数なら配列に push）
+    const targets = [enemy];
+
+    // wizard.attacks の弾それぞれに対し、targets を渡して衝突判定
+    wizard.attacks.forEach((fireBall) => {
+      fireBall.update(targets);
+    });
+  }
+
+  // ゲームループ開始
+  requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
