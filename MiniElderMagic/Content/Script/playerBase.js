@@ -55,10 +55,12 @@ export class PlayerBase extends Character {
                 playerCenter.y,
                 this.step,
                 parentElement,
-                10,      // 攻撃力
-                350,     // 飛距離
-                '🔥'     // 攻撃の絵文字
-            );
+                    this.status.attack,  // プレイヤーの攻撃力を使用
+                    350,     // 飛距離
+                    '🔥'     // 攻撃の絵文字
+                );
+                // デバッグログ追加
+                console.log(`[Player] 火球発射: プレイヤー攻撃力=${this.status.attack}が火球に設定されました`);
             // 最後に押されたWASDキーの方向に発射
             newFire.fire(this.lastDirection.dx, this.lastDirection.dy);
             this.attacks.push(newFire);
