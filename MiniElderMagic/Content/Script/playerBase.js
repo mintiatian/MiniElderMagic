@@ -187,6 +187,11 @@ export class PlayerBase extends Character {
         
         // HPゲージを更新
         this.playerHPGage.update(this.status.hp, this.status.maxHP);
+        
+        // ダメージテキストを表示（赤色で3秒間）
+        if (damage > 0) {
+            this.showFloatingText(`-${damage}`, 'red', 3000, -60);
+        }
     }
     
     // キャラクターが削除されるときに杖も削除

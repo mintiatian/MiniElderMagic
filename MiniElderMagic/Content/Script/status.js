@@ -31,13 +31,19 @@ export class Status {
   /**
    * @desc HPを回復する
    * @param {number} amount - 回復量
+   * @returns {number} - 実際に回復した量
    */
   heal(amount) {
+    const oldHp = this.hp;
     this.hp += amount;
+    
     // 最大HPを超えないように調整
     if (this.hp > this.maxHP) {
       this.hp = this.maxHP;
     }
+    
+    // 実際に回復した量を返す
+    return this.hp - oldHp;
   }
 
   /**

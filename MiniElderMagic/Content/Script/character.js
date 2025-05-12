@@ -62,8 +62,89 @@ export class Character {
     if (this.status.hp <= 0 && !this.isFadingOut) {
       this.fadeOutAndRemove();
     }
+    
+    // ダメージテキストを表示
+    //if (damage > 0) {
+    //  this.showFloatingText(`-${damage}`, 'red', 3000, -50);
+    //}
   }
 
+  /**
+   * @desc キャラクターの頭上にテキストを表示する
+   * @param {string} text - 表示するテキスト
+   * @param {string} color - テキストの色
+   * @param {number} duration - 表示時間（ミリ秒）
+   * @param {number} offsetY - Y軸方向のオフセット（負の値で上方向）
+   * @returns {HTMLElement} - 作成されたテキスト要素
+   */
+  showFloatingText(text, color = 'white', duration = 3000, offsetY = -50) {
+    // 表示用の要素を作成
+    const textElement = document.createElement('div');
+    textElement.textContent = text;
+    textElement.style.position = 'absolute';
+    textElement.style.color = color;
+    textElement.style.fontSize = '24px';
+    textElement.style.fontWeight = 'bold';
+    textElement.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.7)';
+    textElement.style.zIndex = '1000';
+    textElement.style.pointerEvents = 'none'; // クリックイベントを透過
+    textElement.style.userSelect = 'none'; // テキスト選択を防止
+    textElement.style.whiteSpace = 'nowrap'; // 折り返しを防止
+    
+    // アニメーション用のスタイル
+    textElement.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-in-out';
+    textElement.style.opacity = '0';
+    
+    // 親要素に追加
+    if (this.element && this.element.parentNode) {
+      this.element.parentNode.appendChild(textElement);
+    
+      // 位置の更新関数（キャラクターの移動に追従させるため）
+      const updatePosition = () => {
+        const rect = this.element.getBoundingClientRect();
+        const parentRect = this.element.parentNode.getBoundingClientRect();
+        
+        // キャラクターの中心上部に配置
+        const centerX = rect.left - parentRect.left + rect.width / 2;
+        const topY = rect.top - parentRect.top + offsetY;
+        
+        textElement.style.left = `${centerX}px`;
+        textElement.style.top = `${topY}px`;
+        textElement.style.transform = 'translate(-50%, -50%)';
+      };
+      
+      // 初期位置を設定
+      updatePosition();
+      
+      // 表示開始
+      setTimeout(() => {
+        textElement.style.opacity = '1';
+        textElement.style.transform = 'translate(-50%, -80%)'; // 少し上に浮かび上がる
+      }, 10);
+      
+      // キャラクターの移動に合わせて位置を更新
+      const interval = setInterval(updatePosition, 16); // 約60FPS
+      
+      // 指定時間後に消える
+      setTimeout(() => {
+        textElement.style.opacity = '0';
+        textElement.style.transform = 'translate(-50%, -100%)';
+        
+        // 完全に透明になったら要素を削除
+        setTimeout(() => {
+          if (textElement.parentNode) {
+            textElement.parentNode.removeChild(textElement);
+          }
+          clearInterval(interval);
+        }, 500);
+      }, duration);
+      
+      return textElement;
+    }
+    
+    return null;
+  }
+  
   /**
    * @desc キーの押下状態を同期
    */
@@ -96,5 +177,15 @@ export class Character {
         this.element.parentNode.removeChild(this.element);
       }
     }, 1000);
+  }
+  
+  /**
+   * @desc HPを回復したときに回復量を表示
+   * @param {number} amount - 回復量
+   */
+  showHealAmount(amount) {
+    if (amount > 0) {
+      this.showFloatingText(`+${amount}`, 'lightgreen', 3000, -50);
+    }
   }
 }

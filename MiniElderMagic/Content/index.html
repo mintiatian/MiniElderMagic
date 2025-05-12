@@ -38,6 +38,7 @@
   import { Coin } from './Script/coin_character.js';
   import { Stair } from './Script/Stair.js';
   import { Stage } from './Script/Stage.js';  // 新しく追加したステージ管理クラス
+  import { UIShop } from './Script/UIShop.js'; // ショップクラスをインポート
 
   const gameArea = document.getElementById('game-area');
 
@@ -56,6 +57,9 @@
 
   // HUDの生成
   const hud = new UIHud(gameArea);
+  
+  // ショップの生成
+  const shop = new UIShop(gameArea, wizard);
 
   // コインの配列を管理
   let coins = [];
@@ -69,6 +73,15 @@
   const stair = new Stair(500, 400, gameArea);
   stair.draw();
 
+  // ショップ完了イベントのリスナー（一度だけ登録）
+  document.addEventListener('shopCompleted', () => {
+    // ステージを1上げる
+    wizard.playerstatus.nextStage();
+    
+    // 新しいステージのセットアップ
+    onStageChange();
+  });
+  
   // キーの押下状態を監視
   document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase();
@@ -230,11 +243,8 @@
     stair.update();
     if (stair.checkCollision(wizard)) {
       if (stair.onTouch(wizard)) {
-        // ステージを1上げる
-        wizard.playerstatus.nextStage();
-        
-        // 新しいステージのセットアップ
-        onStageChange();
+        // ショップを表示する
+        shop.show();
       }
     }
 
