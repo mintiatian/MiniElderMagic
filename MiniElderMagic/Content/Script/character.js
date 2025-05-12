@@ -163,16 +163,33 @@ export class Character {
    * @desc キャラクターをフェードアウトさせてDOMから取り除く
    */
   fadeOutAndRemove() {
+    // すでにフェードアウト中なら何もしない
+    if (this.isFadingOut) {
+      return;
+    }
+    
+    console.log(`[Character] フェードアウト開始: ${this.emoji}`);
     this.isFadingOut = true;
-    this.element.style.transition = 'opacity 1s ease';
+    
+    // HPゲージを非表示
+    if (this.hpGage) {
+      this.hpGage.hide();
+    }
+    
+    // フェードアウトとスケール縮小アニメーション
+    this.element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
     this.element.style.opacity = '0';
-
+    this.element.style.transform = 'scale(0.8)';
+  
     // フェードアウト後に要素を削除
     setTimeout(() => {
       if (this.element && this.element.parentNode) {
+        console.log(`[Character] DOM要素を削除: ${this.emoji}`);
         this.element.parentNode.removeChild(this.element);
+        // 明示的にnullを設定して参照を切る
+        this.element = null;
       }
-    }, 1000);
+    }, 500); // 短めのフェードアウト時間(500ms)に変更
   }
   
   /**

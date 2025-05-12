@@ -127,12 +127,31 @@ export class Stage {
      * 現在のすべての敵を更新
      */
     updateEnemies() {
+        // 削除された敵や死亡した敵をフィルタリング（配列から除去）
+        const deadEnemies = this.enemies.filter(enemy => 
+            enemy.isDeleted || // 削除フラグが立っている
+            enemy.status.hp <= 0 || // HPが0以下
+            !enemy.element || // DOM要素が存在しない
+            enemy.isFadingOut // フェードアウト中
+        );
+        
+        // デバッグログ
+        if (deadEnemies.length > 0) {
+            console.log(`[Stage] 死亡した敵: ${deadEnemies.length}体を削除します`);
+        }
+        
+        // まだ生きている敵だけをリストに残す
+        this.enemies = this.enemies.filter(enemy => 
+            !enemy.isDeleted && 
+            enemy.status.hp > 0 && 
+            enemy.element && 
+            !enemy.isFadingOut
+        );
+        
+        // 残った敵を更新
         this.enemies.forEach(enemy => {
             enemy.update();
         });
-        
-        // 死んだ敵を配列から削除
-        this.enemies = this.enemies.filter(enemy => enemy.status.hp > 0);
     }
     
     /**

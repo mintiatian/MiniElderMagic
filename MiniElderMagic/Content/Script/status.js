@@ -6,14 +6,16 @@ export class Status {
    * @param {number} attack - 攻撃力
    * @param {number} maxHP - 最大HP（省略時はhpと同じ値）
    * @param {number} maxMP - 最大MP（省略時はmpと同じ値）
+   * @param {number} fireRange - 火球の射程距離
    */
-  constructor(hp = 100, mp = 50, speed = 3, attack = 10, maxHP = null, maxMP = null) {
+  constructor(hp = 100, mp = 50, speed = 3, attack = 10, maxHP = null, maxMP = null, fireRange = 350) {
     this.hp = hp;
     this.mp = mp;
     this.speed = speed;
     this.attack = attack;
     this.maxHP = maxHP !== null ? maxHP : hp; // maxHPが指定されなければhpと同じ値を設定
     this.maxMP = maxMP !== null ? maxMP : mp; // maxMPが指定されなければmpと同じ値を設定
+    this.fireRange = fireRange; // 火球の射程距離
   }
 
   /**
@@ -126,4 +128,20 @@ export class Status {
       this.mp = this.maxMP;
     }
   }
+    
+      /**
+       * @desc 火球の射程距離を設定する
+       * @param {number} range - 設定する射程距離
+       */
+      setFireRange(range) {
+    this.fireRange = range;
+      }
+    
+      /**
+       * @desc 火球の射程距離を取得する
+       * @returns {number} 現在の射程距離
+       */
+      getFireRange() {
+    return this.fireRange;
+      }
 }

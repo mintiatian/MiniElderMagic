@@ -10,6 +10,7 @@
         this.shopItems = [
             { name: "MHPを30増やす", cost: 50, effect: this.increaseMHP.bind(this) },
             { name: "攻撃力を5増やす", cost: 50, effect: this.increaseAttack.bind(this) },
+            { name: "火球射程を50増やす", cost: 40, effect: this.increaseFireRange.bind(this) },
             { name: "全回復", cost: 10, effect: this.fullRecover.bind(this) }
         ];
         
@@ -50,36 +51,55 @@
         this.itemList = document.createElement('div');
         this.itemList.style.display = 'flex';
         this.itemList.style.flexDirection = 'column';
-        this.itemList.style.gap = '10px';
+        this.itemList.style.gap = '15px'; // 間隔を広げる
         this.itemList.style.width = '100%';
+        this.itemList.style.maxWidth = '400px'; // 最大幅を設定
         this.container.appendChild(this.itemList);
         
         // 各商品ボタンを作成
         this.shopItems.forEach((item, index) => {
+            // 商品ボタンのコンテナ
+            const itemContainer = document.createElement('div');
+            itemContainer.style.position = 'relative';
+            itemContainer.style.width = '100%';
+            itemContainer.dataset.index = index.toString();
+            
+            // 商品ボタン
             const itemButton = document.createElement('button');
             itemButton.textContent = `${item.name} - ${item.cost}コイン`;
-            itemButton.style.padding = '10px';
+            itemButton.style.padding = '12px';
+            itemButton.style.width = '100%';
             itemButton.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
             itemButton.style.color = 'white';
             itemButton.style.border = '2px solid gold';
             itemButton.style.borderRadius = '5px';
             itemButton.style.cursor = 'pointer';
-            itemButton.style.transition = 'all 0.2s';
+            itemButton.style.transition = 'all 0.3s';
             itemButton.style.fontFamily = 'Arial, sans-serif';
+            itemButton.style.fontSize = '16px';
+            itemButton.style.textAlign = 'center';
+            itemButton.style.position = 'relative';
+            itemButton.style.zIndex = '1';
             
+            // マウスオーバー効果の追加
             itemButton.addEventListener('mouseover', () => {
                 itemButton.style.backgroundColor = 'rgba(100, 100, 100, 0.8)';
+                itemButton.style.transform = 'translateY(-2px)';
+                itemButton.style.boxShadow = '0 5px 10px rgba(0, 0, 0, 0.3)';
             });
             
             itemButton.addEventListener('mouseout', () => {
                 itemButton.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
+                itemButton.style.transform = 'translateY(0)';
+                itemButton.style.boxShadow = 'none';
             });
             
             itemButton.addEventListener('click', () => {
                 this.purchaseItem(index);
             });
             
-            this.itemList.appendChild(itemButton);
+            itemContainer.appendChild(itemButton);
+            this.itemList.appendChild(itemContainer);
         });
         
         this.parentElement.appendChild(this.container);
@@ -92,6 +112,28 @@
         this.isVisible = true;
         this.container.style.display = 'flex';
         this.updateCoinDisplay();
+        
+        // 開くときにアニメーションを追加
+        this.container.style.opacity = '0';
+        this.container.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        this.container.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        
+        // リフロー後にアニメーション
+        setTimeout(() => {
+            this.container.style.opacity = '1';
+            this.container.style.transform = 'translate(-50%, -50%) scale(1)';
+        }, 50);
+        
+        // ショップが開いたときに全ての商品ボタンをリセット
+        const itemButtons = this.itemList.querySelectorAll('button');
+        itemButtons.forEach(button => {
+            button.style.opacity = '1';
+            button.style.transform = 'scale(1)';
+            button.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
+            button.style.border = '2px solid gold';
+            button.style.boxShadow = 'none';
+            button.style.pointerEvents = 'auto'; // クリック可能に
+        });
     }
     
     /**
@@ -129,10 +171,44 @@
             // 購入成功メッセージ
             this.showMessage(`${item.name}を購入しました！`, 'green');
             
+            // すべての商品ボタンを取得
+            const itemButtons = this.itemList.querySelectorAll('button');
+            
+            // 選択されなかった商品を非表示にする
+            itemButtons.forEach((button, buttonIndex) => {
+                if (buttonIndex !== index) {
+                    // 選択されなかった商品をフェードアウト
+                    button.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    button.style.opacity = '0';
+                    button.style.transform = 'scale(0.8)';
+                    button.style.pointerEvents = 'none'; // クリック不可に
+                } else {
+                    // 選択された商品を強調表示
+                    button.style.transition = 'all 0.3s ease';
+                    button.style.backgroundColor = 'rgba(50, 120, 50, 0.9)';
+                    button.style.border = '2px solid lime';
+                    button.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
+                    button.style.transform = 'scale(1.05)';
+                    button.style.pointerEvents = 'none'; // クリック不可に
+                }
+            });
+            
             // ショップを閉じてカウントダウン開始
             setTimeout(() => {
                 this.hide();
                 this.completeTransaction();
+                
+                // 次回のために全ての商品ボタンをリセット
+                setTimeout(() => {
+                    itemButtons.forEach(button => {
+                        button.style.opacity = '1';
+                        button.style.transform = 'scale(1)';
+                        button.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
+                        button.style.border = '2px solid gold';
+                        button.style.boxShadow = 'none';
+                        button.style.pointerEvents = 'auto'; // クリック可能に戻す
+                    });
+                }, 1000); // ショップが閉じた後に実行
             }, 1000);
             
             return true;
@@ -244,6 +320,14 @@
     increaseAttack() {
         const currentAttack = this.player.status.attack;
         this.player.status.setAttack(currentAttack + 5);
+    }
+    
+    /**
+     * @desc 火球の射程距離を増やす
+     */
+    increaseFireRange() {
+        const currentRange = this.player.status.fireRange;
+        this.player.status.setFireRange(currentRange + 50);
     }
     
     /**

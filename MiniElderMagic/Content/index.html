@@ -39,6 +39,8 @@
   import { Stair } from './Script/Stair.js';
   import { Stage } from './Script/Stage.js';  // 新しく追加したステージ管理クラス
   import { UIShop } from './Script/UIShop.js'; // ショップクラスをインポート
+  import { UIStatus } from './Script/UIStatus.js'; // ステータス画面クラスをインポート
+  import { UIDebug } from './Script/UIDebug.js'; // デバッグ画面クラスをインポート
 
   const gameArea = document.getElementById('game-area');
 
@@ -60,7 +62,13 @@
   
   // ショップの生成
   const shop = new UIShop(gameArea, wizard);
+  
+  // ステータス画面の生成
+  const statusUI = new UIStatus(gameArea, wizard);
 
+  // デバッグ画面の生成
+  const debugUI = new UIDebug(gameArea, wizard);
+  
   // コインの配列を管理
   let coins = [];
 
@@ -85,13 +93,52 @@
   // キーの押下状態を監視
   document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase();
-    pressedKeys[key] = true;
     
-    // 方向キーもWASDにマッピング
-    if (key === 'arrowup') pressedKeys['w'] = true;
-    if (key === 'arrowdown') pressedKeys['s'] = true;
-    if (key === 'arrowleft') pressedKeys['a'] = true;
-    if (key === 'arrowright') pressedKeys['d'] = true;
+    // Tabキーはデフォルトのブラウザの動作を防止する（ステータス画面UIで処理するため）
+    if (key === 'tab') {
+      event.preventDefault();
+    } 
+    // 'o'キーでデバッグモードを切り替え
+    else if (key === 'o') {
+      debugUI.toggle();
+      // デバッグモード切り替えメッセージを表示
+      const message = debugUI.isVisible ? 'デバッグモード: ON' : 'デバッグモード: OFF';
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.position = 'absolute';
+      notification.style.top = '10px';
+      notification.style.left = '50%';
+      notification.style.transform = 'translateX(-50%)';
+      notification.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      notification.style.color = debugUI.isVisible ? '#0f0' : '#fff';
+      notification.style.padding = '8px 15px';
+      notification.style.borderRadius = '5px';
+      notification.style.fontSize = '16px';
+      notification.style.zIndex = '9999';
+      gameArea.appendChild(notification);
+      
+      // 2秒後に通知を消す
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.style.opacity = '0';
+          notification.style.transition = 'opacity 0.5s ease';
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.parentNode.removeChild(notification);
+            }
+          }, 500);
+        }
+      }, 2000);
+    }
+    else {
+      pressedKeys[key] = true;
+      
+      // 方向キーもWASDにマッピング
+      if (key === 'arrowup') pressedKeys['w'] = true;
+      if (key === 'arrowdown') pressedKeys['s'] = true;
+      if (key === 'arrowleft') pressedKeys['a'] = true;
+      if (key === 'arrowright') pressedKeys['d'] = true;
+    }
   });
   
   document.addEventListener('keyup', (event) => {
@@ -202,32 +249,81 @@
 
   // 前のフレームで生きていた敵を記録するための配列
   let previousLivingEnemies = [...stageManager.enemies];
-
+  // 敵の要素を追跡するためのMap（要素ID -> 要素）
+  const enemyElementMap = new Map();
+  
   function updateGame() {
     // プレイヤーの入力状態をセット & 更新
     wizard.setKeyState(pressedKeys);
     wizard.update();
-
+  
     // 各敵にプレイヤーの参照を設定し、更新
     stageManager.enemies.forEach(enemy => {
       if (!enemy.playerTarget) {
         enemy.setPlayerTarget(wizard);
       }
+      
+      // 敵要素をマップに追加（追跡用）
+      if (enemy.element && !enemyElementMap.has(enemy.element.id)) {
+        // 要素にユニークIDを設定（まだない場合）
+        if (!enemy.element.id) {
+          enemy.element.id = `enemy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+        enemyElementMap.set(enemy.element.id, enemy);
+      }
     });
     
-    // 敵の更新
+    // 敵の更新前に現在の敵リストを保存
+    const beforeUpdateEnemies = [...stageManager.enemies];
+    
+    // 敵の更新（ここで死亡した敵は配列から削除される）
     stageManager.updateEnemies();
     
     // 各敵について、前のフレームには生きていたが今は配列にない敵にコインを生成
     const currentEnemies = stageManager.enemies;
-    previousLivingEnemies.forEach(prevEnemy => {
+    
+    // 前回から消えた敵を特定
+    beforeUpdateEnemies.forEach(prevEnemy => {
       // 現在の敵の配列に含まれていなければ、その敵は倒されたということ
-      if (!currentEnemies.includes(prevEnemy)) {
+      if (!currentEnemies.includes(prevEnemy) && prevEnemy.status.hp <= 0) {
+        console.log(`[Game] 敵が倒された: ${prevEnemy.emoji}, コイン生成`);
+        
         // コインを敵の位置に生成
-        const pos = stageManager.getEnemyPosition(prevEnemy);
-        if (pos) {
+        const pos = {
+          x: prevEnemy.x,
+          y: prevEnemy.y
+        };
+        
+        if (pos.x && pos.y) {
           createCoinAt(pos.x, pos.y);
         }
+        
+        // Mapからも敵要素を削除
+        if (prevEnemy.element && prevEnemy.element.id) {
+          enemyElementMap.delete(prevEnemy.element.id);
+        }
+      }
+    });
+    
+    // キャラクターの断片が残っていないか確認
+    document.querySelectorAll('.character').forEach(element => {
+      // プレイヤーでなく、MapになくHPゲージがある要素（敵の残骸）
+      if (element.textContent !== '🧙' && // プレイヤーでない
+          element.textContent !== '🪙' && // コインでない
+          element.textContent !== '🪜' && // 階段でない
+          !stageManager.enemies.some(e => e.element === element)) { // 現在の敵リストにない
+        
+        console.log(`[Game] 残留敵要素を検出: ${element.textContent}、削除します`);
+        
+        // フェードアウト表示して削除
+        element.style.transition = 'opacity 0.3s ease';
+        element.style.opacity = '0';
+        
+        setTimeout(() => {
+          if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        }, 300);
       }
     });
     
@@ -291,6 +387,16 @@
     // HUDを更新（プレイヤーのステータスを渡す）
     hud.update(wizard.playerstatus);
 
+    // ステータス画面が表示されている場合は更新する
+    if (statusUI.isVisible) {
+      statusUI.updateStatusDisplay();
+    }
+    
+    // デバッグ画面が表示されている場合は更新する
+    if (debugUI.isVisible) {
+      debugUI.update();
+    }
+    
     // プレイヤーの攻撃と敵の衝突判定
     const enemyTargets = stageManager.enemies;
     wizard.attacks.forEach((fireBall) => {
