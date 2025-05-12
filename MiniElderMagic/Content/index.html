@@ -22,6 +22,9 @@
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
+      /* 中心位置を基準にする場合は、各キャラクターで個別に設定 */
+      /* transform: translate(-50%, -50%); */
+      text-align: center;
     }
   </style>
 </head>
@@ -31,10 +34,10 @@
 <!-- スクリプトの読み込み -->
 <script type="module">
   import { PlayerBase } from './Script/playerBase.js';
-  import { EnemyBase } from './Script/enemyBase.js';
-  import { UIHud } from './Script/UIHud.js';  // UIHud を追加
-  import { Coin } from './Script/coin_character.js';  // coin_character.jsからCoinを追加
-  import { Stair } from './Script/Stair.js';  // 新しく追加した階段クラス
+  import { UIHud } from './Script/UIHud.js';
+  import { Coin } from './Script/coin_character.js';
+  import { Stair } from './Script/Stair.js';
+  import { Stage } from './Script/Stage.js';  // 新しく追加したステージ管理クラス
 
   const gameArea = document.getElementById('game-area');
 
@@ -45,9 +48,11 @@
   const wizard = new PlayerBase(100, 100, 3, '🧙', gameArea);
   wizard.draw();
 
-  // 敵を生成（ランダム移動の例）
-  const enemy = new EnemyBase(300, 300, 2, '👾', gameArea);
-  enemy.draw();
+  // ステージマネージャーを生成
+  const stageManager = new Stage(gameArea);
+
+  // 最初のステージの敵を生成
+  const enemies = stageManager.createEnemiesForStage(1);
 
   // HUDの生成
   const hud = new UIHud(gameArea);
@@ -66,11 +71,33 @@
 
   // キーの押下状態を監視
   document.addEventListener('keydown', (event) => {
-    pressedKeys[event.key.toLowerCase()] = true;
+    const key = event.key.toLowerCase();
+    pressedKeys[key] = true;
+    
+    // 方向キーもWASDにマッピング
+    if (key === 'arrowup') pressedKeys['w'] = true;
+    if (key === 'arrowdown') pressedKeys['s'] = true;
+    if (key === 'arrowleft') pressedKeys['a'] = true;
+    if (key === 'arrowright') pressedKeys['d'] = true;
   });
+  
   document.addEventListener('keyup', (event) => {
-    pressedKeys[event.key.toLowerCase()] = false;
+    const key = event.key.toLowerCase();
+    pressedKeys[key] = false;
+    
+    // 方向キーもWASDにマッピング解除
+    if (key === 'arrowup') pressedKeys['w'] = false;
+    if (key === 'arrowdown') pressedKeys['s'] = false;
+    if (key === 'arrowleft') pressedKeys['a'] = false;
+    if (key === 'arrowright') pressedKeys['d'] = false;
   });
+
+  // 敵が死んだときにコインを生成する関数
+  function createCoinAt(x, y) {
+    const coin = new Coin(x, y, gameArea);
+    coin.draw();
+    coins.push(coin);
+  }
 
   // 1回あたりの理想フレーム時間（ミリ秒）
   const FPS = 60;
@@ -109,8 +136,9 @@
 
   // ステージが変わったときに呼ばれる関数
   function onStageChange() {
-    // 次のステージのセットアップ
-    enemy.status.hp = enemy.status.maxHP; // 敵のHPを回復
+    // 新しいステージ番号でステージを生成
+    const currentStage = wizard.playerstatus.stage;
+    const enemies = stageManager.createEnemiesForStage(currentStage);
     
     // 階段の位置をランダムに変更
     const maxX = gameArea.clientWidth - 100;
@@ -124,13 +152,9 @@
     // 階段のタッチフラグをリセット
     stair.touched = false;
     
-    // 敵の位置もランダムに変更
-    enemy.x = Math.random() * maxX + 50;
-    enemy.y = Math.random() * maxY + 50;
-    
     // ステージ変更エフェクト
     const stageElement = document.createElement('div');
-    stageElement.textContent = `ステージ ${wizard.playerstatus.stage}`;
+    stageElement.textContent = `ステージ ${currentStage}`;
     stageElement.style.position = 'absolute';
     stageElement.style.top = '50%';
     stageElement.style.left = '50%';
@@ -163,13 +187,44 @@
     }, 10);
   }
 
+  // 前のフレームで生きていた敵を記録するための配列
+  let previousLivingEnemies = [...stageManager.enemies];
+
   function updateGame() {
     // プレイヤーの入力状態をセット & 更新
     wizard.setKeyState(pressedKeys);
     wizard.update();
 
-    // 敵の更新（ランダム移動）
-    enemy.update();
+    // 各敵にプレイヤーの参照を設定し、更新
+    stageManager.enemies.forEach(enemy => {
+      if (!enemy.playerTarget) {
+        enemy.setPlayerTarget(wizard);
+      }
+    });
+    
+    // 敵の更新
+    stageManager.updateEnemies();
+    
+    // 各敵について、前のフレームには生きていたが今は配列にない敵にコインを生成
+    const currentEnemies = stageManager.enemies;
+    previousLivingEnemies.forEach(prevEnemy => {
+      // 現在の敵の配列に含まれていなければ、その敵は倒されたということ
+      if (!currentEnemies.includes(prevEnemy)) {
+        // コインを敵の位置に生成
+        const pos = stageManager.getEnemyPosition(prevEnemy);
+        if (pos) {
+          createCoinAt(pos.x, pos.y);
+        }
+      }
+    });
+    
+    // 現在の敵リストを更新
+    previousLivingEnemies = [...currentEnemies];
+    
+    // 全ての敵が倒されていて、階段が表示されていない場合は階段を表示
+    if (stageManager.areAllEnemiesDefeated() && !stair.element.style.visibility) {
+      stair.element.style.visibility = 'visible';
+    }
     
     // 階段の更新と接触判定
     stair.update();
@@ -183,8 +238,7 @@
       }
     }
 
-    // 敵が倒されると自動的にコインが生成される
-    // ドキュメントから現在のコインを取得
+    // コインとプレイヤーの接触判定
     const coinElements = document.querySelectorAll('.character');
     coinElements.forEach(element => {
       if (element.textContent === '🪙') {
@@ -204,7 +258,7 @@
         const dy = coinY - playerY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // 30px以内に近づいたらコインを取得
+        // 40px以内に近づいたらコインを取得
         if (distance < 40) {
           // コインを非表示にする
           element.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
@@ -227,15 +281,56 @@
     // HUDを更新（プレイヤーのステータスを渡す）
     hud.update(wizard.playerstatus);
 
-    // 衝突判定したい相手を配列にまとめる（敵が複数なら配列に push）
-    const targets = [enemy];
-
-    // wizard.attacks の弾それぞれに対し、targets を渡して衝突判定
+    // プレイヤーの攻撃と敵の衝突判定
+    const enemyTargets = stageManager.enemies;
     wizard.attacks.forEach((fireBall) => {
-      fireBall.update(targets);
+      fireBall.update(enemyTargets);
     });
+    
+    // 敵の攻撃とプレイヤーの衝突判定（敵の内部で処理）
+    // すでに各敵のupdateメソッド内で、enemyTarget（プレイヤー）を対象とした衝突判定が行われている
+    
+    // HPが0になったらゲームオーバー
+    if (wizard.status.hp <= 0) {
+      // ゲームオーバー処理を追加
+      displayGameOver();
+    }
   }
 
+  // ゲームオーバー表示関数
+  function displayGameOver() {
+    // すでにゲームオーバー画面があれば何もしない
+    if (document.getElementById('game-over')) return;
+    
+    // ゲームオーバー要素を作成
+    const gameOverElement = document.createElement('div');
+    gameOverElement.id = 'game-over';
+    gameOverElement.style.position = 'absolute';
+    gameOverElement.style.top = '50%';
+    gameOverElement.style.left = '50%';
+    gameOverElement.style.transform = 'translate(-50%, -50%)';
+    gameOverElement.style.fontSize = '60px';
+    gameOverElement.style.fontWeight = 'bold';
+    gameOverElement.style.color = 'red';
+    gameOverElement.style.textShadow = '3px 3px 5px rgba(0, 0, 0, 0.8)';
+    gameOverElement.style.zIndex = '1000';
+    gameOverElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    gameOverElement.style.padding = '30px';
+    gameOverElement.style.borderRadius = '15px';
+    gameOverElement.style.textAlign = 'center';
+    gameOverElement.innerHTML = `
+      <div>ゲームオーバー</div>
+      <div style="font-size: 30px; margin-top: 20px;">ステージ: ${wizard.playerstatus.stage}</div>
+      <div style="font-size: 30px;">コイン: ${wizard.playerstatus.coins}</div>
+      <div style="font-size: 24px; margin-top: 40px;">リスタートするにはF5キーを押してください</div>
+    `;
+    
+    gameArea.appendChild(gameOverElement);
+    
+    // ゲームを一時停止する効果（すべての敵を止める）
+    stageManager.clearEnemies();
+  }
+  
   // ゲームループ開始
   requestAnimationFrame(gameLoop);
 </script>

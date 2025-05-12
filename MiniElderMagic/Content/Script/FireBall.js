@@ -12,6 +12,8 @@ export class FireBall extends attackBase {
         this.element.style.position = 'absolute';
         //this.element.style.fontSize = '30px';
         this.element.classList.add('character'); // 共通クラスを利用
+        this.element.style.transform = 'translate(-50%, -50%)'; // 中心を基準に配置
+        this.element.style.textAlign = 'center';
 
         this.element.textContent = this.emoji;
         this.parentElement.appendChild(this.element);

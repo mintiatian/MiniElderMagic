@@ -1,5 +1,6 @@
 import { Character } from './character.js';
 import { Coin } from './coin_character.js';
+import { FireBall } from './fireBall.js';
 
 export class EnemyBase extends Character {
   constructor(x, y, step, emoji, parentElement) {
@@ -14,8 +15,29 @@ export class EnemyBase extends Character {
     this.status.hp = 30;           // 敵のHPを設定
     this.status.maxHP = 30;        // 敵の最大HPを設定
     this.detectionRadius = 200;    // プレイヤー検出半径
+    
+    // 攻撃関連の設定
+    this.attackPower = 5;          // 攻撃力
+    this.attackRange = 150;        // 攻撃範囲
+    this.attackCooldown = 2000;    // 攻撃クールダウン（ミリ秒）
+    this.lastAttackTime = 0;       // 最後に攻撃した時間
+    
+    // 火球攻撃システム
+    this.attackSystem = new FireBall(x, y, step, parentElement);
+    this.attacks = [];             // 発射した火球を管理する配列
+    
+    // プレイヤーへの参照
+    this.playerTarget = null;
   }
 
+  /**
+   * @desc プレイヤーの参照を設定する
+   * @param {PlayerBase} player - プレイヤーオブジェクト
+   */
+  setPlayerTarget(player) {
+    this.playerTarget = player;
+  }
+  
   /**
    * @desc 毎フレーム呼び出され、敵の移動を行う
    * ランダム移動の実装
@@ -23,10 +45,64 @@ export class EnemyBase extends Character {
   update() {
     // HPが残っている場合のみ動く
     if (this.status.hp > 0) {
-      // -1 以上 1 未満のランダム値を使用して
-      // ちょっとずつ動かす例
-      this.x += (Math.random() * 2 - 1) * this.step;
-      this.y += (Math.random() * 2 - 1) * this.step;
+      // プレイヤーが設定されている場合、プレイヤーに向かって移動
+      if (this.playerTarget) {
+        // プレイヤーとの距離を計算
+        const dx = this.playerTarget.x - this.x;
+        const dy = this.playerTarget.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // 検出半径内にプレイヤーがいる場合
+        if (distance < this.detectionRadius) {
+          // 攻撃範囲内ならば火球を発射
+          if (distance <= this.attackRange) {
+            // 火球発射を試みる
+            this.fire();
+            
+            // 火球を撃った後も少し距離を保つ
+            if (distance < 100) {
+              // プレイヤーから離れる
+              const normalizedDx = dx / distance;
+              const normalizedDy = dy / distance;
+              this.x -= normalizedDx * this.step * 0.5;
+              this.y -= normalizedDy * this.step * 0.5;
+            } else {
+              // 攻撃範囲内で維持
+              const normalizedDx = dx / distance;
+              const normalizedDy = dy / distance;
+              this.x += normalizedDx * this.step * 0.2;
+              this.y += normalizedDy * this.step * 0.2;
+            }
+          } else {
+            // 攻撃範囲外ならプレイヤーに向かって移動
+            // 移動方向を正規化
+            const normalizedDx = dx / distance;
+            const normalizedDy = dy / distance;
+            
+            // プレイヤーに向かって移動
+            this.x += normalizedDx * this.step;
+            this.y += normalizedDy * this.step;
+          }
+        } else {
+          // プレイヤーが検出範囲外の場合はランダム移動
+          this.x += (Math.random() * 2 - 1) * this.step;
+          this.y += (Math.random() * 2 - 1) * this.step;
+        }
+      } else {
+        // プレイヤーが設定されていない場合はランダム移動
+        this.x += (Math.random() * 2 - 1) * this.step;
+        this.y += (Math.random() * 2 - 1) * this.step;
+      }
+      
+      // 発射済みの火球をアップデートし、使用済みの火球を削除
+      this.attacks = this.attacks.filter(fireBall => {
+        if (this.playerTarget) {
+          // FireBallのupdateメソッドを実行
+          fireBall.update([this.playerTarget]);
+        }
+        // activeがtrueの火球のみを残す
+        return fireBall.active;
+      });
       
       // 親クラスのupdate処理（HPゲージ更新など）
       super.update();
@@ -114,5 +190,71 @@ export class EnemyBase extends Character {
       this.dropCoins();
       this.hasDroppedCoins = true;
     }
+  }
+  
+  /**
+   * @desc 火球を発射する
+   * @returns {boolean} 発射に成功したかどうか
+   */
+  fire() {
+    // プレイヤーが存在しないか、敵のHPが0以下なら攻撃しない
+    if (!this.playerTarget || this.status.hp <= 0) {
+      return false;
+    }
+    
+    // 現在の時間を取得
+    const currentTime = Date.now();
+    
+    // クールダウン中なら攻撃しない
+    if (currentTime - this.lastAttackTime < this.attackCooldown) {
+      return false;
+    }
+    
+    // プレイヤーとの距離を計算
+    const dx = this.playerTarget.x - this.x;
+    const dy = this.playerTarget.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // 攻撃範囲内にプレイヤーがいるか確認
+    if (distance <= this.attackRange) {
+      // 攻撃時間を更新
+      this.lastAttackTime = currentTime;
+      
+      // プレイヤーの方向を計算（正規化）
+      const normalizedDx = dx / distance;
+      const normalizedDy = dy / distance;
+      
+      // 火球を生成（attackSystemを使わない新しいインスタンスを生成）
+      const fireBall = new FireBall(
+        this.x, 
+        this.y, 
+        5, 
+        this.parentElement,
+        this.attackPower, // 攻撃力
+        300,             // 射程範囲
+        '🔥'             // 火球の絵文字
+      );
+      
+      // 正規化された方向ベクトルで火球を発射
+      fireBall.fire(normalizedDx, normalizedDy);
+      
+      // 敵の火球であることを設定（FireBallクラスが対応している場合）
+      if (typeof fireBall.setOwner === 'function') {
+        fireBall.setOwner('enemy');
+      }
+      
+      // 攻撃配列に追加
+      this.attacks.push(fireBall);
+      
+      // 長時間飛んでいる場合に備えて、一定時間後に強制的に非アクティブ化
+      setTimeout(() => {
+        fireBall.deactivate();
+      }, 5000); // 5秒後に削除（射程範囲内で消えなかった場合の保険）
+      
+      console.log("敵が火球を発射しました");
+      return true;
+    }
+    
+    return false;
   }
 }
