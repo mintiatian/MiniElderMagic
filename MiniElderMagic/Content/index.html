@@ -305,27 +305,113 @@
       }
     });
     
-    // キャラクターの断片が残っていないか確認
-    document.querySelectorAll('.character').forEach(element => {
-      // プレイヤーでなく、MapになくHPゲージがある要素（敵の残骸）
-      if (element.textContent !== '🧙' && // プレイヤーでない
-          element.textContent !== '🪙' && // コインでない
-          element.textContent !== '🪜' && // 階段でない
-          !stageManager.enemies.some(e => e.element === element)) { // 現在の敵リストにない
-        
-        console.log(`[Game] 残留敵要素を検出: ${element.textContent}、削除します`);
-        
-        // フェードアウト表示して削除
-        element.style.transition = 'opacity 0.3s ease';
-        element.style.opacity = '0';
-        
-        setTimeout(() => {
-          if (element && element.parentNode) {
-            element.parentNode.removeChild(element);
+    // 残留要素クリーンアップ関数
+    function cleanupRemainingElements() {
+      // クリーンアップ対象になる要素とその親要素の一覧
+      const cleanupTargets = [];
+    
+      // キャラクターの断片が残っていないか確認
+      document.querySelectorAll('.character').forEach(element => {
+        // プレイヤーでなく、MapになくHPゲージがある要素（敵の残骸）
+        if (element.textContent !== '🧙' && // プレイヤーでない
+            element.textContent !== '🪙' && // コインでない
+            element.textContent !== '🪜' && // 階段でない
+            !stageManager.enemies.some(e => e.element === element)) { // 現在の敵リストにない
+          
+          // 火球(🔥)または杖(🪄)の場合、タグ付けして後でクリーンアップ
+          if (element.textContent === '🔥' || element.textContent === '🪄') {
+            if (!element.dataset.markedForRemoval) {
+              console.log(`[Game] 残留敵要素を検出: ${element.textContent}、削除します`);
+              element.dataset.markedForRemoval = 'true';
+              element.dataset.removalTime = Date.now().toString();
+              cleanupTargets.push(element);
+            } else {
+              // 既にマークされている要素で、5秒以上経過している場合は強制削除
+              const markedTime = parseInt(element.dataset.removalTime || '0');
+              if (Date.now() - markedTime > 5000) {
+                console.log(`[Game] 長時間残留している要素を強制削除: ${element.textContent}`);
+                cleanupTargets.push(element);
+              }
+            }
+          } else {
+            // その他の不明要素は直ちにクリーンアップ対象に
+            console.log(`[Game] 不明な残留要素を検出: ${element.textContent}、削除します`);
+            cleanupTargets.push(element);
           }
-        }, 300);
+        }
+      });
+      
+      // クリーンアップ対象の要素を削除
+      cleanupTargets.forEach(element => {
+        try {
+          // フェードアウト表示して削除
+          element.style.transition = 'opacity 0.3s ease';
+          element.style.opacity = '0';
+          
+          setTimeout(() => {
+            try {
+              if (element && element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            } catch (err) {
+              console.warn(`[Game] 要素削除中にエラーが発生しました:`, err);
+            }
+          }, 300);
+        } catch (err) {
+          console.warn(`[Game] 要素フェードアウト中にエラーが発生しました:`, err);
+          // フェードアウトに失敗した場合は直接削除を試みる
+          if (element && element.parentNode) {
+            try {
+              element.parentNode.removeChild(element);
+            } catch (removeErr) {
+              console.error(`[Game] 要素の直接削除に失敗しました:`, removeErr);
+            }
+          }
+        }
+      });
+    }
+          
+          // 30秒ごとに特に杖要素の健全性をチェックするクリーンアップを実行
+          setInterval(() => {
+      // player-staffクラスを持つ要素をチェック (プレイヤーが所有する正しい杖要素を特定)
+      let validStaffElement = null;
+      if (wizard && wizard.staffElement && document.body.contains(wizard.staffElement)) {
+        validStaffElement = wizard.staffElement;
       }
-    });
+      
+      // すべての杖要素を取得
+      const staffElements = document.querySelectorAll('.character');
+      staffElements.forEach(element => {
+        if (element.textContent === '🪄') {
+          // プレイヤーの正しい杖でない場合は削除
+          if (element !== validStaffElement) {
+            console.log('[Game] 無効な杖要素を検出しました。削除します。');
+            try {
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            } catch (err) {
+              console.warn('[Game] 無効な杖要素の削除中にエラーが発生しました:', err);
+            }
+          }
+        }
+      });
+      
+      // プレイヤーの杖が存在しない場合は再作成を試みる
+      if (wizard && (!wizard.staffElement || !document.body.contains(wizard.staffElement))) {
+        console.log('[Game] プレイヤーの杖が見つかりません。再作成を促します。');
+        if (typeof wizard.createStaffElement === 'function') {
+          wizard.createStaffElement();
+          wizard.updateStaffPosition();
+        }
+      }
+          }, 30000);
+    
+    // 定期的なクリーンアップを実行（1秒ごと）
+    setInterval(cleanupRemainingElements, 1000);
+    
+    // 通常のゲーム更新時にもクリーンアップを実行
+    cleanupRemainingElements();
     
     // 現在の敵リストを更新
     previousLivingEnemies = [...currentEnemies];
@@ -399,8 +485,42 @@
     
     // プレイヤーの攻撃と敵の衝突判定
     const enemyTargets = stageManager.enemies;
-    wizard.attacks.forEach((fireBall) => {
-      fireBall.update(enemyTargets);
+    
+    // 攻撃オブジェクトの更新と非アクティブな攻撃のフィルタリング
+    if (wizard.attacks && Array.isArray(wizard.attacks)) {
+      // アクティブな攻撃だけを残す
+      wizard.attacks = wizard.attacks.filter((fireBall) => {
+        // nullチェック
+        if (!fireBall) return false;
+        
+        try {
+          // 攻撃の更新
+          fireBall.update(enemyTargets);
+          
+          // 攻撃がアクティブか確認（active属性がない場合はtrueとみなす）
+          return fireBall.active !== false;
+        } catch (err) {
+          console.warn('[Game] 攻撃オブジェクトの更新中にエラーが発生しました:', err);
+          return false; // エラーが発生した場合は削除
+        }
+      });
+    }
+    
+    // 敵の攻撃も同様にクリーンアップ
+    stageManager.enemies.forEach(enemy => {
+      if (enemy.attacks && Array.isArray(enemy.attacks)) {
+        enemy.attacks = enemy.attacks.filter(fireBall => {
+          if (!fireBall) return false;
+          
+          try {
+            // 攻撃がアクティブか確認
+            return fireBall.active !== false;
+          } catch (err) {
+            console.warn('[Game] 敵の攻撃オブジェクトの確認中にエラーが発生しました:', err);
+            return false;
+          }
+        });
+      }
     });
     
     // 敵の攻撃とプレイヤーの衝突判定（敵の内部で処理）

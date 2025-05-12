@@ -8,14 +8,6 @@
         this.player = player;
         this.isVisible = false;
         
-        // Tabキーでステータス画面の表示/非表示を切り替える
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Tab') {
-                event.preventDefault(); // ブラウザのデフォルト動作を防止
-                this.toggle();
-            }
-        });
-        
         // ステータス表示用のコンテナ
         this.container = document.createElement('div');
         this.container.classList.add('status-container');
@@ -63,8 +55,9 @@
         // コンテナを親要素に追加
         this.parentElement.appendChild(this.container);
         
-        // Tabキーのイベントリスナーを追加
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        // Tabキーのイベントリスナーを追加（バインドして1回だけ登録）
+        this.handleKeyDownBound = this.handleKeyDown.bind(this);
+        document.addEventListener('keydown', this.handleKeyDownBound);
     }
     
     /**
@@ -141,7 +134,7 @@
             { name: 'HP', value: `${this.player.status.hp} / ${this.player.status.maxHP}`, color: 'lightgreen' },
             { name: 'MP', value: `${this.player.status.mp} / ${this.player.status.maxMP}`, color: 'lightblue' },
             { name: '攻撃力', value: this.player.status.attack, color: 'salmon' },
-            { name: '火球射程', value: `${this.player.status.fireRange}`, color: 'orange' },
+            { name: '火球射程', value: `${this.player.status.fireRange}`, color: 'orange', highlight: true },
             { name: '移動速度', value: this.player.status.speed, color: 'lightyellow' },
             { name: 'コイン', value: this.player.playerstatus.coins, color: 'gold' },
             { name: 'ステージ', value: this.player.playerstatus.stage, color: 'white' }
@@ -158,6 +151,17 @@
             nameCell.style.padding = '8px 10px';
             nameCell.style.textAlign = 'left';
             nameCell.style.fontWeight = 'bold';
+            
+            // ハイライト表示（主に火球射程用）
+            if (item.highlight) {
+                nameCell.style.position = 'relative';
+                const highlightSpan = document.createElement('span');
+                highlightSpan.textContent = ' 🔥';
+                highlightSpan.style.fontSize = '0.8em';
+                highlightSpan.style.opacity = '0.7';
+                nameCell.appendChild(highlightSpan);
+            }
+            
             row.appendChild(nameCell);
             
             // 値セル
@@ -166,6 +170,13 @@
             valueCell.style.padding = '8px 10px';
             valueCell.style.textAlign = 'right';
             valueCell.style.color = item.color;
+            
+            // ハイライト効果が指定されている場合、追加スタイルを適用
+            if (item.highlight) {
+                valueCell.style.fontWeight = 'bold';
+                valueCell.style.textShadow = `0 0 5px ${item.color}`;
+            }
+            
             row.appendChild(valueCell);
             
             this.statusTable.appendChild(row);

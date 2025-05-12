@@ -34,4 +34,20 @@ export class attackBase {
     update() {
         // このクラスでは空実装。継承先で必要に応じて書き換え。
     }
+    
+    /**
+     * @desc 移動方向を矢印や傾きで表現する
+     * @param {HTMLElement} element - 方向を表示する要素
+     * @param {number} dx - X方向の移動量
+     * @param {number} dy - Y方向の移動量 
+     */
+    applyDirectionStyle(element, dx, dy) {
+        if (!element) return;
+        
+        // 方向に基づいて回転角度を計算
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        
+        // 要素に回転を適用
+        element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    }
 }

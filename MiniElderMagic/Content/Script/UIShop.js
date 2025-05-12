@@ -327,7 +327,70 @@
      */
     increaseFireRange() {
         const currentRange = this.player.status.fireRange;
-        this.player.status.setFireRange(currentRange + 50);
+            const increaseAmount = 50;
+            const newRange = currentRange + increaseAmount;
+            
+            // ステータスの射程距離を更新
+            this.player.status.setFireRange(newRange);
+            
+            // 詳細なログを出力
+            console.log(`[Shop] 火球射程距離を増加: ${currentRange} → ${newRange} (+${increaseAmount})`);
+            
+            // 確認のため、ユーザーにフィードバックを表示
+            this.player.showFloatingText(`火球射程 +${increaseAmount}`, 'orange', 2000, -70);
+            
+            // 射程距離増加エフェクト（プレイヤーの周りに小さな火球を表示）
+            this.createRangeUpgradeEffect(increaseAmount);
+        }
+        
+        /**
+         * @desc 射程距離アップグレード時のエフェクトを生成
+         * @param {number} amount - 増加した射程距離
+         */
+        createRangeUpgradeEffect(amount) {
+            // プレイヤーの周りに複数の小さな火球エフェクトを表示
+            const count = 8; // エフェクトの数
+            const radius = 50; // プレイヤーからの距離
+            
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i;
+                const x = this.player.x + Math.cos(angle) * radius;
+                const y = this.player.y + Math.sin(angle) * radius;
+                
+                // エフェクト要素を作成
+                const effect = document.createElement('div');
+                effect.textContent = '🔥';
+                effect.style.position = 'absolute';
+                effect.style.left = `${x}px`;
+                effect.style.top = `${y}px`;
+                effect.style.fontSize = '20px';
+                effect.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                effect.style.opacity = '0.7';
+                effect.style.zIndex = '5';
+                
+                // 親要素に追加
+                this.container.parentElement.appendChild(effect);
+                
+                // 外側に拡散するアニメーション
+                setTimeout(() => {
+                    effect.style.transition = `transform 1s ease, opacity 1s ease, left 1s ease, top 1s ease`;
+                    const newRadius = radius + 100 + Math.random() * 50;
+                    const newX = this.player.x + Math.cos(angle) * newRadius;
+                    const newY = this.player.y + Math.sin(angle) * newRadius;
+                    
+                    effect.style.left = `${newX}px`;
+                    effect.style.top = `${newY}px`;
+                    effect.style.transform = 'translate(-50%, -50%) scale(0.1)';
+                    effect.style.opacity = '0';
+                }, i * 50); // 少し遅延させて順番に拡散
+                
+                // 一定時間後に削除
+                setTimeout(() => {
+                    if (effect.parentNode) {
+                        effect.parentNode.removeChild(effect);
+                    }
+                }, 1000 + i * 50);
+            }
     }
     
     /**

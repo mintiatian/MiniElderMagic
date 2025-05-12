@@ -30,7 +30,44 @@ export class FireBall extends attackBase {
         this.owner = owner;
         console.log(`[FireBall] 所有者設定: ${owner}`);
     }
-
+    /**
+     * @desc FireBallを安全に非アクティブ化し、要素を削除する
+     */
+    deactivate() {
+        // 既に非アクティブなら何もしない
+        if (!this.active) {
+            return;
+        }
+        
+        // アクティブフラグをfalseに設定
+        this.active = false;
+        
+        try {
+            // 要素が存在する場合は削除
+            if (this.element && this.element.parentNode) {
+                // 要素をフェードアウト
+                this.element.style.transition = 'opacity 0.2s ease';
+                this.element.style.opacity = '0';
+                
+                // 短い遅延後に要素を削除
+                setTimeout(() => {
+                    try {
+                        if (this.element && this.element.parentNode) {
+                            this.element.parentNode.removeChild(this.element);
+                            this.element = null;  // 参照をクリア
+                        }
+                    } catch (err) {
+                        console.warn('[FireBall] 要素削除中にエラーが発生しました:', err);
+                    }
+                }, 200);
+            }
+        } catch (err) {
+            console.error('[FireBall] deactivate中にエラーが発生しました:', err);
+            
+            // エラーが発生した場合でも、要素をnullに設定して参照を切る
+            this.element = null;
+        }
+    }
     // 攻撃力を設定するメソッドを追加
     setAttackPower(power) {
         const oldPower = this.attackPower;
@@ -43,13 +80,23 @@ export class FireBall extends attackBase {
         this.dx = dx;
         this.dy = dy;
         this.traveled = 0;
-        this.updateElementPosition();
+        
+        // 要素の表示と位置を更新
         this.element.style.display = 'block'; // 再表示(再発射時用)
+        this.updateElementPosition();
         
-        // 発射時の詳細ログ
-        console.log(`[FireBall] 発射: 方向(${dx.toFixed(2)}, ${dy.toFixed(2)}), 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), 攻撃力=${this.attackPower}`);
+        // 射撃方向を火球の見た目に反映（親クラスのメソッドを使用）
+        if (typeof this.applyDirectionStyle === 'function') {
+            this.applyDirectionStyle(this.element, dx, dy);
+        }
         
-        // 衝突エフェクトを生成（発射時の視覚効果）
+        // 火球のスタイルを追加
+        this.element.style.filter = 'drop-shadow(0 0 5px rgba(255, 100, 0, 0.7))';
+        
+        // 発射時の詳細ログ - 射程距離も追加
+        console.log(`[FireBall] 発射: 方向(${dx.toFixed(2)}, ${dy.toFixed(2)}), 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), 攻撃力=${this.attackPower}, 射程距離=${this.range}`);
+        
+        // 発射エフェクトを生成
         this.createLaunchEffect();
     }
 
@@ -59,14 +106,46 @@ export class FireBall extends attackBase {
 
         // 移動
         const speed = 5;
-        this.x += this.dx * speed;
-        this.y += this.dy * speed;
-        this.traveled += speed;
+        
+        // 移動前の位置を保存
+        const prevX = this.x;
+        const prevY = this.y;
+        
+        // 次の移動位置を計算
+        const nextX = this.x + this.dx * speed;
+        const nextY = this.y + this.dy * speed;
+        
+        // 実際に移動した距離を計算（ピタゴラスの定理で計算）
+        const distanceMoved = Math.sqrt(
+            Math.pow(nextX - prevX, 2) + 
+            Math.pow(nextY - prevY, 2)
+        );
+        
+        // 今回の移動で射程を超えるか確認
+        const wouldExceedRange = this.traveled + distanceMoved > this.range;
+        
+        if (wouldExceedRange) {
+            // 射程ちょうどの位置を計算
+            const remainingDistance = this.range - this.traveled;
+            const ratio = remainingDistance / distanceMoved;
+            
+            // 射程までの正確な位置を計算
+            this.x = prevX + (nextX - prevX) * ratio;
+            this.y = prevY + (nextY - prevY) * ratio;
+            this.traveled = this.range;
+        } else {
+            // 通常通り移動
+            this.x = nextX;
+            this.y = nextY;
+            this.traveled += distanceMoved;
+        }
+        
+        // 位置を画面に反映
         this.updateElementPosition();
-
+    
         // デバッグ：ターゲット数の表示（頻度を下げるため100pxごと）
-        if (this.traveled % 100 < 5) {
-            console.log(`[FireBall] 更新: 移動距離=${this.traveled.toFixed(0)}, ターゲット数=${targets.length}, 攻撃力=${this.attackPower}`);
+        if (Math.floor(this.traveled / 100) !== Math.floor((this.traveled - distanceMoved) / 100)) {
+            console.log(`[FireBall] 更新: 移動距離=${this.traveled.toFixed(0)}, ターゲット数=${targets.length}, 攻撃力=${this.attackPower}, 残り射程=${(this.range - this.traveled).toFixed(0)}`);
         }
 
         // ここで当たり判定を行い、当たったら HP を減らして弾を消す
@@ -97,10 +176,23 @@ export class FireBall extends attackBase {
             }
         }
 
-        // 範囲を超えたら非アクティブ化
-        if (this.traveled >= this.range) {
-            console.log(`[FireBall] 射程(${this.range})を超えたため非アクティブ化`);
-            this.deactivate();
+        // 範囲に達したら非アクティブ化（ただし精密な判定のため、わずかな誤差を許容）
+        if (this.traveled >= this.range - 0.1 && this.active) {
+            // 瞬時に非アクティブフラグをセットして重複処理を防止
+            // ただし表示はまだ残す
+            this.active = false;
+            
+            // 実際の座標で射程距離エフェクトを表示して、その後に非表示化
+            console.log(`[FireBall] 射程距離(${this.range})に達したため消滅します。移動距離: ${this.traveled.toFixed(0)}`);
+            
+            // エフェクト表示 - 完全な非アクティブ化する前に表示
+            this.createRangeEndEffect();
+            
+            // 少し遅延させて完全に非アクティブ化（エフェクトが表示される時間を確保）
+            setTimeout(() => {
+                console.log(`[FireBall] 射程(${this.range})に達したため非アクティブ化`);
+                this.element.style.display = 'none';
+            }, 50); // 50ミリ秒の遅延
         }
     }
 
@@ -129,8 +221,33 @@ export class FireBall extends attackBase {
     }
 
     deactivate() {
+        // 既に非アクティブならスキップ
+        if (!this.active) {
+            return;
+        }
+        
+        // まず即座に非アクティブフラグを設定して重複処理を防止
         this.active = false;
-        this.element.style.display = 'none';
+        
+        // 安全チェック - 要素があるか確認
+        if (!this.element) {
+            console.warn('[FireBall] deactivate: 要素が見つかりません');
+            return;
+        }
+        
+        // フェードアウトによる非表示
+        this.element.style.transition = 'opacity 0.1s ease-out';
+        this.element.style.opacity = '0';
+        
+        // 少し遅延して完全に非表示にする
+        setTimeout(() => {
+            if (this.element) {
+                this.element.style.display = 'none';
+                // トランジションをリセット
+                this.element.style.transition = '';
+                this.element.style.opacity = '1';
+            }
+        }, 100);
     }
 
     updateElementPosition() {
@@ -196,5 +313,103 @@ export class FireBall extends attackBase {
         }, 300);
         
         console.log(`[FireBall] 衝突エフェクト生成: 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), ダメージ=${this.attackPower}`);
+    }
+    
+    // エフェクト生成中フラグ
+    #isCreatingEffect = false;
+    
+    // 射程終了時のエフェクトを生成するメソッド
+    createRangeEndEffect() {
+        // 重複防止 - 既にエフェクト生成中なら新たに生成しない
+        if (this.#isCreatingEffect) {
+            console.log(`[FireBall] すでにエフェクト生成中のため、重複生成をスキップします`);
+            return;
+        }
+        
+        // エフェクト生成中フラグをセット
+        this.#isCreatingEffect = true;
+        
+        // 安全チェック - 親要素があるか確認
+        if (!this.parentElement) {
+            console.warn('[FireBall] createRangeEndEffect: 親要素が見つかりません');
+            this.#isCreatingEffect = false;
+            return;
+        }
+        
+        try {
+            // メインエフェクト
+            const effect = document.createElement('div');
+            effect.textContent = '💨';
+            effect.style.position = 'absolute';
+            effect.style.left = `${this.x}px`;
+            effect.style.top = `${this.y}px`;
+            effect.style.fontSize = '30px';
+            effect.style.transform = 'translate(-50%, -50%)';
+            effect.style.zIndex = '5';
+            effect.style.opacity = '0'; // 初期状態は透明
+            
+            // 親要素に追加
+            this.parentElement.appendChild(effect);
+            
+            // 追加のパーティクル効果（小さな煙を複数）
+            const particles = [];
+            for (let i = 0; i < 3; i++) {
+                const particle = document.createElement('div');
+                particle.textContent = '💨';
+                particle.style.position = 'absolute';
+                particle.style.left = `${this.x + (Math.random() * 20 - 10)}px`;
+                particle.style.top = `${this.y + (Math.random() * 20 - 10)}px`;
+                particle.style.fontSize = '20px';
+                particle.style.opacity = '0';
+                particle.style.transform = 'translate(-50%, -50%) scale(0.6)';
+                particle.style.zIndex = '4';
+                this.parentElement.appendChild(particle);
+                particles.push(particle);
+                
+                // パーティクルのアニメーション
+                setTimeout(() => {
+                    particle.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-in-out';
+                    particle.style.opacity = '0.8';
+                    particle.style.transform = `translate(-50%, -50%) scale(0.8) translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px)`;
+                    
+                    setTimeout(() => {
+                        particle.style.opacity = '0';
+                        particle.style.transform = 'translate(-50%, -50%) scale(0.4)';
+                        
+                        setTimeout(() => {
+                            if (particle.parentNode) {
+                                particle.parentNode.removeChild(particle);
+                            }
+                        }, 500);
+                    }, 300);
+                }, i * 100);
+            }
+            
+            // メインエフェクトのアニメーション
+            setTimeout(() => {
+                effect.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-in-out';
+                effect.style.opacity = '1';
+                effect.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                
+                setTimeout(() => {
+                    effect.style.opacity = '0';
+                    effect.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                    
+                    // 一定時間後にエフェクトを削除
+                    setTimeout(() => {
+                        if (effect.parentNode) {
+                            effect.parentNode.removeChild(effect);
+                        }
+                        // すべての処理が完了したらフラグをリセット
+                        this.#isCreatingEffect = false;
+                    }, 500);
+                }, 300);
+            }, 10);
+            
+            console.log(`[FireBall] 射程終了エフェクト生成: 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), 射程=${this.range}, 移動距離=${this.traveled.toFixed(0)}`);
+        } catch (error) {
+            console.error('[FireBall] エフェクト生成中にエラーが発生しました:', error);
+            this.#isCreatingEffect = false;
+        }
     }
 }
