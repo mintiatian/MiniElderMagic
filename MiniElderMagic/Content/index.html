@@ -321,7 +321,7 @@
           // 火球(🔥)または杖(🪄)の場合、タグ付けして後でクリーンアップ
           if (element.textContent === '🔥' || element.textContent === '🪄') {
             if (!element.dataset.markedForRemoval) {
-              console.log(`[Game] 残留敵要素を検出: ${element.textContent}、削除します`);
+              //console.log(`[Game] 残留敵要素を検出: ${element.textContent}、削除します`);
               element.dataset.markedForRemoval = 'true';
               element.dataset.removalTime = Date.now().toString();
               cleanupTargets.push(element);

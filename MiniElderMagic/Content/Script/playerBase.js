@@ -51,9 +51,6 @@ export class PlayerBase extends Character {
           // 親要素に追加
           if (parentElement && document.body.contains(parentElement)) {
             parentElement.appendChild(this.staffElement);
-            console.log('[Player] 杖要素を作成しました');
-          } else {
-            console.warn('[Player] 杖要素の作成に失敗: 親要素が無効です');
           }
           
           return this.staffElement;
@@ -68,7 +65,6 @@ export class PlayerBase extends Character {
         // 杖要素の健全性を定期的にチェック (3秒ごと)
         this.staffCheckInterval = setInterval(() => {
           if (!this.staffElement || !document.body.contains(this.staffElement)) {
-            console.warn('[Player] 杖要素が見つかりません。再作成します。');
             this.createStaffElement();
             this.updateStaffPosition();
           }
@@ -95,20 +91,17 @@ export class PlayerBase extends Character {
             // 杖の位置から FireBall を生成
             // より堅牢な杖の存在チェック
             if (!this.staffElement) {
-                        console.warn('[Player] click: 杖要素が未定義です。再作成します。');
-                        this.createStaffElement();
-                        this.updateStaffPosition();
-                    }
+                this.createStaffElement();
+                this.updateStaffPosition();
+            }
                     
-                    if (!document.body.contains(this.staffElement)) {
-                        console.warn('[Player] click: 杖要素がDOMに存在しません。再作成します。');
-                        this.createStaffElement();
-                        this.updateStaffPosition();
+            if (!document.body.contains(this.staffElement)) {
+                this.createStaffElement();
+                this.updateStaffPosition();
             }
             
             const staffPos = this.getStaffPosition();
             if (!staffPos) {
-                console.warn('[Player] click: 杖の位置が取得できません');
                 return;
             }
             
@@ -122,18 +115,14 @@ export class PlayerBase extends Character {
                 '🔥'                         // 攻撃の絵文字
             );
             
-            // デバッグログ追加
-            console.log(`[Player] 火球発射: プレイヤー攻撃力=${this.status.attack}、射程=${this.status.fireRange}が火球に設定されました`);
-            console.log(`[Player] 火球発射位置: 杖(${staffPos.x.toFixed(0)}, ${staffPos.y.toFixed(0)}), 方向(${this.lastDirection.dx.toFixed(2)}, ${this.lastDirection.dy.toFixed(2)})`);
-            
             // 最後に押されたWASDキーの方向に発射
             newFire.fire(this.lastDirection.dx, this.lastDirection.dy);
             this.attacks.push(newFire);
             
             // 発射エフェクト（杖から出る小さな光）
             this.createCastEffect(staffPos);
-        } catch (error) {
-            console.error('[Player] 火球発射中にエラーが発生しました:', error);
+                    } catch (error) {
+            // エラー発生時はログを出力せず静かに続行
         }
     }
 
@@ -204,17 +193,14 @@ export class PlayerBase extends Character {
         // 杖要素の存在チェック
         if (!this.staffElement) {
             // 杖が未定義の場合は再作成
-            console.warn('[Player] updateStaffPosition: 杖要素が未定義です。再作成します。');
             this.createStaffElement();
         } else if (!document.body.contains(this.staffElement)) {
             // DOMに存在しない場合も再作成
-            console.warn('[Player] updateStaffPosition: 杖要素がDOMに存在しません。再作成します。');
             this.createStaffElement();
         }
         
         // 再作成後も杖が無い場合は処理を中止
         if (!this.staffElement) {
-            console.error('[Player] updateStaffPosition: 杖要素の再作成に失敗しました。');
             return;
         }
         
@@ -236,8 +222,6 @@ export class PlayerBase extends Character {
             // 杖を回転させる
             this.staffElement.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
         } catch (error) {
-            console.error('[Player] 杖の位置更新中にエラーが発生しました:', error);
-            
             // エラーが発生した場合は杖を再作成
             this.createStaffElement();
             
@@ -248,7 +232,7 @@ export class PlayerBase extends Character {
                 const angle = Math.atan2(this.lastDirection.dy, this.lastDirection.dx) * (180 / Math.PI);
                 this.staffElement.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
             } catch (retryError) {
-                console.error('[Player] 杖の位置更新の再試行に失敗しました:', retryError);
+                // 再試行失敗時も静かに続行
             }
         }
     }
@@ -257,7 +241,6 @@ export class PlayerBase extends Character {
     getStaffPosition() {
         // 安全チェック - 要素が存在するか確認
         if (!this.staffElement) {
-            console.warn('[Player] getStaffPosition: 杖要素が未定義です。再作成を試みます。');
             this.createStaffElement();
             this.updateStaffPosition();
             
@@ -271,7 +254,6 @@ export class PlayerBase extends Character {
         }
         
         if (!document.body.contains(this.staffElement)) {
-            console.warn('[Player] getStaffPosition: 杖要素がDOMに存在しません。再作成を試みます。');
             this.createStaffElement();
             this.updateStaffPosition();
             
@@ -298,7 +280,6 @@ export class PlayerBase extends Character {
             // 上記が失敗した場合はBoundingClientRectを試みる
             const rect = this.staffElement.getBoundingClientRect();
             if (!rect.width || !rect.height) {
-                console.warn('[Player] getStaffPosition: 杖要素のサイズが0です');
                 return {
                     x: this.x + this.lastDirection.dx * 30,
                     y: this.y + this.lastDirection.dy * 30
@@ -313,8 +294,6 @@ export class PlayerBase extends Character {
                 y: rect.top - containerRect.top + rect.height / 2
             };
         } catch (error) {
-            console.error('[Player] 杖の位置取得中にエラーが発生しました:', error);
-            
             // エラーが発生した場合はゲーム座標をそのまま返す（フォールバック）
             return {
                 x: this.x + this.lastDirection.dx * 30,
@@ -327,7 +306,6 @@ export class PlayerBase extends Character {
     getPlayerCenter() {
         // 安全チェック - 要素が存在するか確認
         if (!this.element || !this.element.parentElement) {
-            console.warn('[Player] getPlayerCenter: プレイヤー要素または親要素が見つかりません');
             return { x: this.x, y: this.y }; // フォールバック
         }
         
@@ -341,7 +319,6 @@ export class PlayerBase extends Character {
                 y: rect.top - containerRect.top + rect.height / 2
             };
         } catch (error) {
-            console.error('[Player] プレイヤー位置取得中にエラーが発生しました:', error);
             return { x: this.x, y: this.y }; // 内部座標をフォールバックとして使用
         }
     }
@@ -387,13 +364,12 @@ export class PlayerBase extends Character {
                             this.staffElement.parentNode.removeChild(this.staffElement);
                         }
                     } catch (error) {
-                        console.warn('[Player] 杖要素の削除中にエラーが発生しました:', error);
+                        // エラー時は静かに続行
                     } finally {
                         this.staffElement = null;  // 明示的に参照を解放
                     }
                 }, 1000);
             } catch (error) {
-                console.warn('[Player] 杖要素のフェードアウト中にエラーが発生しました:', error);
                 // エラーが発生した場合は直接削除を試みる
                 if (this.staffElement && document.body.contains(this.staffElement)) {
                     try {
@@ -430,18 +406,15 @@ export class PlayerBase extends Character {
     createCastEffect(position) {
         // 安全チェック - 親要素が存在しない場合は処理しない
         if (!this.element) {
-            console.warn('[Player] createCastEffect: プレイヤー要素が未定義です');
             return;
         }
         
         if (!document.body.contains(this.element)) {
-            console.warn('[Player] createCastEffect: プレイヤー要素がDOMに存在しません');
             return;
         }
         
         const parentElement = this.element.parentElement;
         if (!parentElement) {
-            console.warn('[Player] createCastEffect: 親要素が見つかりません');
             return;
         }
         
@@ -486,7 +459,7 @@ export class PlayerBase extends Character {
                 }, 200);
             }, 10);
         } catch (error) {
-            console.error('[Player] エフェクト生成中にエラーが発生しました:', error);
+            // エラー発生時は静かに続行
         }
     }
 }

@@ -9,8 +9,7 @@ export class FireBall extends attackBase {
         this.owner = 'player'; // デフォルトはプレイヤー所有
         
         // デバッグ情報 - コンストラクタでの攻撃力を記録
-        console.log(`[FireBall] 生成: attack=${this.attackPower}, range=${this.range}, emoji=${this.emoji}`);
-
+        
         // 表示用DOM要素の作成
         this.element = document.createElement('div');
         this.element.style.position = 'absolute';
@@ -28,7 +27,6 @@ export class FireBall extends attackBase {
     // 所有者を設定（プレイヤーか敵か）
     setOwner(owner) {
         this.owner = owner;
-        console.log(`[FireBall] 所有者設定: ${owner}`);
     }
     /**
      * @desc FireBallを安全に非アクティブ化し、要素を削除する
@@ -72,7 +70,6 @@ export class FireBall extends attackBase {
     setAttackPower(power) {
         const oldPower = this.attackPower;
         this.attackPower = power;
-        console.log(`[FireBall] 攻撃力変更: ${oldPower} → ${power}`);
     }
 
     fire(dx, dy) {
@@ -92,9 +89,6 @@ export class FireBall extends attackBase {
         
         // 火球のスタイルを追加
         this.element.style.filter = 'drop-shadow(0 0 5px rgba(255, 100, 0, 0.7))';
-        
-        // 発射時の詳細ログ - 射程距離も追加
-        console.log(`[FireBall] 発射: 方向(${dx.toFixed(2)}, ${dy.toFixed(2)}), 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), 攻撃力=${this.attackPower}, 射程距離=${this.range}`);
         
         // 発射エフェクトを生成
         this.createLaunchEffect();
@@ -143,35 +137,27 @@ export class FireBall extends attackBase {
         // 位置を画面に反映
         this.updateElementPosition();
     
-        // デバッグ：ターゲット数の表示（頻度を下げるため100pxごと）
-        if (Math.floor(this.traveled / 100) !== Math.floor((this.traveled - distanceMoved) / 100)) {
-            console.log(`[FireBall] 更新: 移動距離=${this.traveled.toFixed(0)}, ターゲット数=${targets.length}, 攻撃力=${this.attackPower}, 残り射程=${(this.range - this.traveled).toFixed(0)}`);
-        }
+        
+        
 
         // ここで当たり判定を行い、当たったら HP を減らして弾を消す
         for (const target of targets) {
             if (this.checkCollision(target)) {
                 // 衝突情報の詳細表示
-                console.log(`[FireBall] 衝突検知: ターゲット=${target.emoji}, 攻撃力=${this.attackPower}, 所有者=${this.owner}`);
                 
                 // 重要: ここでtarget.status.takeDamageではなく、target.takeDamageを呼び出す
                 if (typeof target.takeDamage === 'function') {
-                    console.log(`[FireBall] takeDamageメソッドを直接呼び出します: ダメージ=${this.attackPower}`);
                     target.takeDamage(this.attackPower);
                 } else {
                     console.warn(`[FireBall] ターゲットにtakeDamageメソッドがありません。statusから呼び出します`);
                     target.status.takeDamage(this.attackPower);
                 }
                 
-                // ターゲットのHP確認
-                console.log(`[FireBall] 攻撃後のターゲットHP: ${target.status.hp}/${target.status.maxHP}`);
-                
                 // 衝突エフェクトを表示
                 this.createHitEffect();
                 
                 // 弾を消す
                 this.deactivate();
-                console.log(`[FireBall] 衝突により非アクティブ化`);
                 break; // 1つ当たれば処理終了
             }
         }
@@ -183,14 +169,12 @@ export class FireBall extends attackBase {
             this.active = false;
             
             // 実際の座標で射程距離エフェクトを表示して、その後に非表示化
-            console.log(`[FireBall] 射程距離(${this.range})に達したため消滅します。移動距離: ${this.traveled.toFixed(0)}`);
             
             // エフェクト表示 - 完全な非アクティブ化する前に表示
             this.createRangeEndEffect();
             
             // 少し遅延させて完全に非アクティブ化（エフェクトが表示される時間を確保）
             setTimeout(() => {
-                console.log(`[FireBall] 射程(${this.range})に達したため非アクティブ化`);
                 this.element.style.display = 'none';
             }, 50); // 50ミリ秒の遅延
         }
@@ -212,10 +196,6 @@ export class FireBall extends attackBase {
             bulletRect.right > targetRect.left &&
             bulletRect.top < targetRect.bottom &&
             bulletRect.bottom > targetRect.top;
-
-        if (isOverlap) {
-            console.log(`[FireBall] 衝突判定: 成功 - 弾(${bulletRect.left.toFixed(0)},${bulletRect.top.toFixed(0)}) ターゲット(${targetRect.left.toFixed(0)},${targetRect.top.toFixed(0)})`);
-        }
         
         return isOverlap;
     }
@@ -312,7 +292,6 @@ export class FireBall extends attackBase {
             }
         }, 300);
         
-        console.log(`[FireBall] 衝突エフェクト生成: 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), ダメージ=${this.attackPower}`);
     }
     
     // エフェクト生成中フラグ
@@ -322,7 +301,6 @@ export class FireBall extends attackBase {
     createRangeEndEffect() {
         // 重複防止 - 既にエフェクト生成中なら新たに生成しない
         if (this.#isCreatingEffect) {
-            console.log(`[FireBall] すでにエフェクト生成中のため、重複生成をスキップします`);
             return;
         }
         
@@ -406,7 +384,6 @@ export class FireBall extends attackBase {
                 }, 300);
             }, 10);
             
-            console.log(`[FireBall] 射程終了エフェクト生成: 位置(${this.x.toFixed(0)}, ${this.y.toFixed(0)}), 射程=${this.range}, 移動距離=${this.traveled.toFixed(0)}`);
         } catch (error) {
             console.error('[FireBall] エフェクト生成中にエラーが発生しました:', error);
             this.#isCreatingEffect = false;
