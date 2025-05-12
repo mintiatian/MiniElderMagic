@@ -176,8 +176,8 @@ export class PlayerBase extends Character {
      * @param {number} damage - 受けるダメージ量
      */
     takeDamage(damage) {
-        // ダメージを受ける（親クラスのstatusを使用）
-        this.status.takeDamage(damage);
+        // 親クラスのtakeDamageを呼び出す
+        super.takeDamage(damage);
         
         // ダメージエフェクト（一時的に赤くする）
         this.element.style.filter = 'brightness(2) sepia(1) hue-rotate(-50deg) saturate(7)';
@@ -185,13 +185,8 @@ export class PlayerBase extends Character {
             this.element.style.filter = 'none';
         }, 200);
         
-        // HPゲージを更新
+        // プレイヤー固有のHPゲージを更新
         this.playerHPGage.update(this.status.hp, this.status.maxHP);
-        
-        // ダメージテキストを表示（赤色で3秒間）
-        if (damage > 0) {
-            this.showFloatingText(`-${damage}`, 'red', 3000, -60);
-        }
     }
     
     // キャラクターが削除されるときに杖も削除

@@ -176,10 +176,54 @@ export class EnemyBase extends Character {
    * @param {number} damage - 受けるダメージ量
    */
   takeDamage(damage) {
-    // ダメージを受ける
+    // 重要: 直接コンソールに出力
+    console.log(`[DAMAGE] 敵(${this.emoji})がダメージを受けました: ${damage}, 現在HP=${this.status.hp}`);
+    
+    // ステータスへダメージを適用
     this.status.takeDamage(damage);
     
-    // ダメージエフェクト（一時的に赤くする）
+    // HPゲージの更新
+    this.hpGage.update(this.status.hp, this.status.maxHP);
+    
+    // ダメージテキストを表示 - 直接実装してオーバーライド
+    if (damage > 0 && this.parentElement) {
+      try {
+        // ダメージテキスト表示要素
+        const damageText = document.createElement('div');
+        damageText.textContent = `-${damage}`;
+        damageText.style.position = 'absolute';
+        damageText.style.fontSize = '28px';
+        damageText.style.fontWeight = 'bold';
+        damageText.style.color = '#ff3333';
+        damageText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.7)';
+        damageText.style.zIndex = '9999';
+        damageText.style.left = `${this.x}px`;
+        damageText.style.top = `${this.y - 30}px`;
+        damageText.style.transform = 'translate(-50%, -50%)';
+        
+        // 要素を追加
+        this.parentElement.appendChild(damageText);
+        console.log(`[DAMAGE] ダメージテキスト要素を追加: "${damageText.textContent}"`);
+        
+        // アニメーション
+        setTimeout(() => {
+          damageText.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
+          damageText.style.transform = 'translate(-50%, -100px)';
+          damageText.style.opacity = '0';
+        }, 10);
+        
+        // 一定時間後に削除
+        setTimeout(() => {
+          if (damageText.parentNode) {
+            damageText.parentNode.removeChild(damageText);
+          }
+        }, 800);
+      } catch (e) {
+        console.error(`[ERROR] ダメージテキスト表示中にエラー: ${e}`);
+      }
+    }
+    
+    // 追加のダメージエフェクト（一時的に赤くする）
     this.element.style.filter = 'brightness(2) sepia(1) hue-rotate(-50deg) saturate(7)';
     setTimeout(() => {
       this.element.style.filter = 'none';
@@ -187,6 +231,7 @@ export class EnemyBase extends Character {
     
     // HPが0以下になったらコインをドロップ
     if (this.status.hp <= 0 && !this.hasDroppedCoins) {
+      console.log(`[DAMAGE] 敵(${this.emoji})が倒れました! コインをドロップします`);
       this.dropCoins();
       this.hasDroppedCoins = true;
     }

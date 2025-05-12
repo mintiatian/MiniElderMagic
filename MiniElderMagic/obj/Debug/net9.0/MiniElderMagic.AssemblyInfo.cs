@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MiniElderMagic")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ff071d575fa0dac05853162675d3aefc3a0f19ea")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+be27b42b7f41823239c4fe3a6800616209740bb7")]
 [assembly: System.Reflection.AssemblyProductAttribute("MiniElderMagic")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MiniElderMagic")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

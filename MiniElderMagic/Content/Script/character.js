@@ -1,6 +1,7 @@
-import { Status } from './status.js';
+
 import { UIGage } from './UIGage.js';
-import { FireBall } from './fireBall.js'; // attackBase を継承したクラス
+import { FireBall } from './FireBall.js';
+import { Status } from './status.js';
 
 export class Character {
   /**
@@ -62,11 +63,6 @@ export class Character {
     if (this.status.hp <= 0 && !this.isFadingOut) {
       this.fadeOutAndRemove();
     }
-    
-    // ダメージテキストを表示
-    //if (damage > 0) {
-    //  this.showFloatingText(`-${damage}`, 'red', 3000, -50);
-    //}
   }
 
   /**
@@ -180,6 +176,23 @@ export class Character {
   }
   
   /**
+   * @desc ダメージを受けたときの処理
+   * @param {number} damage - 受けるダメージ量
+   */
+  takeDamage(damage) {
+    // statusオブジェクトにダメージを適用
+    this.status.takeDamage(damage);
+    
+    // HPゲージを更新
+    this.hpGage.update(this.status.hp, this.status.maxHP);
+    
+    // ダメージテキストを表示
+    if (damage > 0) {
+      this.showFloatingText(`-${damage}`, 'red', 3000, -50);
+    }
+  }
+  
+  /**
    * @desc HPを回復したときに回復量を表示
    * @param {number} amount - 回復量
    */
@@ -187,5 +200,24 @@ export class Character {
     if (amount > 0) {
       this.showFloatingText(`+${amount}`, 'lightgreen', 3000, -50);
     }
+  }
+  
+  /**
+   * @desc HPを回復する
+   * @param {number} amount - 回復量
+   */
+  heal(amount) {
+    // Statusオブジェクトの回復メソッドを呼び出し、実際に回復した量を取得
+    const healedAmount = this.status.heal(amount);
+    
+    // HPゲージを更新
+    this.hpGage.update(this.status.hp, this.status.maxHP);
+    
+    // 回復テキストを表示
+    if (healedAmount > 0) {
+      this.showFloatingText(`+${healedAmount}`, 'lightgreen', 3000, -50);
+    }
+    
+    return healedAmount;
   }
 }
