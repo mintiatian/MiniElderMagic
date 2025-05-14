@@ -28,44 +28,8 @@ export class FireBall extends attackBase {
     setOwner(owner) {
         this.owner = owner;
     }
-    /**
-     * @desc FireBallを安全に非アクティブ化し、要素を削除する
-     */
-    deactivate() {
-        // 既に非アクティブなら何もしない
-        if (!this.active) {
-            return;
-        }
-        
-        // アクティブフラグをfalseに設定
-        this.active = false;
-        
-        try {
-            // 要素が存在する場合は削除
-            if (this.element && this.element.parentNode) {
-                // 要素をフェードアウト
-                this.element.style.transition = 'opacity 0.2s ease';
-                this.element.style.opacity = '0';
-                
-                // 短い遅延後に要素を削除
-                setTimeout(() => {
-                    try {
-                        if (this.element && this.element.parentNode) {
-                            this.element.parentNode.removeChild(this.element);
-                            this.element = null;  // 参照をクリア
-                        }
-                    } catch (err) {
-                        console.warn('[FireBall] 要素削除中にエラーが発生しました:', err);
-                    }
-                }, 200);
-            }
-        } catch (err) {
-            console.error('[FireBall] deactivate中にエラーが発生しました:', err);
-            
-            // エラーが発生した場合でも、要素をnullに設定して参照を切る
-            this.element = null;
-        }
-    }
+
+
     // 攻撃力を設定するメソッドを追加
     setAttackPower(power) {
         const oldPower = this.attackPower;
@@ -176,7 +140,7 @@ export class FireBall extends attackBase {
             // 少し遅延させて完全に非アクティブ化（エフェクトが表示される時間を確保）
             setTimeout(() => {
                 this.element.style.display = 'none';
-            }, 50); // 50ミリ秒の遅延
+            }, 150); // 50ミリ秒の遅延
         }
     }
 
@@ -201,35 +165,24 @@ export class FireBall extends attackBase {
     }
 
     deactivate() {
-        // 既に非アクティブならスキップ
-        if (!this.active) {
-            return;
-        }
-        
-        // まず即座に非アクティブフラグを設定して重複処理を防止
+        if (!this.active) return;
         this.active = false;
-        
-        // 安全チェック - 要素があるか確認
+
         if (!this.element) {
             console.warn('[FireBall] deactivate: 要素が見つかりません');
             return;
         }
-        
-        // フェードアウトによる非表示
+
         this.element.style.transition = 'opacity 0.1s ease-out';
         this.element.style.opacity = '0';
-        
-        // 少し遅延して完全に非表示にする
+
         setTimeout(() => {
-            if (this.element) {
-                this.element.style.display = 'none';
-                // トランジションをリセット
-                this.element.style.transition = '';
-                this.element.style.opacity = '1';
+            if (this.element && this.element.parentNode) {
+                this.element.parentNode.removeChild(this.element);
             }
+            this.element = null;
         }, 100);
     }
-
     updateElementPosition() {
         this.element.style.left = this.x + 'px';
         this.element.style.top = this.y + 'px';
