@@ -164,6 +164,10 @@ export class FireBall extends attackBase {
         return isOverlap;
     }
 
+    applyDirectionStyle(element, dx, dy) {
+        // 何もしない（回転禁止）
+    }
+
     deactivate() {
         if (!this.active) return;
         this.active = false;

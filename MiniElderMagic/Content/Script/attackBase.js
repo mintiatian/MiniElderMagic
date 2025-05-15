@@ -46,8 +46,9 @@ export class attackBase {
         
         // 方向に基づいて回転角度を計算
         const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        
-        // 要素に回転を適用
-        element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+        // 元の transform がすでに設定されている場合、translate を壊さないようにするにはこうする
+        element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;  // FireBall 側も合わせて設定していればOK
+
     }
 }

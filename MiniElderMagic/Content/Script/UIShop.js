@@ -103,6 +103,42 @@
         });
         
         this.parentElement.appendChild(this.container);
+
+
+
+        // 「何も買わない」ボタン
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = '何も買わない';
+        cancelButton.style.marginTop = '25px';
+        cancelButton.style.padding = '10px 20px';
+        cancelButton.style.backgroundColor = 'rgba(100, 100, 100, 0.8)';
+        cancelButton.style.color = 'white';
+        cancelButton.style.border = '2px solid gray';
+        cancelButton.style.borderRadius = '5px';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontFamily = 'Arial, sans-serif';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.transition = 'all 0.3s';
+
+        cancelButton.addEventListener('mouseover', () => {
+            cancelButton.style.backgroundColor = 'rgba(130, 130, 130, 0.9)';
+            cancelButton.style.transform = 'scale(1.05)';
+        });
+
+        cancelButton.addEventListener('mouseout', () => {
+            cancelButton.style.backgroundColor = 'rgba(100, 100, 100, 0.8)';
+            cancelButton.style.transform = 'scale(1)';
+        });
+
+        cancelButton.addEventListener('click', () => {
+            this.hide();
+            this.showMessage('ショップを閉じました。', 'white');
+
+            // 購入しなかったけど次のステージへ進むための処理（カウントダウン付き）
+            this.completeTransaction();
+        });
+
+        this.container.appendChild(cancelButton);
     }
     
     /**
@@ -112,6 +148,12 @@
         this.isVisible = true;
         this.container.style.display = 'flex';
         this.updateCoinDisplay();
+
+        // ★★★ ここで既存のメッセージを削除しておく ★★★
+        const existingMsg = this.container.querySelector('.shop-message');
+        if (existingMsg) {
+            existingMsg.remove();
+        }
         
         // 開くときにアニメーションを追加
         this.container.style.opacity = '0';
