@@ -30,4 +30,5 @@ export class PlayerStatus {
   setStage(stageNumber) {
     this.stage = stageNumber;
   }
+  
 }

@@ -4,15 +4,42 @@
      * @param {Object} player - プレイヤーオブジェクト
      */
     constructor(parentElement, player) {
+        this.isCountingDown = false;      // ← 追加
         this.parentElement = parentElement;
         this.player = player;
         this.isVisible = false;
         this.shopItems = [
-            { name: "MHPを30増やす", cost: 50, effect: this.increaseMHP.bind(this) },
-            { name: "攻撃力を5増やす", cost: 50, effect: this.increaseAttack.bind(this) },
-            { name: "火球射程を50増やす", cost: 40, effect: this.increaseFireRange.bind(this) },
-            { name: "全回復", cost: 10, effect: this.fullRecover.bind(this) }
+            // HP 系
+            { name: "最大HPを30増やす", cost: 50, value: 30, effect: () => this.increaseMHP(30) },
+            { name: "最大HPを20増やす", cost: 40, value: 20, effect: () => this.increaseMHP(20) },
+            { name: "HPを50回復", cost: 30, value: 50, effect: () => this.player.heal(50) },
+            { name: "HP全回復", cost: 10, value: null, effect: () => this.fullRecover() },
+
+            // MP 系
+            { name: "最大MPを20増やす", cost: 40, value: 20, effect: () => this.player.status.setMaxMP(this.player.status.maxMP + 20) },
+            { name: "MPを30回復", cost: 25, value: 30, effect: () => this.player.status.recoverMP(30) },
+            { name: "MPを全回復", cost: 15, value: null, effect: () => { this.player.status.mp = this.player.status.maxMP } },
+
+            // 攻撃・火球系
+            { name: "攻撃力を5増やす", cost: 50, value: 5, effect: () => this.increaseAttack(5) },
+            { name: "攻撃力を3増やす", cost: 30, value: 3, effect: () => this.increaseAttack(3) },
+            { name: "火球射程を50増やす", cost: 40, value: 50, effect: () => this.increaseFireRange(50) },
+            { name: "火球射程を30増やす", cost: 25, value: 30, effect: () => this.increaseFireRange(30) },
+
+            // 移動系
+            { name: "移動速度を0.5上げる", cost: 30, value: 0.5, effect: () => this.player.status.setSpeed(this.player.status.speed + 0.5) },
+
+            // コイン・報酬系
+            { name: "コインを20枚手に入れる", cost: 0, value: 20, effect: () => this.player.playerstatus.addCoins(20) },
+
+            // ステージ進行
+            { name: "ステージを1スキップ", cost: 70, value: 1, effect: () => this.player.playerstatus.nextStage() },
+
+            // おまけ演出系（遊び要素）
+            { name: "✨後光がさす（5秒）", cost: 5, value: null, effect: () => this.player.showFloatingText("✨後光！", 'gold', 5000, -80) }
         ];
+
+
         
         // ショップのコンテナ要素
         this.container = document.createElement('div');
@@ -140,6 +167,13 @@
 
         this.container.appendChild(cancelButton);
     }
+
+
+    getRandomShopItems(count = 3) {
+        const shuffled = this.shopItems.sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
+    }
+
     
     /**
      * @desc ショップを表示する
@@ -149,35 +183,58 @@
         this.container.style.display = 'flex';
         this.updateCoinDisplay();
 
-        // ★★★ ここで既存のメッセージを削除しておく ★★★
+        // メッセージを消去
         const existingMsg = this.container.querySelector('.shop-message');
-        if (existingMsg) {
-            existingMsg.remove();
-        }
-        
-        // 開くときにアニメーションを追加
-        this.container.style.opacity = '0';
-        this.container.style.transform = 'translate(-50%, -50%) scale(0.9)';
-        this.container.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        
-        // リフロー後にアニメーション
-        setTimeout(() => {
-            this.container.style.opacity = '1';
-            this.container.style.transform = 'translate(-50%, -50%) scale(1)';
-        }, 50);
-        
-        // ショップが開いたときに全ての商品ボタンをリセット
-        const itemButtons = this.itemList.querySelectorAll('button');
-        itemButtons.forEach(button => {
-            button.style.opacity = '1';
-            button.style.transform = 'scale(1)';
-            button.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
-            button.style.border = '2px solid gold';
-            button.style.boxShadow = 'none';
-            button.style.pointerEvents = 'auto'; // クリック可能に
+        if (existingMsg) existingMsg.remove();
+
+        // 商品一覧を一旦クリア
+        this.itemList.innerHTML = '';
+
+        // ランダムな3商品を選出
+        const selectedItems = this.getRandomShopItems(3);
+
+        selectedItems.forEach((item, index) => {
+            const itemContainer = document.createElement('div');
+            itemContainer.style.position = 'relative';
+            itemContainer.style.width = '100%';
+            itemContainer.dataset.index = index.toString();
+
+            const itemButton = document.createElement('button');
+            itemButton.textContent = `${item.name} - ${item.cost}コイン`;
+            itemButton.style.padding = '12px';
+            itemButton.style.width = '100%';
+            itemButton.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
+            itemButton.style.color = 'white';
+            itemButton.style.border = '2px solid gold';
+            itemButton.style.borderRadius = '5px';
+            itemButton.style.cursor = 'pointer';
+            itemButton.style.transition = 'all 0.3s';
+            itemButton.style.fontSize = '16px';
+            itemButton.style.fontFamily = 'Arial, sans-serif';
+            itemButton.style.textAlign = 'center';
+
+            itemButton.addEventListener('mouseover', () => {
+                itemButton.style.backgroundColor = 'rgba(100, 100, 100, 0.8)';
+                itemButton.style.transform = 'translateY(-2px)';
+                itemButton.style.boxShadow = '0 5px 10px rgba(0, 0, 0, 0.3)';
+            });
+
+            itemButton.addEventListener('mouseout', () => {
+                itemButton.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
+                itemButton.style.transform = 'translateY(0)';
+                itemButton.style.boxShadow = 'none';
+            });
+
+            itemButton.addEventListener('click', () => {
+                this.purchaseItemDirect(item, itemButton);
+            });
+
+            itemContainer.appendChild(itemButton);
+            this.itemList.appendChild(itemContainer);
         });
     }
-    
+
+
     /**
      * @desc ショップを非表示にする
      */
@@ -198,69 +255,41 @@
      * @param {number} index - 購入する商品のインデックス
      * @returns {boolean} - 購入が成功したかどうか
      */
-    purchaseItem(index) {
-        const item = this.shopItems[index];
-        
-        // コインが足りるか確認
+    purchaseItemDirect(item, button) {
         if (this.player.playerstatus.coins >= item.cost) {
-            // 効果を適用
             item.effect();
-            
-            // コインを減らす
             this.player.playerstatus.coins -= item.cost;
             this.updateCoinDisplay();
-            
-            // 購入成功メッセージ
             this.showMessage(`${item.name}を購入しました！`, 'green');
-            
-            // すべての商品ボタンを取得
-            const itemButtons = this.itemList.querySelectorAll('button');
-            
-            // 選択されなかった商品を非表示にする
-            itemButtons.forEach((button, buttonIndex) => {
-                if (buttonIndex !== index) {
-                    // 選択されなかった商品をフェードアウト
-                    button.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    button.style.opacity = '0';
-                    button.style.transform = 'scale(0.8)';
-                    button.style.pointerEvents = 'none'; // クリック不可に
-                } else {
-                    // 選択された商品を強調表示
-                    button.style.transition = 'all 0.3s ease';
-                    button.style.backgroundColor = 'rgba(50, 120, 50, 0.9)';
-                    button.style.border = '2px solid lime';
-                    button.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
-                    button.style.transform = 'scale(1.05)';
-                    button.style.pointerEvents = 'none'; // クリック不可に
+
+            // 選ばれなかったボタンをフェード
+            const allButtons = this.itemList.querySelectorAll('button');
+            allButtons.forEach(b => {
+                if (b !== button) {
+                    b.style.opacity = '0';
+                    b.style.transform = 'scale(0.8)';
+                    b.style.pointerEvents = 'none';
                 }
             });
-            
-            // ショップを閉じてカウントダウン開始
+
+            // 購入ボタンは強調
+            button.style.backgroundColor = 'rgba(50, 120, 50, 0.9)';
+            button.style.border = '2px solid lime';
+            button.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
+            button.style.transform = 'scale(1.05)';
+            button.style.pointerEvents = 'none';
+
+            // トランザクション完了へ
             setTimeout(() => {
                 this.hide();
                 this.completeTransaction();
-                
-                // 次回のために全ての商品ボタンをリセット
-                setTimeout(() => {
-                    itemButtons.forEach(button => {
-                        button.style.opacity = '1';
-                        button.style.transform = 'scale(1)';
-                        button.style.backgroundColor = 'rgba(70, 70, 70, 0.8)';
-                        button.style.border = '2px solid gold';
-                        button.style.boxShadow = 'none';
-                        button.style.pointerEvents = 'auto'; // クリック可能に戻す
-                    });
-                }, 1000); // ショップが閉じた後に実行
             }, 1000);
-            
-            return true;
         } else {
-            // コイン不足メッセージ
             this.showMessage('コインが足りません！', 'red');
-            return false;
         }
     }
-    
+
+
     /**
      * @desc メッセージを表示する
      * @param {string} text - 表示するメッセージ
@@ -288,6 +317,7 @@
      * @desc 購入完了後の処理（カウントダウン後に次のステージへ）
      */
     completeTransaction() {
+        this.isCountingDown = true;      // ← カウント開始前に立てる
         // カウントダウン表示用の要素を作成
         const countdownContainer = document.createElement('div');
         countdownContainer.style.position = 'absolute';
@@ -331,7 +361,7 @@
             // カウントが0になったら次のステージへ
             if (count <= 0) {
                 clearInterval(countInterval);
-                
+                this.isCountingDown = false;   // ← カウント終了で倒す
                 // カウントダウン表示を削除
                 if (countdownContainer.parentNode) {
                     countdownContainer.parentNode.removeChild(countdownContainer);
@@ -346,93 +376,86 @@
     
     // 各アイテムの効果
     
+
     /**
      * @desc 最大HPを増やす
      */
-    increaseMHP() {
+    increaseMHP(amount) {
         const currentMaxHP = this.player.status.maxHP;
-        this.player.status.setMaxHP(currentMaxHP + 30, true);
-        // HPゲージを更新
+        this.player.status.setMaxHP(currentMaxHP + amount, true);
         this.player.playerHPGage.update(this.player.status.hp, this.player.status.maxHP);
     }
+
     
     /**
      * @desc 攻撃力を増やす
      */
-    increaseAttack() {
+    increaseAttack(amount) {
         const currentAttack = this.player.status.attack;
-        this.player.status.setAttack(currentAttack + 5);
+        this.player.status.setAttack(currentAttack + amount);
     }
+
     
     /**
      * @desc 火球の射程距離を増やす
      */
-    increaseFireRange() {
+    increaseFireRange(amount) {
         const currentRange = this.player.status.fireRange;
-            const increaseAmount = 50;
-            const newRange = currentRange + increaseAmount;
-            
-            // ステータスの射程距離を更新
-            this.player.status.setFireRange(newRange);
-            
-            // 詳細なログを出力
-            console.log(`[Shop] 火球射程距離を増加: ${currentRange} → ${newRange} (+${increaseAmount})`);
-            
-            // 確認のため、ユーザーにフィードバックを表示
-            this.player.showFloatingText(`火球射程 +${increaseAmount}`, 'orange', 2000, -70);
-            
-            // 射程距離増加エフェクト（プレイヤーの周りに小さな火球を表示）
-            this.createRangeUpgradeEffect(increaseAmount);
-        }
+        const newRange = currentRange + amount;
+        this.player.status.setFireRange(newRange);
+        console.log(`[Shop] 火球射程距離を増加: ${currentRange} → ${newRange} (+${amount})`);
+        this.player.showFloatingText(`火球射程 +${amount}`, 'orange', 2000, -70);
+        this.createRangeUpgradeEffect(amount);
+    }
         
-        /**
-         * @desc 射程距離アップグレード時のエフェクトを生成
-         * @param {number} amount - 増加した射程距離
-         */
-        createRangeUpgradeEffect(amount) {
-            // プレイヤーの周りに複数の小さな火球エフェクトを表示
-            const count = 8; // エフェクトの数
-            const radius = 50; // プレイヤーからの距離
+    /**
+     * @desc 射程距離アップグレード時のエフェクトを生成
+     * @param {number} amount - 増加した射程距離
+     */s
+    createRangeUpgradeEffect(amount) {
+        // プレイヤーの周りに複数の小さな火球エフェクトを表示
+        const count = 8; // エフェクトの数
+        const radius = 50; // プレイヤーからの距離
+        
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 / count) * i;
+            const x = this.player.x + Math.cos(angle) * radius;
+            const y = this.player.y + Math.sin(angle) * radius;
             
-            for (let i = 0; i < count; i++) {
-                const angle = (Math.PI * 2 / count) * i;
-                const x = this.player.x + Math.cos(angle) * radius;
-                const y = this.player.y + Math.sin(angle) * radius;
+            // エフェクト要素を作成
+            const effect = document.createElement('div');
+            effect.textContent = '🔥';
+            effect.style.position = 'absolute';
+            effect.style.left = `${x}px`;
+            effect.style.top = `${y}px`;
+            effect.style.fontSize = '20px';
+            effect.style.transform = 'translate(-50%, -50%) scale(0.5)';
+            effect.style.opacity = '0.7';
+            effect.style.zIndex = '5';
+            
+            // 親要素に追加
+            this.container.parentElement.appendChild(effect);
+            
+            // 外側に拡散するアニメーション
+            setTimeout(() => {
+                effect.style.transition = `transform 1s ease, opacity 1s ease, left 1s ease, top 1s ease`;
+                const newRadius = radius + 100 + Math.random() * 50;
+                const newX = this.player.x + Math.cos(angle) * newRadius;
+                const newY = this.player.y + Math.sin(angle) * newRadius;
                 
-                // エフェクト要素を作成
-                const effect = document.createElement('div');
-                effect.textContent = '🔥';
-                effect.style.position = 'absolute';
-                effect.style.left = `${x}px`;
-                effect.style.top = `${y}px`;
-                effect.style.fontSize = '20px';
-                effect.style.transform = 'translate(-50%, -50%) scale(0.5)';
-                effect.style.opacity = '0.7';
-                effect.style.zIndex = '5';
-                
-                // 親要素に追加
-                this.container.parentElement.appendChild(effect);
-                
-                // 外側に拡散するアニメーション
-                setTimeout(() => {
-                    effect.style.transition = `transform 1s ease, opacity 1s ease, left 1s ease, top 1s ease`;
-                    const newRadius = radius + 100 + Math.random() * 50;
-                    const newX = this.player.x + Math.cos(angle) * newRadius;
-                    const newY = this.player.y + Math.sin(angle) * newRadius;
-                    
-                    effect.style.left = `${newX}px`;
-                    effect.style.top = `${newY}px`;
-                    effect.style.transform = 'translate(-50%, -50%) scale(0.1)';
-                    effect.style.opacity = '0';
-                }, i * 50); // 少し遅延させて順番に拡散
-                
-                // 一定時間後に削除
-                setTimeout(() => {
-                    if (effect.parentNode) {
-                        effect.parentNode.removeChild(effect);
-                    }
-                }, 1000 + i * 50);
-            }
+                effect.style.left = `${newX}px`;
+                effect.style.top = `${newY}px`;
+                effect.style.transform = 'translate(-50%, -50%) scale(0.1)';
+                effect.style.opacity = '0';
+            }, i * 50); // 少し遅延させて順番に拡散
+            
+            // 一定時間後に削除
+            setTimeout(() => {
+                if (effect.parentNode) {
+                    effect.parentNode.removeChild(effect);
+                }
+            }, 1000 + i * 50);
+        }
     }
     
     /**

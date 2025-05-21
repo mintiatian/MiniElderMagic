@@ -9,7 +9,13 @@ export class Stair extends Character {
    */
   constructor(x, y, parentElement) {
     // ステップを0に設定して動かないようにする
-    super(x, y, 0, '🪜', parentElement);
+    // 👇 まずは「閉鎖中」アイコンで生成
+    super(x, y, 0, '🚪', parentElement);   // 🚪=封鎖アイコン
+    
+    this.activeEmoji   = '🪜';  // 解放後
+    this.inactiveEmoji = '🚪';  // 封鎖中
+    this.setActive(false);      // ⭐ 起動直後は必ず封鎖
+    this.isActive      = false; // 初期は封鎖
     
     // 親要素の参照を明示的に保存
     this.parentContainer = parentElement;
@@ -28,6 +34,14 @@ export class Stair extends Character {
     // 階段に接触したかどうか判定するためのフラグ
     this.touched = false;
   }
+
+  /** 階段を有効／無効に切り替え */
+  setActive(flag) {
+    this.isActive        = flag;
+    this.element.textContent = flag ? this.activeEmoji : this.inactiveEmoji;
+    // 視覚的にロック中と分かるよう半透明に
+    this.element.style.opacity = flag ? '1' : '0.5';
+  }
   
   /**
    * @desc 階段は静的なのでupdateは必要最小限
@@ -43,6 +57,7 @@ export class Stair extends Character {
    * @returns {boolean} - 接触しているかどうか
    */
   checkCollision(player) {
+    if (!this.isActive) return false; // ロック中は無視
     const stairRect = this.element.getBoundingClientRect();
     const playerRect = player.element.getBoundingClientRect();
     
@@ -63,15 +78,14 @@ export class Stair extends Character {
    */
   onTouch(player) {
     // まだ触れていない場合のみtrue
-    if (!this.touched) {
+    // 👇 ロック中 or 既に触っていたらスルー
+    if (!this.isActive || this.touched) return false;
+      // 以降は“階段が解放されて初タッチ”の時だけ
       this.touched = true;
       
       // エフェクト表示
       this.showLevelUpEffect();
-      
       return true;
-    }
-    return false;
   }
   
   /**

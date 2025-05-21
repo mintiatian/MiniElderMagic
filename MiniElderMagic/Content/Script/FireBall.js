@@ -37,6 +37,10 @@ export class FireBall extends attackBase {
     }
 
     fire(dx, dy) {
+
+        //if (player.status.mp < fireCost) return;
+        //player.status.useMP(fireCost);
+        
         this.active = true;
         this.dx = dx;
         this.dy = dy;

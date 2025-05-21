@@ -171,6 +171,7 @@ export class PlayerBase extends Character {
             // FireBall の active が false になっていれば取り除く
             return fireBall.active;
         });
+        
     }
     
     // 最後に押された方向を更新するメソッド

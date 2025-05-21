@@ -177,6 +177,7 @@
       accumulatedTime -= FRAME_TIME;
     }
     requestAnimationFrame(gameLoop);
+
   }
 
   // ゲームエリア内のすべてのCoinを探す
@@ -253,9 +254,13 @@
   const enemyElementMap = new Map();
   
   function updateGame() {
-    // プレイヤーの入力状態をセット & 更新
-    wizard.setKeyState(pressedKeys);
-    wizard.update();
+    
+    // ショップ表示中はプレイヤーの移動／攻撃を無効化
+    if (!shop.isVisible && !shop.isCountingDown) {
+      // 普通に入力を受け付けて更新
+      wizard.setKeyState(pressedKeys);
+      wizard.update();
+    }
   
     // 各敵にプレイヤーの参照を設定し、更新
     stageManager.enemies.forEach(enemy => {
@@ -316,6 +321,7 @@
         if (element.textContent !== '🧙' && // プレイヤーでない
             element.textContent !== '🪙' && // コインでない
             element.textContent !== '🪜' && // 階段でない
+                element.textContent !== '🚪' &&
             !stageManager.enemies.some(e => e.element === element)) { // 現在の敵リストにない
           
           // 火球(🔥)または杖(🪄)の場合、タグ付けして後でクリーンアップ
@@ -416,11 +422,10 @@
     
     // 現在の敵リストを更新
     previousLivingEnemies = [...currentEnemies];
-    
-    // 全ての敵が倒されていて、階段が表示されていない場合は階段を表示
-    if (stageManager.areAllEnemiesDefeated() && !stair.element.style.visibility) {
-      stair.element.style.visibility = 'visible';
-    }
+
+    // 敵が残っているかどうかで階段の状態を更新
+    const cleared = stageManager.areAllEnemiesDefeated();
+    stair.setActive(cleared);
     
     // 階段の更新と接触判定
     stair.update();
