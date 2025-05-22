@@ -132,7 +132,8 @@
         // プレイヤーのステータスデータを取得
         const statusData = [
             { name: 'HP', value: `${this.player.status.hp} / ${this.player.status.maxHP}`, color: 'lightgreen' },
-            { name: 'MP', value: `${this.player.status.mp} / ${this.player.status.maxMP}`, color: 'lightblue' },
+            { name: 'MP', value: `${Math.floor(this.player.status.mp)} / ${this.player.status.maxMP}`, color: 'lightblue' },
+            { name: 'MP自動回復', value: `${this.player.status.mpregene}`, color: 'lightblue' },
             { name: '攻撃力', value: this.player.status.attack, color: 'salmon' },
             { name: '火球射程', value: `${this.player.status.fireRange}`, color: 'orange', highlight: true },
             { name: '移動速度', value: this.player.status.speed, color: 'lightyellow' },

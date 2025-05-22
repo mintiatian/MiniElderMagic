@@ -60,8 +60,6 @@
   // HUDの生成
   const hud = new UIHud(gameArea);
   
-  // ショップの生成
-  const shop = new UIShop(gameArea, wizard);
   
   // ステータス画面の生成
   const statusUI = new UIStatus(gameArea, wizard);
@@ -80,6 +78,8 @@
   // 階段を生成
   const stair = new Stair(500, 400, gameArea);
   stair.draw();
+  // ショップの生成
+  const shop = new UIShop(gameArea, wizard,stair);
 
   // ショップ完了イベントのリスナー（一度だけ登録）
   document.addEventListener('shopCompleted', () => {

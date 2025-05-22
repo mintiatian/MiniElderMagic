@@ -75,15 +75,22 @@ export class PlayerBase extends Character {
         
         // 左クリック時、新しい弾を生成して発射する
         document.addEventListener('click', this.clickHandler);
-            }
+    }
             
-            /**
-             * プレイヤークリックイベント処理
-             * @param {MouseEvent} evt - クリックイベント
-             */
-            onPlayerClick(evt) {
+    /**
+     * プレイヤークリックイベント処理
+     * @param {MouseEvent} evt - クリックイベント
+     */
+    onPlayerClick(evt) {
         // プレイヤーのHPが0以下なら攻撃できない
         if (this.status.hp <= 0) {
+            return;
+        }
+        if (this.status.mp >= 5) {
+            this.status.useMP(5);
+            // 発射処理…
+        }
+        else{
             return;
         }
         
@@ -134,7 +141,8 @@ export class PlayerBase extends Character {
         // 方向ベクトルを初期化
         let dx = 0;
         let dy = 0;
-    
+
+        this.status.recoverMP(0.01);
         // 押されているキーに基づいて方向ベクトルを更新
         if (this.keys['w']) dy -= 1; // 上
         if (this.keys['s']) dy += 1; // 下

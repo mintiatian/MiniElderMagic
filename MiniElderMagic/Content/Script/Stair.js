@@ -16,7 +16,7 @@ export class Stair extends Character {
     this.inactiveEmoji = '🚪';  // 封鎖中
     this.setActive(false);      // ⭐ 起動直後は必ず封鎖
     this.isActive      = false; // 初期は封鎖
-    
+    this.waitingForExit = false;   // ★追加: 判定から抜けるまでブロック
     // 親要素の参照を明示的に保存
     this.parentContainer = parentElement;
     
@@ -67,7 +67,12 @@ export class Stair extends Character {
       stairRect.right > playerRect.left &&
       stairRect.top < playerRect.bottom &&
       stairRect.bottom > playerRect.top;
-    
+
+    // 当たり判定から離脱したら再タッチを許可
+    if (!isOverlap && this.waitingForExit) {
+      this.waitingForExit = false;
+      this.touched = false;
+    }
     return isOverlap;
   }
   
@@ -79,7 +84,7 @@ export class Stair extends Character {
   onTouch(player) {
     // まだ触れていない場合のみtrue
     // 👇 ロック中 or 既に触っていたらスルー
-    if (!this.isActive || this.touched) return false;
+    if (!this.isActive || this.touched || this.waitingForExit) return false;
       // 以降は“階段が解放されて初タッチ”の時だけ
       this.touched = true;
       

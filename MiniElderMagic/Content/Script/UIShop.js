@@ -3,10 +3,12 @@
      * @param {HTMLElement} parentElement - ショップUIを表示する親要素
      * @param {Object} player - プレイヤーオブジェクト
      */
-    constructor(parentElement, player) {
+    constructor(parentElement, player,stair) {
         this.isCountingDown = false;      // ← 追加
         this.parentElement = parentElement;
         this.player = player;
+        this.stair = stair; // ← 追加
+        
         this.isVisible = false;
         this.shopItems = [
             // HP 系
@@ -36,7 +38,9 @@
             { name: "ステージを1スキップ", cost: 70, value: 1, effect: () => this.player.playerstatus.nextStage() },
 
             // おまけ演出系（遊び要素）
-            { name: "✨後光がさす（5秒）", cost: 5, value: null, effect: () => this.player.showFloatingText("✨後光！", 'gold', 5000, -80) }
+            { name: "✨後光がさす（5秒）", cost: 5, value: null, effect: () => this.player.showFloatingText("✨後光！", 'gold', 5000, -80) },
+
+            { name: "MPリジェネ +0.002", cost: 35, value: 0.002, effect: () => this.increaseMPRegene(0.002) },
         ];
 
 
@@ -166,9 +170,69 @@
         });
 
         this.container.appendChild(cancelButton);
+
+        // 「ちょっとまって」ボタン
+        const waitButton = document.createElement('button');
+        waitButton.textContent = 'ちょっとまって';
+        waitButton.style.marginTop = '10px';
+        waitButton.style.padding = '10px 20px';
+        waitButton.style.backgroundColor = 'rgba(60, 60, 60, 0.8)';
+        waitButton.style.color = 'white';
+        waitButton.style.border = '2px solid gray';
+        waitButton.style.borderRadius = '5px';
+        waitButton.style.cursor = 'pointer';
+        waitButton.style.fontFamily = 'Arial, sans-serif';
+        waitButton.style.fontSize = '16px';
+        waitButton.style.transition = 'all 0.3s';
+
+        waitButton.addEventListener('mouseover', () => {
+            waitButton.style.backgroundColor = 'rgba(90, 90, 90, 0.9)';
+            waitButton.style.transform = 'scale(1.05)';
+        });
+
+        waitButton.addEventListener('mouseout', () => {
+            waitButton.style.backgroundColor = 'rgba(60, 60, 60, 0.8)';
+            waitButton.style.transform = 'scale(1)';
+        });
+
+        waitButton.addEventListener('click', () => {
+            this.hide();
+            this.showMessage('後でまた来よう…', 'gray');
+            // ステージ遷移は行わない
+
+            // ✅ 「一度離脱するまで再タッチ不可」にする
+            if (this.stair) {
+                this.stair.waitingForExit = true;   // ← true に変更
+                // touched は Stair.onTouch() が立てたままにしておく
+            }
+        });
+
+        this.container.appendChild(waitButton);
     }
 
 
+
+
+    /**
+     * @desc MP 自然回復量を増やす
+     * @param {number} amount - 増やす値
+     */
+    increaseMPRegene(amount) {
+        const before = this.player.status.mpregene;
+        this.player.status.mpregene += amount;
+
+        // フローティングテキストで可視化
+        this.player.showFloatingText(
+            `MPリジェネ +${amount.toFixed(3)}`,
+            'lightblue',
+            2000,
+            -70
+        );
+
+        console.log(`[Shop] mpregene: ${before} → ${this.player.status.mpregene}`);
+    }
+    
+    
     getRandomShopItems(count = 3) {
         const shuffled = this.shopItems.sort(() => 0.5 - Math.random());
         return shuffled.slice(0, count);
@@ -372,6 +436,9 @@
                 document.dispatchEvent(event);
             }
         }, 1000);
+
+
+
     }
     
     // 各アイテムの効果

@@ -11,6 +11,7 @@ export class Status {
   constructor(hp = 100, mp = 50, speed = 3, attack = 10, maxHP = null, maxMP = null, fireRange = 350) {
     this.hp = hp;
     this.mp = mp;
+    this.mpregene = 0.001;
     this.speed = speed;
     this.attack = attack;
     this.maxHP = maxHP !== null ? maxHP : hp; // maxHPが指定されなければhpと同じ値を設定
@@ -66,6 +67,14 @@ export class Status {
    */
   recoverMP(amount) {
     this.mp += amount;
+    // 最大MPを超えないように調整
+    if (this.mp > this.maxMP) {
+      this.mp = this.maxMP;
+    }
+  }
+
+  regeneMP() {
+    this.mp += this.mpregene;
     // 最大MPを超えないように調整
     if (this.mp > this.maxMP) {
       this.mp = this.maxMP;
