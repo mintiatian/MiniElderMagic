@@ -8,6 +8,9 @@ import {UIStatus} from './UI/UIStatus.js'; // ステータス画面クラスを�
 import {UIDebug} from './UI/UIDebug.js'; // デバッグ画面クラスをインポート
 import {UIMagic} from './UI/UIMagic.js';
 
+import {Camera}  from './Camera.js';
+import {GameConfig} from './Config.js';
+
 import {
     EnemyDataTable,
     enemyDataTable,
@@ -49,7 +52,8 @@ export class GameMain {
         /* ───── 基本セットアップ ───── */
 
         this.gameArea = parentElement;
-
+        /* === カメラ初期化 (#game-area を渡す) === */
+        this.camera = new Camera(this.gameArea);
         /* ───── 非同期テーブル読込 ───── */
         const urls = {
             magic: 'https://docs.google.com/spreadsheets/d/14KPqmm0KQ-wlcgV-WMGqlqIwCCoz94hI8InyBMPmJdA/export?format=csv',
@@ -95,10 +99,6 @@ export class GameMain {
         this.statusUI = new UIStatus(this.gameArea, this.wizard);
         // デバッグ画面の生成
         const debugUI = new UIDebug(this.gameArea, this.wizard);
-
-        // ショップの生成
-        //const shop = new UIShop(this.gameArea, this.wizard, stair);
-
 
         this.magicUI = new UIMagic(this.gameArea, this.wizard);
         const itemList = new UIItemList(this.gameArea, this.wizard);
@@ -235,7 +235,10 @@ export class GameMain {
     }
 
     updateGame(delta) {
-
+        /* 既存のキャラ更新ループの後ろ（最終行近く）に追加 */
+        /* プレイヤーを追ってカメラ位置を更新 */
+        if(this.wizard) this.camera.update(this.wizard);
+        
         // 登録したpawnsがある時
         while (this.AddNewPawns.length > 0) {
             const ch = this.AddNewPawns.shift();   // 先頭を取り出してキューから削除

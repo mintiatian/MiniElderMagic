@@ -88,17 +88,20 @@ export class Wizard extends CharacterBase {
         document.addEventListener('mousedown', this.mouseDownHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
 
-        // マウス位置追跡
+        /* ===== ビューポート → ワールド座標へ変換 ===== */
         this.mouseMoveHandler = (evt) => {
-
-            const playerCenter = this.getPlayerCenter();
-
+            // #game-area（＝this.element.parentElement）のスクリーン位置
+            const containerRect = this.element.parentElement.getBoundingClientRect();
+            // 補正後マウス座標（ワールド基準）
+            const mouseXWorld = evt.clientX - containerRect.left;
+            const mouseYWorld = evt.clientY - containerRect.top;
+            const playerCenter = this.getPlayerCenter();   // こちらもワールド座標
             // マウス方向に向けて回転
-            const dx = evt.clientX - playerCenter.x;
-            const dy = evt.clientY - playerCenter.y;
-
-            this.mouseX = evt.clientX;
-            this.mouseY = evt.clientY;
+            const dx = mouseXWorld - playerCenter.x;
+            const dy = mouseYWorld - playerCenter.y;
+            // 次フレーム用に保持
+            this.mouseX = mouseXWorld;
+            this.mouseY = mouseYWorld;
 
             this.radian = Math.atan2(dy, dx);
             this.setDir(this.radian);

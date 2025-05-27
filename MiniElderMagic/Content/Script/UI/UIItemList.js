@@ -95,7 +95,13 @@ export class UIItemList extends UIBase {
         });
         this.element.appendChild(this.listWrapper);
 
-        parentElement.appendChild(this.element);
+        //parentElement.appendChild(this.element);
+
+
+        document.body.appendChild(this.element);
+        this.element.style.display = 'none';
+        this.element.style.position = 'fixed';     // カメラに流されない
+        this.element.style.zIndex  = 1000;         // ゲーム画より前面
         this.hide();
     }
 

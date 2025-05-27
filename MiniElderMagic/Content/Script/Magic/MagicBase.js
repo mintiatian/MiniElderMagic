@@ -1,9 +1,10 @@
 ﻿import {Character} from "../Base/Character.js";
+import {EnemyBase} from "../Character/EnemyBase.js";
+import {Wizard} from "../Character/Wizard.js";
+
 import {CollisionType, Pawn} from "../Base/Pawn.js";
 import {MoveBase} from "../Base/MoveBase.js";
 import { MagicDataTable } from '../Utils/DataTable.js';
-import {Wizard} from "../Character/Wizard.js";
-import {EnemyBase} from "../Character/EnemyBase.js";
 
 
 export class MagicBase extends Character {

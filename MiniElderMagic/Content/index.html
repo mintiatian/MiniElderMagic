@@ -21,6 +21,7 @@
             position:absolute;               /* resize() で left/top を動かす */
             transform-origin:top left;       /* 左上基準でスケール */
 
+            overflow:hidden;                /* ←★追加★ */
 
             /* ゲーム背景 */
             background:#000;
@@ -80,7 +81,27 @@
        ========================== */
     import { CHAR_SIZE } from './Script/GameData.js';
     import { GameMain   } from './Script/GameMain.js';
+    import { GameConfig, setRenderScale } from './Script/Config.js';
+    import { Camera }                     from './Script/Camera.js';
 
+    /* ========== #game-area をワールド全体とし、サイズを倍率で決定 ========== */
+    const world = document.getElementById('game-area');
+
+    function resizeWorld(){
+        world.style.width  = GameConfig.baseWidth  * GameConfig.renderScale + 'px';
+        world.style.height = GameConfig.baseHeight * GameConfig.renderScale + 'px';
+    }
+    resizeWorld();
+    window.addEventListener('renderScaleChanged', resizeWorld);
+
+    /* デバッグ：F1-F4 で倍率を即変更 */
+    window.addEventListener('keydown', e=>{
+        if(e.code==='F1') setRenderScale(1);
+        if(e.code==='F2') setRenderScale(2);
+        if(e.code==='F3') setRenderScale(3);
+        if(e.code==='F4') setRenderScale(4);
+    });
+    
     /* フォントサイズ (絵文字サイズ) を環境変数に反映 */
     document.documentElement.style.setProperty('--char-size', `${CHAR_SIZE}px`);
 

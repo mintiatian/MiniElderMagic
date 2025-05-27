@@ -54,8 +54,11 @@ export class UIStatus extends UIBase{
         */
         
         // コンテナを親要素に追加
-        this.parentElement.appendChild(this.element);
-        
+        //this.parentElement.appendChild(this.element);
+        document.body.appendChild(this.element);
+        this.element.style.display = 'none';
+        this.element.style.position = 'fixed';     // カメラに流されない
+        this.element.style.zIndex  = 1000;         // ゲーム画より前面
     }
 
 

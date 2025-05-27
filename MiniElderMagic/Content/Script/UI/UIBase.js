@@ -37,18 +37,17 @@
      */
     show() {
         this.isVisible = true;
-        this.element.style.display = 'flex';
-        this.updateDisplay();
+        this.element.style.display = 'flex';   // ← 初期は none にしておくと安心
 
-        // 表示アニメーション
-        this.element.style.opacity = '0';
-        this.element.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        /* ----------- アニメーション ----------- */
+        this.element.style.opacity   = '0';
+        this.element.style.transform = 'scale(0.9)';
         this.element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
 
         setTimeout(() => {
-            this.element.style.opacity = '1';
-            this.element.style.transform = 'translate(-50%, -50%) scale(1)';
-        }, 50);
+            this.element.style.opacity   = '1';
+            this.element.style.transform = 'scale(1)';
+            }, 50);
     }
 
     /**
@@ -56,8 +55,9 @@
      */
     hide() {
         // 非表示アニメーション
-        this.element.style.opacity = '0';
-        this.element.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        this.element.style.opacity   = '0';
+        this.element.style.transform = 'scale(0.9)';
+
 
         setTimeout(() => {
             this.isVisible = false;
