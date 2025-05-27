@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>魔法 SE シンセ・デモ</title>
+<style>
+ :root { --gap: 18px; --btn:#3d69ff; --btn-h:#5c84ff; }
+ body   { background:#202630; color:#eee; font-family:sans-serif;
+          display:flex; flex-direction:column; align-items:center; padding:40px; gap:var(--gap); }
+ h1     { margin:0 0 10px; color:#7ec9ff; }
+ .grid  { width:100%; max-width:900px;
+          display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:var(--gap); }
+ .btn   { padding:.55em 1.2em; font-size:1.05rem; border:none; border-radius:10px;
+          background:var(--btn); color:#fff; cursor:pointer;
+          box-shadow:0 3px 8px rgba(0,0,0,.35); transition:.18s; }
+ .btn:hover  { background:var(--btn-h); transform:translateY(-2px); }
+ .btn:active { transform:none; }
+</style>
+</head>
+<body>
+
+<h1>🎮 魔法効果音・ファイルレス合成</h1>
+<div class="grid" id="btnWrap"></div>
+
+<script>
+/*==============================================================*
+ *  Web Audio ユーティリティ                                   *
+ *==============================================================*/
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let ctx=null;
+async function unlockCtx(){ if(!ctx) ctx=new AudioCtx(); if(ctx.state==='suspended') await ctx.resume(); }
+
+function beep({f=440,fEnd=null,d=0.2,vol=0.5,type='square',curve='linear'}={}){
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=type; o.frequency.setValueAtTime(f,ctx.currentTime);
+  if(fEnd!==null){
+    const m=curve==='exp'?'exponentialRampToValueAtTime':'linearRampToValueAtTime';
+    o.frequency[m](fEnd,ctx.currentTime+d);
+  }
+  g.gain.setValueAtTime(vol,ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d);
+  o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+d);
+}
+
+const noiseBuf=(()=>{const b=(ctx??new AudioCtx()).createBuffer(1,44100,44100);
+  const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; return b;})();
+function noise({vol=.6,d=.3,cut=1000}={}){
+  const s=ctx.createBufferSource(); s.buffer=noiseBuf;
+  const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=cut;
+  const g=ctx.createGain(); g.gain.value=vol;
+  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d);
+  s.connect(f).connect(g).connect(ctx.destination); s.start(); s.stop(ctx.currentTime+d);
+}
+
+/*==============================================================*
+ *  効果音プリセット                                             *
+ *==============================================================*/
+const SE={
+  // 既存 10 種（shot/explosion/…）は省略可。ここでは新 16 種のみ示す
+  fire(){         // 🔥 火球：ヒュン→ボッ
+    beep({f:1200,fEnd:300,d:0.18,vol:0.6,type:'triangle',curve:'exp'});
+    setTimeout(()=>noise({vol:0.5,d:0.25,cut:1200}),140);
+  },
+  ice(){          // ❄️ 氷：キラッ
+    [1700,1400,1100].forEach((f,i)=>setTimeout(()=>beep({f,type:'triangle',d:0.12,vol:0.5}),i*60));
+  },
+  lightning(){    // ⚡ 雷：ビリッ
+    noise({vol:0.8,d:0.15,cut:5000});
+    beep({f:2000,d:0.05,vol:0.7,type:'square'});
+  },
+  tornado(){      // 🌪️ 竜巻：ゴォォ…
+    noise({vol:0.5,d:0.8,cut:800});
+  },
+  meteor(){       // ☄️ 隕石：ヒューン→ドン
+    beep({f:1000,fEnd:200,d:0.4,vol:0.6,type:'sawtooth',curve:'exp'});
+    setTimeout(()=>noise({vol:0.8,d:0.5,cut:1000}),350);
+  },
+  explosion(){    // 💥 爆発（既存）
+    noise({vol:0.9,d:0.6,cut:900}); beep({f:90,fEnd:60,d:0.6,vol:0.8,type:'sine'});
+  },
+  gust(){         // 💨 突風
+    noise({vol:0.6,d:0.25,cut:3000});
+  },
+  bubble(){       // 🫧 バブル：ポコッ
+    beep({f:700,fEnd:400,d:0.25,vol:0.5,type:'triangle'});
+  },
+  rainbow(){      // 🌈 レインボー：ドレミファ
+    [523.25,587.33,659.25,698.46].forEach((f,i)=>setTimeout(()=>beep({f,type:'triangle',d:0.18,vol:0.45}),i*120));
+  },
+  web(){          // 🕸️ 蜘蛛糸：シュパッ
+    noise({vol:0.4,d:0.15,cut:2500});
+    beep({f:4000,d:0.05,vol:0.3,type:'square'});
+  },
+  poison(){       // 🦂 ポイズン：ジジ…
+    beep({f:300,fEnd:280,d:0.35,vol:0.5,type:'square'});
+    setTimeout(()=>noise({vol:0.4,d:0.2,cut:1500}),180);
+  },
+  sword(){        // 🗡️ 剣：シュン
+    beep({f:800,fEnd:1200,d:0.1,vol:0.6,type:'triangle'});
+  },
+  axe(){          // 🪓 斧：ブォン
+    beep({f:200,fEnd:120,d:0.25,vol:0.7,type:'square'});
+  },
+  hammer(){       // 🔨 ハンマー：ゴン
+    beep({f:150,d:0.2,vol:0.7,type:'square'}); noise({vol:0.4,d:0.2,cut:600});
+  },
+  trident(){      // 🔱 槍：ズバッ
+    beep({f:900,fEnd:500,d:0.12,vol:0.6,type:'square'});
+  },
+  shield(){       // 🛡️ 盾：カーン
+    beep({f:600,d:0.25,vol:0.5,type:'triangle'});
+    setTimeout(()=>noise({vol:0.4,d:0.15,cut:1800}),120);
+  }
+};
+
+/*==============================================================*
+ *  ボタン生成 & イベント                                       *
+ *==============================================================*/
+const names=[
+ ['fire','🔥 火球'],
+ ['ice','❄️ 氷'],
+ ['lightning','⚡ 雷'],
+ ['tornado','🌪️ 竜巻'],
+ ['meteor','☄️ 隕石'],
+ ['explosion','💥 爆発'],
+ ['gust','💨 突風'],
+ ['bubble','🫧 バブル'],
+ ['rainbow','🌈 レインボー'],
+ ['web','🕸️ 蜘蛛糸'],
+ ['poison','🦂 ポイズン'],
+ ['sword','🗡️ 剣斬撃'],
+ ['axe','🪓 斧スイング'],
+ ['hammer','🔨 ハンマー'],
+ ['trident','🔱 槍突き'],
+ ['shield','🛡️ シールド']
+];
+const wrap=document.getElementById('btnWrap');
+names.forEach(([key,label])=>{
+  const b=document.createElement('button');
+  b.className='btn'; b.textContent=label; b.dataset.se=key;
+  wrap.appendChild(b);
+  b.addEventListener('click',async()=>{
+    await unlockCtx(); SE[key]?.();
+  });
+});
+</script>
+</body>
+</html>

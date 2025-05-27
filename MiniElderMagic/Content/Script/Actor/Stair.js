@@ -1,7 +1,8 @@
-import { Character } from './character.js';
+import { Actor } from '../Base/Actor.js';
+import {CollisionType} from "../Base/Pawn.js";
 
 
-export class Stair extends Character {
+export class Stair extends Actor {
   /**
    * @param {number} x - 初期x位置
    * @param {number} y - 初期y位置
@@ -10,7 +11,7 @@ export class Stair extends Character {
   constructor(x, y, parentElement) {
     // ステップを0に設定して動かないようにする
     // 👇 まずは「閉鎖中」アイコンで生成
-    super(x, y, 0, '🚪', parentElement);   // 🚪=封鎖アイコン
+    super(x, y, '🚪', parentElement);   // 🚪=封鎖アイコン
     
     this.activeEmoji   = '🪜';  // 解放後
     this.inactiveEmoji = '🚪';  // 封鎖中
@@ -21,16 +22,16 @@ export class Stair extends Character {
     this.parentContainer = parentElement;
     
     // HPゲージを非表示にする
-    this.hpGage.hide();
+    //this.hpGage.hide();
     
     // 階段の見た目をカスタマイズ
-    this.element.style.fontSize = '60px';
     this.element.style.zIndex = '1'; // プレイヤーより下に表示
     
     // 当たり判定用のサイズを少し調整
     this.collisionWidth = 50;
     this.collisionHeight = 70;
     
+    this.setCollisionType(CollisionType.TRIGGER);
     // 階段に接触したかどうか判定するためのフラグ
     this.touched = false;
   }
@@ -46,10 +47,7 @@ export class Stair extends Character {
   /**
    * @desc 階段は静的なのでupdateは必要最小限
    */
-  update() {
-    // ベースのCharacterクラスのupdateを部分的に利用
-    this.draw();
-  }
+
   
   /**
    * @desc プレイヤーとの衝突判定
@@ -78,7 +76,7 @@ export class Stair extends Character {
   
   /**
    * @desc 階段と接触した時の処理
-   * @param {PlayerBase} player - プレイヤーオブジェクト
+   * @param {Wizard} player - プレイヤーオブジェクト
    * @returns {boolean} - 初めて接触した場合はtrue
    */
   onTouch(player) {

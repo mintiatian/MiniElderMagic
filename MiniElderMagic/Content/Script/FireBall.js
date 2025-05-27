@@ -5,7 +5,7 @@ export class FireBall extends attackBase {
         super(x, y, step, parentElement);
         this.attackPower = attackPower || 10; // デフォルト値を設定
         this.range = range || 350;
-        this.emoji = emoji || '🔥';
+        this.emoji = emoji || '';
         this.owner = 'player'; // デフォルトはプレイヤー所有
         
         // デバッグ情報 - コンストラクタでの攻撃力を記録
@@ -175,21 +175,11 @@ export class FireBall extends attackBase {
     deactivate() {
         if (!this.active) return;
         this.active = false;
-
-        if (!this.element) {
-            console.warn('[FireBall] deactivate: 要素が見つかりません');
-            return;
-        }
-
-        this.element.style.transition = 'opacity 0.1s ease-out';
+        if (!this.element) return;
+        this.element.style.transition = 'opacity .1s ease';
         this.element.style.opacity = '0';
-
-        setTimeout(() => {
-            if (this.element && this.element.parentNode) {
-                this.element.parentNode.removeChild(this.element);
-            }
-            this.element = null;
-        }, 100);
+        setTimeout(() => this.element?.remove(), 120);
+        this.element = null;
     }
     updateElementPosition() {
         this.element.style.left = this.x + 'px';
@@ -234,6 +224,8 @@ export class FireBall extends attackBase {
         effect.style.fontSize = '40px';
         effect.style.transform = 'translate(-50%, -50%)';
         effect.style.zIndex = '6';
+        effect.classList.add('cast-effect');   // ★追加
+        
         
         // 親要素に追加
         this.parentElement.appendChild(effect);
@@ -286,7 +278,8 @@ export class FireBall extends attackBase {
             effect.style.transform = 'translate(-50%, -50%)';
             effect.style.zIndex = '5';
             effect.style.opacity = '0'; // 初期状態は透明
-            
+
+            effect.classList.add('cast-effect');
             // 親要素に追加
             this.parentElement.appendChild(effect);
             
@@ -302,6 +295,7 @@ export class FireBall extends attackBase {
                 particle.style.opacity = '0';
                 particle.style.transform = 'translate(-50%, -50%) scale(0.6)';
                 particle.style.zIndex = '4';
+                particle.classList.add('cast-effect');
                 this.parentElement.appendChild(particle);
                 particles.push(particle);
                 

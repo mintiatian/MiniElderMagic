@@ -1,580 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>🧙をWASDで動かす - スムーズ移動</title>
-  <style>
-    /* 画面全体を表示領域に */
-    #game-area {
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background-color: #333; /* HUD文字色が見やすいように背景を追加(任意) */
-    }
-    /* キャラクター用のスタイル */
-    .character {
-      position: absolute;
-      font-size: 50px;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      /* 中心位置を基準にする場合は、各キャラクターで個別に設定 */
-      /* transform: translate(-50%, -50%); */
-      text-align: center;
-    }
-  </style>
+    <meta charset="utf-8">
+    <title>🧙 MiniElderMagic</title>
+    <style>
+        /* ==========================
+           1. 基本レイアウト
+           ========================== */
+        html,body{
+            margin:0;height:100%;overflow:hidden;
+            background:#111;                 /* 黒帯を少し明るめに塗り分け */
+            user-select:none; -webkit-user-select:none; -ms-user-select:none;
+        }
+
+        /* ==========================
+           2. 仮想スクリーン (1920×1080)
+           ========================== */
+        #game-container{
+            width:1920px; height:1080px;     /* ゲーム世界の論理サイズ */
+            position:absolute;               /* resize() で left/top を動かす */
+            transform-origin:top left;       /* 左上基準でスケール */
+
+
+            /* ゲーム背景 */
+            background:#000;
+        }
+
+        /* 2) 疑似要素で“上にかぶせる”フレーム --------------- */
+        #game-container::after{
+            content:'';
+            position:absolute; inset:0;     /* container と同サイズ */
+            border:4px solid #fff;          /* ★ 白フレーム */
+            border-radius:12px;             /* ★ 角丸 */
+            pointer-events:none;            /* クリック判定を透過 */
+            z-index:9999;                   /* ゲーム描画より最前面へ */
+        }
+
+        /* 3) フルスクリーン時に枠を消す／残すも自由 ---------- */
+        #game-container:fullscreen::after{
+            /* 枠を残したいなら何もしない */
+            /* 消したい場合は下をアンコメント
+            border:none;
+            */
+        }
+        /* Safari / Firefox プレフィックスは同様に ::after 付きで */
+        #game-container:-webkit-full-screen{border:none;border-radius:0;} /* iOS Safari */
+        #game-container:-moz-full-screen   {border:none;border-radius:0;} /* 旧 Firefox */
+
+        /* ==========================
+           3. 実際のプレイエリア
+           ========================== */
+        #game-area{
+            width:100%; height:100%;         /* container に追従 */
+            position:relative;               /* キャラを absolute で置きやすく */
+        }
+
+        /* ==========================
+           4. キャラクター汎用スタイル
+           ========================== */
+        :root{ --char-size:50px; }         /* JS で再設定される */
+        .character{
+            position:absolute;
+            font-size:var(--char-size);
+            text-align:center;
+            user-select:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none;
+        }
+    </style>
 </head>
 <body>
-<div id="game-area"></div>
 
-<!-- スクリプトの読み込み -->
+<!-- ========== HTML ========= -->
+<div id="game-container">
+    <div id="game-area"></div>
+</div>
+
 <script type="module">
-  import { PlayerBase } from './Script/playerBase.js';
-  import { UIHud } from './Script/UIHud.js';
-  import { Coin } from './Script/coin_character.js';
-  import { Stair } from './Script/Stair.js';
-  import { Stage } from './Script/Stage.js';  // 新しく追加したステージ管理クラス
-  import { UIShop } from './Script/UIShop.js'; // ショップクラスをインポート
-  import { UIStatus } from './Script/UIStatus.js'; // ステータス画面クラスをインポート
-  import { UIDebug } from './Script/UIDebug.js'; // デバッグ画面クラスをインポート
+    /* ==========================
+       5. モジュール読み込み
+       ========================== */
+    import { CHAR_SIZE } from './Script/GameData.js';
+    import { GameMain   } from './Script/GameMain.js';
 
-  const gameArea = document.getElementById('game-area');
+    /* フォントサイズ (絵文字サイズ) を環境変数に反映 */
+    document.documentElement.style.setProperty('--char-size', `${CHAR_SIZE}px`);
 
-  // 押下状態を保持するためのオブジェクト
-  const pressedKeys = {};
+    /* ==========================
+       6. リサイズ / フルスクリーン対応
+       ========================== */
+    const BASE_W  = 1920;
+    const BASE_H  = 1080;
+    const BORDER  = 4;                          // CSS と合わせる
+    const OUTER_W = BASE_W + BORDER*2;          // 枠込み外形
+    const OUTER_H = BASE_H + BORDER*2;
 
-  // プレイヤーとして使用するキャラクターを生成
-  const wizard = new PlayerBase(100, 100, 3, '🧙', gameArea);
-  wizard.draw();
+    const container = document.getElementById('game-container');
 
-  // ステージマネージャーを生成
-  const stageManager = new Stage(gameArea);
+    /* 画面サイズ・FS 状態に応じてスケール＆中央寄せ */
+    function resize(){
+        const isFS = document.fullscreenElement === container   // 要素フルスクリーン
+            || document.webkitFullscreenElement === container
+            || document.mozFullScreenElement === container;
 
-  // 最初のステージの敵を生成
-  const enemies = stageManager.createEnemiesForStage(1);
+        /* フルスクリーン時は枠が無いので論理サイズで計算 */
+        const targetW = isFS ? BASE_W : OUTER_W;
+        const targetH = isFS ? BASE_H : OUTER_H;
 
-  // HUDの生成
-  const hud = new UIHud(gameArea);
-  
-  
-  // ステータス画面の生成
-  const statusUI = new UIStatus(gameArea, wizard);
+        const scale = Math.min(
+            window.innerWidth  / targetW,
+            window.innerHeight / targetH);
 
-  // デバッグ画面の生成
-  const debugUI = new UIDebug(gameArea, wizard);
-  
-  // コインの配列を管理
-  let coins = [];
+        container.style.transform = `scale(${scale})`;
+        container.style.left = ((window.innerWidth  - targetW * scale) / 2) + 'px';
+        container.style.top  = ((window.innerHeight - targetH * scale) / 2) + 'px';
+    }
 
-  // デモ用に初期コインを生成
-  const initialCoin = new Coin(200, 200, gameArea);
-  initialCoin.draw();
-  coins.push(initialCoin);
+    /* 画面リサイズ & FS 状態変化で都度調整 */
+    window.addEventListener('resize',           resize);
+    document.addEventListener('fullscreenchange',resize);
+    document.addEventListener('webkitfullscreenchange',resize);
+    document.addEventListener('mozfullscreenchange',resize);
+    resize();           // 起動直後 1 回
 
-  // 階段を生成
-  const stair = new Stair(500, 400, gameArea);
-  stair.draw();
-  // ショップの生成
-  const shop = new UIShop(gameArea, wizard,stair);
-
-  // ショップ完了イベントのリスナー（一度だけ登録）
-  document.addEventListener('shopCompleted', () => {
-    // ステージを1上げる
-    wizard.playerstatus.nextStage();
-    
-    // 新しいステージのセットアップ
-    onStageChange();
-  });
-  
-  // キーの押下状態を監視
-  document.addEventListener('keydown', (event) => {
-    const key = event.key.toLowerCase();
-    
-    // Tabキーはデフォルトのブラウザの動作を防止する（ステータス画面UIで処理するため）
-    if (key === 'tab') {
-      event.preventDefault();
-    } 
-    // 'o'キーでデバッグモードを切り替え
-    else if (key === 'o') {
-      debugUI.toggle();
-      // デバッグモード切り替えメッセージを表示
-      const message = debugUI.isVisible ? 'デバッグモード: ON' : 'デバッグモード: OFF';
-      const notification = document.createElement('div');
-      notification.textContent = message;
-      notification.style.position = 'absolute';
-      notification.style.top = '10px';
-      notification.style.left = '50%';
-      notification.style.transform = 'translateX(-50%)';
-      notification.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-      notification.style.color = debugUI.isVisible ? '#0f0' : '#fff';
-      notification.style.padding = '8px 15px';
-      notification.style.borderRadius = '5px';
-      notification.style.fontSize = '16px';
-      notification.style.zIndex = '9999';
-      gameArea.appendChild(notification);
-      
-      // 2秒後に通知を消す
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.style.opacity = '0';
-          notification.style.transition = 'opacity 0.5s ease';
-          setTimeout(() => {
-            if (notification.parentNode) {
-              notification.parentNode.removeChild(notification);
-            }
-          }, 500);
+    /* ==========================
+       7. フルスクリーン切替（任意）
+       ========================== */
+    /*  ダブルクリックで要素フルスクリーン切替（デバッグ用）  */
+    /*
+    container.addEventListener('dblclick', () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen?.();
+        } else {
+            container.requestFullscreen?.();
         }
-      }, 2000);
-    }
-    else {
-      pressedKeys[key] = true;
-      
-      // 方向キーもWASDにマッピング
-      if (key === 'arrowup') pressedKeys['w'] = true;
-      if (key === 'arrowdown') pressedKeys['s'] = true;
-      if (key === 'arrowleft') pressedKeys['a'] = true;
-      if (key === 'arrowright') pressedKeys['d'] = true;
-    }
-  });
-  
-  document.addEventListener('keyup', (event) => {
-    const key = event.key.toLowerCase();
-    pressedKeys[key] = false;
-    
-    // 方向キーもWASDにマッピング解除
-    if (key === 'arrowup') pressedKeys['w'] = false;
-    if (key === 'arrowdown') pressedKeys['s'] = false;
-    if (key === 'arrowleft') pressedKeys['a'] = false;
-    if (key === 'arrowright') pressedKeys['d'] = false;
-  });
-
-  // 敵が死んだときにコインを生成する関数
-  function createCoinAt(x, y) {
-    const coin = new Coin(x, y, gameArea);
-    coin.draw();
-    coins.push(coin);
-  }
-
-  // 1回あたりの理想フレーム時間（ミリ秒）
-  const FPS = 60;
-  const FRAME_TIME = 1000 / FPS; // 1000ms ÷ 60fps ≈ 16.6667ms
-
-  let lastTime = performance.now();
-  let accumulatedTime = 0; // 経過時間をためるための変数
-
-  // フレームごとのループ
-  function gameLoop(timestamp) {
-    const delta = timestamp - lastTime;
-    lastTime = timestamp;
-    accumulatedTime += delta;
-
-    while (accumulatedTime >= FRAME_TIME) {
-      updateGame();
-      accumulatedTime -= FRAME_TIME;
-    }
-    requestAnimationFrame(gameLoop);
-
-  }
-
-  // ゲームエリア内のすべてのCoinを探す
-  function findAllCoins() {
-    // ドキュメントから追加されたコインを全て取得
-    const coinElements = document.querySelectorAll('.character');
-    coins = [];
-    
-    coinElements.forEach(element => {
-      // 絵文字が🪙のものだけがコイン
-      if (element.textContent === '🪙') {
-        // 対応するCoinオブジェクトを探す処理
-        // 簡易実装: 表示されているコインは敵が倒された時に作られるので検出不要
-      }
     });
-  }
+    */
 
-  // ステージが変わったときに呼ばれる関数
-  function onStageChange() {
-    // 新しいステージ番号でステージを生成
-    const currentStage = wizard.playerstatus.stage;
-    const enemies = stageManager.createEnemiesForStage(currentStage);
-    
-    // 階段の位置をランダムに変更
-    const maxX = gameArea.clientWidth - 100;
-    const maxY = gameArea.clientHeight - 100;
-    const newX = Math.random() * maxX + 50;
-    const newY = Math.random() * maxY + 50;
-    stair.x = newX;
-    stair.y = newY;
-    stair.draw();
-    
-    // 階段のタッチフラグをリセット
-    stair.touched = false;
-    
-    // ステージ変更エフェクト
-    const stageElement = document.createElement('div');
-    stageElement.textContent = `ステージ ${currentStage}`;
-    stageElement.style.position = 'absolute';
-    stageElement.style.top = '50%';
-    stageElement.style.left = '50%';
-    stageElement.style.transform = 'translate(-50%, -50%)';
-    stageElement.style.fontSize = '48px';
-    stageElement.style.fontWeight = 'bold';
-    stageElement.style.color = 'white';
-    stageElement.style.textShadow = '3px 3px 5px rgba(0, 0, 0, 0.8)';
-    stageElement.style.zIndex = '1000';
-    stageElement.style.opacity = '0';
-    stageElement.style.transition = 'opacity 0.5s ease-in, transform 0.5s ease-in';
-    
-    gameArea.appendChild(stageElement);
-    
-    // アニメーション
-    setTimeout(() => {
-      stageElement.style.opacity = '1';
-      stageElement.style.transform = 'translate(-50%, -50%) scale(1.2)';
-      
-      setTimeout(() => {
-        stageElement.style.opacity = '0';
-        stageElement.style.transform = 'translate(-50%, -50%) scale(0.8)';
-        
-        setTimeout(() => {
-          if (stageElement.parentNode) {
-            stageElement.parentNode.removeChild(stageElement);
-          }
-        }, 500);
-      }, 1500);
-    }, 10);
-  }
-
-  // 前のフレームで生きていた敵を記録するための配列
-  let previousLivingEnemies = [...stageManager.enemies];
-  // 敵の要素を追跡するためのMap（要素ID -> 要素）
-  const enemyElementMap = new Map();
-  
-  function updateGame() {
-    
-    // ショップ表示中はプレイヤーの移動／攻撃を無効化
-    if (!shop.isVisible && !shop.isCountingDown) {
-      // 普通に入力を受け付けて更新
-      wizard.setKeyState(pressedKeys);
-      wizard.update();
-    }
-  
-    // 各敵にプレイヤーの参照を設定し、更新
-    stageManager.enemies.forEach(enemy => {
-      if (!enemy.playerTarget) {
-        enemy.setPlayerTarget(wizard);
-      }
-      
-      // 敵要素をマップに追加（追跡用）
-      if (enemy.element && !enemyElementMap.has(enemy.element.id)) {
-        // 要素にユニークIDを設定（まだない場合）
-        if (!enemy.element.id) {
-          enemy.element.id = `enemy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        }
-        enemyElementMap.set(enemy.element.id, enemy);
-      }
-    });
-    
-    // 敵の更新前に現在の敵リストを保存
-    const beforeUpdateEnemies = [...stageManager.enemies];
-    
-    // 敵の更新（ここで死亡した敵は配列から削除される）
-    stageManager.updateEnemies();
-    
-    // 各敵について、前のフレームには生きていたが今は配列にない敵にコインを生成
-    const currentEnemies = stageManager.enemies;
-    
-    // 前回から消えた敵を特定
-    beforeUpdateEnemies.forEach(prevEnemy => {
-      // 現在の敵の配列に含まれていなければ、その敵は倒されたということ
-      if (!currentEnemies.includes(prevEnemy) && prevEnemy.status.hp <= 0) {
-        console.log(`[Game] 敵が倒された: ${prevEnemy.emoji}, コイン生成`);
-        
-        // コインを敵の位置に生成
-        const pos = {
-          x: prevEnemy.x,
-          y: prevEnemy.y
-        };
-        
-        if (pos.x && pos.y) {
-          createCoinAt(pos.x, pos.y);
-        }
-        
-        // Mapからも敵要素を削除
-        if (prevEnemy.element && prevEnemy.element.id) {
-          enemyElementMap.delete(prevEnemy.element.id);
-        }
-      }
-    });
-    
-    // 残留要素クリーンアップ関数
-    function cleanupRemainingElements() {
-      // クリーンアップ対象になる要素とその親要素の一覧
-      const cleanupTargets = [];
-    
-      // キャラクターの断片が残っていないか確認
-      document.querySelectorAll('.character').forEach(element => {
-        // プレイヤーでなく、MapになくHPゲージがある要素（敵の残骸）
-        if (element.textContent !== '🧙' && // プレイヤーでない
-            element.textContent !== '🪙' && // コインでない
-            element.textContent !== '🪜' && // 階段でない
-                element.textContent !== '🚪' &&
-            !stageManager.enemies.some(e => e.element === element)) { // 現在の敵リストにない
-          
-          // 火球(🔥)または杖(🪄)の場合、タグ付けして後でクリーンアップ
-          if (element.textContent === '🔥' || element.textContent === '🪄') {
-            /*
-            if (!element.dataset.markedForRemoval) {
-              //console.log(`[Game] 残留敵要素を検出: ${element.textContent}、削除します`);
-              element.dataset.markedForRemoval = 'true';
-              element.dataset.removalTime = Date.now().toString();
-              cleanupTargets.push(element);
-            } else {
-              // 既にマークされている要素で、5秒以上経過している場合は強制削除
-              const markedTime = parseInt(element.dataset.removalTime || '0');
-              if (Date.now() - markedTime > 5000) {
-                console.log(`[Game] 長時間残留している要素を強制削除: ${element.textContent}`);
-                cleanupTargets.push(element);
-              }
-            }*/
-          } else {
-            // その他の不明要素は直ちにクリーンアップ対象に
-            console.log(`[Game] 不明な残留要素を検出: ${element.textContent}、削除します`);
-            cleanupTargets.push(element);
-          }
-        }
-      });
-      
-      // クリーンアップ対象の要素を削除
-      cleanupTargets.forEach(element => {
-        try {
-          // フェードアウト表示して削除
-          element.style.transition = 'opacity 0.3s ease';
-          element.style.opacity = '0';
-          
-          setTimeout(() => {
-            try {
-              if (element && element.parentNode) {
-                element.parentNode.removeChild(element);
-              }
-            } catch (err) {
-              console.warn(`[Game] 要素削除中にエラーが発生しました:`, err);
-            }
-          }, 300);
-        } catch (err) {
-          console.warn(`[Game] 要素フェードアウト中にエラーが発生しました:`, err);
-          // フェードアウトに失敗した場合は直接削除を試みる
-          if (element && element.parentNode) {
-            try {
-              element.parentNode.removeChild(element);
-            } catch (removeErr) {
-              console.error(`[Game] 要素の直接削除に失敗しました:`, removeErr);
-            }
-          }
-        }
-      });
-    }
-          
-          // 30秒ごとに特に杖要素の健全性をチェックするクリーンアップを実行
-          setInterval(() => {
-      // player-staffクラスを持つ要素をチェック (プレイヤーが所有する正しい杖要素を特定)
-      let validStaffElement = null;
-      if (wizard && wizard.staffElement && document.body.contains(wizard.staffElement)) {
-        validStaffElement = wizard.staffElement;
-      }
-      
-      // すべての杖要素を取得
-      const staffElements = document.querySelectorAll('.character');
-      staffElements.forEach(element => {
-        if (element.textContent === '🪄') {
-          // プレイヤーの正しい杖でない場合は削除
-          if (element !== validStaffElement) {
-            console.log('[Game] 無効な杖要素を検出しました。削除します。');
-            try {
-              if (element.parentNode) {
-                element.parentNode.removeChild(element);
-              }
-            } catch (err) {
-              console.warn('[Game] 無効な杖要素の削除中にエラーが発生しました:', err);
-            }
-          }
-        }
-      });
-      
-      // プレイヤーの杖が存在しない場合は再作成を試みる
-      if (wizard && (!wizard.staffElement || !document.body.contains(wizard.staffElement))) {
-        console.log('[Game] プレイヤーの杖が見つかりません。再作成を促します。');
-        if (typeof wizard.createStaffElement === 'function') {
-          wizard.createStaffElement();
-          wizard.updateStaffPosition();
-        }
-      }
-          }, 30000);
-    
-    // 定期的なクリーンアップを実行（1秒ごと）
-    setInterval(cleanupRemainingElements, 1000);
-    
-    // 通常のゲーム更新時にもクリーンアップを実行
-    cleanupRemainingElements();
-    
-    // 現在の敵リストを更新
-    previousLivingEnemies = [...currentEnemies];
-
-    // 敵が残っているかどうかで階段の状態を更新
-    const cleared = stageManager.areAllEnemiesDefeated();
-    stair.setActive(cleared);
-    
-    // 階段の更新と接触判定
-    stair.update();
-    if (stair.checkCollision(wizard)) {
-      if (stair.onTouch(wizard)) {
-        // ショップを表示する
-        shop.show();
-      }
-    }
-
-    // コインとプレイヤーの接触判定
-    const coinElements = document.querySelectorAll('.character');
-    coinElements.forEach(element => {
-      if (element.textContent === '🪙') {
-        // 各コインに対する参照を持つ必要があるが、
-        // ここでは簡易的に位置から判定
-        const rect = element.getBoundingClientRect();
-        const coinX = rect.left + rect.width / 2;
-        const coinY = rect.top + rect.height / 2;
-        
-        // プレイヤーの位置
-        const playerRect = wizard.element.getBoundingClientRect();
-        const playerX = playerRect.left + playerRect.width / 2;
-        const playerY = playerRect.top + playerRect.height / 2;
-        
-        // 距離を計算
-        const dx = coinX - playerX;
-        const dy = coinY - playerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // 40px以内に近づいたらコインを取得
-        if (distance < 40) {
-          // コインを非表示にする
-          element.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-          element.style.transform = 'scale(1.5)';
-          element.style.opacity = '0';
-          
-          // プレイヤーのコインを増やす
-          wizard.playerstatus.addCoins(1);
-          
-          // アニメーション後に要素を削除
-          setTimeout(() => {
-            if (element && element.parentNode) {
-              element.parentNode.removeChild(element);
-            }
-          }, 300);
-        }
-      }
-    });
-
-    // HUDを更新（プレイヤーのステータスを渡す）
-    hud.update(wizard.playerstatus);
-
-    // ステータス画面が表示されている場合は更新する
-    if (statusUI.isVisible) {
-      statusUI.updateStatusDisplay();
-    }
-    
-    // デバッグ画面が表示されている場合は更新する
-    if (debugUI.isVisible) {
-      debugUI.update();
-    }
-    
-    // プレイヤーの攻撃と敵の衝突判定
-    const enemyTargets = stageManager.enemies;
-    
-    // 攻撃オブジェクトの更新と非アクティブな攻撃のフィルタリング
-    if (wizard.attacks && Array.isArray(wizard.attacks)) {
-      // アクティブな攻撃だけを残す
-      wizard.attacks = wizard.attacks.filter((fireBall) => {
-        // nullチェック
-        if (!fireBall) return false;
-        
-        try {
-          // 攻撃の更新
-          fireBall.update(enemyTargets);
-          
-          // 攻撃がアクティブか確認（active属性がない場合はtrueとみなす）
-          return fireBall.active !== false;
-        } catch (err) {
-          console.warn('[Game] 攻撃オブジェクトの更新中にエラーが発生しました:', err);
-          return false; // エラーが発生した場合は削除
-        }
-      });
-    }
-    
-    // 敵の攻撃も同様にクリーンアップ
-    stageManager.enemies.forEach(enemy => {
-      if (enemy.attacks && Array.isArray(enemy.attacks)) {
-        enemy.attacks = enemy.attacks.filter(fireBall => {
-          if (!fireBall) return false;
-          
-          try {
-            // 攻撃がアクティブか確認
-            return fireBall.active !== false;
-          } catch (err) {
-            console.warn('[Game] 敵の攻撃オブジェクトの確認中にエラーが発生しました:', err);
-            return false;
-          }
-        });
-      }
-    });
-    
-    // 敵の攻撃とプレイヤーの衝突判定（敵の内部で処理）
-    // すでに各敵のupdateメソッド内で、enemyTarget（プレイヤー）を対象とした衝突判定が行われている
-    
-    // HPが0になったらゲームオーバー
-    if (wizard.status.hp <= 0) {
-      // ゲームオーバー処理を追加
-      displayGameOver();
-    }
-  }
-
-  // ゲームオーバー表示関数
-  function displayGameOver() {
-    // すでにゲームオーバー画面があれば何もしない
-    if (document.getElementById('game-over')) return;
-    
-    // ゲームオーバー要素を作成
-    const gameOverElement = document.createElement('div');
-    gameOverElement.id = 'game-over';
-    gameOverElement.style.position = 'absolute';
-    gameOverElement.style.top = '50%';
-    gameOverElement.style.left = '50%';
-    gameOverElement.style.transform = 'translate(-50%, -50%)';
-    gameOverElement.style.fontSize = '60px';
-    gameOverElement.style.fontWeight = 'bold';
-    gameOverElement.style.color = 'red';
-    gameOverElement.style.textShadow = '3px 3px 5px rgba(0, 0, 0, 0.8)';
-    gameOverElement.style.zIndex = '1000';
-    gameOverElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    gameOverElement.style.padding = '30px';
-    gameOverElement.style.borderRadius = '15px';
-    gameOverElement.style.textAlign = 'center';
-    gameOverElement.innerHTML = `
-      <div>ゲームオーバー</div>
-      <div style="font-size: 30px; margin-top: 20px;">ステージ: ${wizard.playerstatus.stage}</div>
-      <div style="font-size: 30px;">コイン: ${wizard.playerstatus.coins}</div>
-      <div style="font-size: 24px; margin-top: 40px;">リスタートするにはF5キーを押してください</div>
-    `;
-    
-    gameArea.appendChild(gameOverElement);
-    
-    // ゲームを一時停止する効果（すべての敵を止める）
-    stageManager.clearEnemies();
-  }
-  
-  // ゲームループ開始
-  requestAnimationFrame(gameLoop);
+    /* ==========================
+       8. ゲーム起動
+       ========================== */
+    const gameMain = new GameMain(document.getElementById('game-area'));
 </script>
 </body>
 </html>

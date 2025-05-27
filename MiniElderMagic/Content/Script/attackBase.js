@@ -8,7 +8,7 @@ export class attackBase {
     constructor(x, y, step, parentElement) {
         this.x = x;
         this.y = y;
-        this.step = step;
+        this.MaxSpeed = step;
         this.parentElement = parentElement;
     }
 
@@ -31,8 +31,9 @@ export class attackBase {
     /**
      * @desc 毎フレームごとに必要な更新ロジックがあれば、継承先でoverride
      */
-    update() {
+    update(delta) {
         // このクラスでは空実装。継承先で必要に応じて書き換え。
+        super.update(delta);
     }
     
     /**

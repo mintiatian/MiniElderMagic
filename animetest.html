@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>🔥 Animation Test – scrollable list</title>
+<style>
+/* ==== ベースレイアウト ================================================= */
+html,body{height:100%;margin:0;background:#222;color:#eee;font-family:system-ui}
+.layout{height:100%;display:flex;align-items:center;justify-content:center;gap:48px}
+
+/* ==== 🔥 キャラ ======================================================== */
+.character{display:flex;justify-content:center;align-items:center;font-size:96px}
+
+/* ==== コントロール列 =================================================== */
+.controls{display:flex;flex-direction:column;gap:16px;max-height:80vh}
+
+/* ▸ スクロール対応のアニメリスト */
+.list{
+  display:flex;flex-direction:column;gap:16px;
+  overflow-y:auto;padding-right:4px;      /* パディングでスクロールバーが被らない */
+  scrollbar-width:thin;                   /* Firefox */
+}
+.list::-webkit-scrollbar{width:6px}       /* Chrome */
+.list::-webkit-scrollbar-thumb{background:#555;border-radius:3px}
+
+.item{display:flex;align-items:flex-start;gap:12px}
+.item button{padding:6px 14px;font-size:16px;cursor:pointer}
+.snippet{
+  font-family:monospace;font-size:12px;line-height:1.3;
+  width:350px;height:50px;background:#111;border:1px solid #555;color:#eee;
+  resize:none;user-select:all
+}
+
+/* ▸ Loop & Reset 行 (アニメリストとは別要素) */
+.tools{display:flex;align-items:center;gap:12px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- 左 : 🔥 -->
+  <div id="fire" class="character">🔥</div>
+
+  <!-- 右 : コントロール列 -->
+  <div class="controls">
+
+    <!-- ★ スクロールするリスト部分 ---------------------------- -->
+    <div class="list">
+      <div class="item">
+        <button data-anim="fade">Fade</button>
+        <textarea class="snippet" readonly>
+FadeAnimation(){
+    const Time = 2;
+    this.element.style.transition = 'opacity '+Time+'s ease, transform '+Time+'s ease';
+    this.element.style.opacity = '0';
+    this.element.style.transform = 'scale(0)';
+    setTimeout(()=>this.OnExitAnime('Fade'), Time*1000);
+}</textarea>
+      </div>
+
+      <div class="item">
+        <button data-anim="jelly">Jelly</button>
+        <textarea class="snippet" readonly>
+JellyAnimation(){
+    const Time = 2;
+    this.element.style.transition = 'transform '+Time+'s cubic-bezier(.25,1.7,.7,1.3)';
+    this.element.style.transform = 'scale(.8,1.1)';
+    setTimeout(()=>this.OnExitAnime('Jelly'), Time*1000);
+}</textarea>
+      </div>
+
+      <div class="item">
+        <button data-anim="spin">Spin</button>
+        <textarea class="snippet" readonly>
+SpinAnimation(){
+    const Time = 2;
+    this.element.style.transition = 'transform '+Time+'s linear';
+    this.element.style.transform = 'rotate(360deg)';
+    setTimeout(()=>this.OnExitAnime('Spin'), Time*1000);
+}</textarea>
+      </div>
+
+      <div class="item">
+        <button data-anim="pulse">Pulse</button>
+        <textarea class="snippet" readonly>
+PulseAnimation(){
+    const Time = 2;
+    this.element.style.transition = 'transform '+Time+'s ease, filter '+Time+'s ease';
+    this.element.style.transform = 'scale(1.3)';
+    this.element.style.filter = 'brightness(2)';
+    setTimeout(()=>this.OnExitAnime('Pulse'), Time*1000);
+}</textarea>
+      </div>
+      <!-- ここに <div class="item">…</div> をコピペすれば新しいアニメを追加可能 -->
+    </div><!-- /list -->
+
+    <!-- ★ Loop / Reset は完全に独立 --------------------------- -->
+    <div class="tools">
+      <label><input type="checkbox" id="loop"> Loop</label>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div><!-- /controls -->
+</div><!-- /layout -->
+
+<script>
+/* ==== 共通変数 ======================================================= */
+const el   = document.getElementById('fire');
+const loop = document.getElementById('loop');
+const D    = 600;              // ms
+let current=null;
+
+/* ==== アニメ辞書 ===================================================== */
+const anim={
+  fade(){el.style.transition=`opacity ${D}ms ease`;
+         el.style.opacity='0';                 schedule('fade');},
+  jelly(){el.style.transition=`transform ${D}ms cubic-bezier(.25,1.7,.7,1.3)`;
+          el.style.transform='translate(-50%,-50%) scale(.8,1.1)'; schedule('jelly');},
+  spin(){el.style.transition=`transform ${D}ms linear`;
+         el.style.transform='translate(-50%,-50%) rotate(360deg)';  schedule('spin');},
+  pulse(){el.style.transition=`transform ${D}ms ease,filter ${D}ms ease`;
+          el.style.transform='translate(-50%,-50%) scale(1.3)';
+          el.style.filter='brightness(2)';     schedule('pulse');}
+};
+
+/* ==== 汎用関数 ======================================================= */
+function schedule(name){
+  current=name;
+  setTimeout(()=>loop.checked? start(name): reset(), D);
+}
+function start(name){reset(); requestAnimationFrame(()=>anim[name]());}
+function reset(){
+  el.style.transition=''; el.style.opacity='1'; el.style.filter='none';
+  el.style.transform='translate(-50%,-50%)'; current=null;
+}
+
+/* ==== イベントハンドラ =============================================== */
+document.querySelector('.list').addEventListener('click',e=>{
+  if(e.target.tagName==='BUTTON') start(e.target.dataset.anim);
+});
+document.getElementById('resetBtn').addEventListener('click',reset);
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 
-        export class UIHud {
+export class UIHud {
             /**
              * @param {HTMLElement} parentElement - HUDを配置する親要素
              */

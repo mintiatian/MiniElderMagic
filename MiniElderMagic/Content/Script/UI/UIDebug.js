@@ -9,7 +9,7 @@ export class UIDebug {
    */
   constructor(parentElement, player) {
     this.parentElement = parentElement;
-    this.player = player;
+    this.wizard = player;
     this.isVisible = false;
     this.container = null;
     
@@ -55,40 +55,40 @@ export class UIDebug {
     this.container.appendChild(title);
     
     // パラメータセクション
-    this.createParameterSection('HP', () => this.player.status.hp, (v) => {
-      this.player.status.hp = Math.max(0, Math.min(this.player.status.maxHP, v));
+    this.createParameterSection('HP', () => this.wizard.status.hp, (v) => {
+      this.wizard.status.hp = Math.max(0, Math.min(this.wizard.status.maxHP, v));
     });
     
-    this.createParameterSection('最大HP', () => this.player.status.maxHP, (v) => {
-      this.player.status.setMaxHP(v);
+    this.createParameterSection('最大HP', () => this.wizard.status.maxHP, (v) => {
+      this.wizard.status.setMaxHP(v);
     });
     
-    this.createParameterSection('MP', () => this.player.status.mp, (v) => {
-      this.player.status.mp = Math.max(0, Math.min(this.player.status.maxMP, v));
+    this.createParameterSection('MP', () => this.wizard.status.mp, (v) => {
+      this.wizard.status.mp = Math.max(0, Math.min(this.wizard.status.maxMP, v));
     });
     
-    this.createParameterSection('最大MP', () => this.player.status.maxMP, (v) => {
-      this.player.status.setMaxMP(v);
+    this.createParameterSection('最大MP', () => this.wizard.status.maxMP, (v) => {
+      this.wizard.status.setMaxMP(v);
     });
     
-    this.createParameterSection('攻撃力', () => this.player.status.attack, (v) => {
-      this.player.status.setAttack(v);
+    this.createParameterSection('攻撃力', () => this.wizard.status.attack, (v) => {
+      this.wizard.status.setAttack(v);
     });
     
-    this.createParameterSection('移動速度', () => this.player.status.speed, (v) => {
-      this.player.status.setSpeed(v);
+    this.createParameterSection('移動速度', () => this.wizard.status.MaxSpeed, (v) => {
+      this.wizard.status.setDir(v);
     });
     
-    this.createParameterSection('火球射程', () => this.player.status.fireRange, (v) => {
-      this.player.status.setFireRange(v);
+    this.createParameterSection('火球射程', () => this.wizard.status.AddLifeTime, (v) => {
+      this.wizard.status.AddLifeTime+v;
     });
     
-    this.createParameterSection('コイン', () => this.player.playerstatus.coins, (v) => {
-      this.player.playerstatus.coins = v;
+    this.createParameterSection('コイン', () => this.wizard.playerstatus.coins, (v) => {
+      this.wizard.playerstatus.coins = v;
     });
     
-    this.createParameterSection('ステージ', () => this.player.playerstatus.stage, (v) => {
-      this.player.playerstatus.setStage(v);
+    this.createParameterSection('ステージ', () => this.wizard.playerstatus.stage, (v) => {
+      this.wizard.playerstatus.setStage(v);
     });
     
     // 閉じるボタン
