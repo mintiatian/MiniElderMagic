@@ -1,5 +1,6 @@
 ﻿// Script/Actor/Terrain.js
 import { Actor } from '../Base/Actor.js';
+import {CollisionType} from "../Base/Pawn.js";
 
 /**
  * 背景タイル（木・岩・水面など）を表す静的 Actor
@@ -16,6 +17,7 @@ export class Terrain extends Actor {
     constructor(x, y, emoji, parent) {
         super(x, y, emoji, parent);
 
+        this.setCollisionType(CollisionType.NO_COLLISION);
         // フォントをタイルサイズに合わせ直す
         //this.element.style.fontSize = `${tileSize}px`;
 

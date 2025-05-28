@@ -1,67 +1,122 @@
-﻿// Script/Background.js
+﻿// Script/BackgroundCanvas.js
 import { TILE_SIZE } from './GameData.js';
-import { Terrain   } from './Actor/Terrain.js';
-import {MapDataTable} from "./Utils/DataTable.js";
+import { MapDataTable } from './Utils/DataTable.js';
 
-/**
- * 背景マップを Terrain Actor の集合として組み立てる
- *  - フレームの内側いっぱいにタイルを敷く
- *  - 最外周 1 タイルを 🪨 で囲み、内部は空地
- */
+// 下層レイヤにだけ描き、当たり判定も無視する“床”タイル
+const DECOR_TILES = new Set(['🟫', '👣','🌉']);
+const DECOR2_TILES = new Set(['🌿', '🌾','🌴','🌳', '🍀','🌲']);
+
 export class Background {
     /**
-     * @param {HTMLElement} gameArea 親 DOM (#game-area)
-     * @param {number}      tileSize 1 タイルの辺 [px]
+     * @param {HTMLElement} parentEl   #game-area
+     * @param {Camera}      camera
      */
-    constructor(gameArea, tileSize = TILE_SIZE) {
-        this.gameArea = gameArea;
-        this.tileSize = tileSize;              // 60px
+    constructor(parentEl, camera) {
+        this.camera = camera;
+        this.tile   = TILE_SIZE;
+        this.map    = MapDataTable.getMap();
 
-        /* 1. 画面実サイズ (1920×1080) を取得
-           transform でスケールされても clientWidth/Height は論理値を返す */
-        const widthPx  = gameArea.clientWidth  || 1920;
-        const heightPx = gameArea.clientHeight || 1080;
+        this.rows   = this.map.length;
+        this.cols   = this.map[0].length;
 
-        /* 2. グリッド数を算出 (端数切り捨て) */
-        this.cols = Math.floor(widthPx  / this.tileSize); // = 32
-        this.rows = Math.floor(heightPx / this.tileSize); // = 18
+        /* ===== オフスクリーン: ワールド全域を描く ===== */
+        const worldW = this.cols * this.tile;
+        const worldH = this.rows * this.tile;
 
-        /* 3. 外枠 1 マスを 🪨、内部を空地にした mapData を動的生成 */
-        // 32*18
-        /*this.mapData = Array.from({ length: this.rows }, (_r, r) =>
-            Array.from({ length: this.cols }, (_c, c) =>
-                (r === 0 || r === this.rows - 1 || c === 0 || c === this.cols - 1)
-                    ? '🪨'   // 四辺を岩タイルで壁に
-                    : ''     // 内部は空地
-            )
-        );
-        */
-        this.mapData = MapDataTable.getMap();          // 32×18 配列
+        // ── 衝突ありタイル用
+        this.worldCanvas        = document.createElement('canvas');
+        this.worldCanvas.width  = worldW;
+        this.worldCanvas.height = worldH;
+        const sctx = this.worldCanvas.getContext('2d');
 
-        /** @type {Terrain[]} 生成済み Terrain 役者 */
-        this.terrainActors = [];
+        // ── 床デコタイル用
+        this.decorCanvas        = document.createElement('canvas');
+        this.decorCanvas.width  = worldW;
+        this.decorCanvas.height = worldH;
+        const dctx = this.decorCanvas.getContext('2d');
 
-        this.#buildTerrainActors();            // ここですべて生成
-    }
+        // 共通フォント設定
+        for (const ctx of [sctx, dctx]) {
+            ctx.font = `${this.tile * 0.9}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+        }
 
-    /** タイルごとに Terrain Actor を作成 */
-    #buildTerrainActors() {
-        this.mapData.forEach((row, r) => {
-            row.forEach((cell, c) => {
-                if (!cell) return;                 // 空地はスキップ
+        // マップ走査して描き分け
+        for (let r = 0; r < this.rows; ++r) {
+            for (let c = 0; c < this.cols; ++c) {
+                const ch = this.map[r][c];
+                if (!ch) continue;
+                const x = c * this.tile + this.tile * 0.5;
+                const y = r * this.tile + this.tile * 0.5;
+                if (DECOR_TILES.has(ch)) dctx.fillText(ch, x, y);
+                else                      sctx.fillText(ch, x, y);
+            }
+        }
 
-                /* マップセル左上 → 中心座標へ */
-                const x = c * this.tileSize + this.tileSize * 0.5;
-                const y = r * this.tileSize + this.tileSize * 0.5;
+        /* ===== ② 表示キャンバス: 画面サイズ分だけ ===== */
+        // ※solid(壁) は z=1、decor(床) は z=0
+        this.viewCanvas        = document.createElement('canvas'); // 壁レイヤ
+        this.decorViewCanvas   = document.createElement('canvas'); // 床レイヤ
 
-                const tile = new Terrain(x, y, cell, this.gameArea);
-                this.terrainActors.push(tile);
-            });
+        for (const cvs of [this.viewCanvas, this.decorViewCanvas]) {
+            cvs.width  = camera.vw;   // baseWidth
+            cvs.height = camera.vh;   // baseHeight
+        }
+
+        this.ctx       = this.viewCanvas.getContext('2d');
+        this.decorCtx  = this.decorViewCanvas.getContext('2d');
+
+        const viewport = parentEl.parentElement;   // <div id="viewport">
+        Object.assign(this.decorViewCanvas.style, {
+            position:'absolute', left:'0', top:'0', pointerEvents:'none', zIndex:0
         });
+        Object.assign(this.viewCanvas.style, {
+            position:'absolute', left:'0', top:'0', pointerEvents:'none', zIndex:10
+        });
+
+        // 先にデコ→後に壁で DOM stacking-order も自然
+        viewport.appendChild(this.decorViewCanvas);
+        viewport.appendChild(this.viewCanvas);
     }
 
-    /** GameMain でまとめて push するためのアクセサ */
-    getActors() {
-        return this.terrainActors;
+    /* 当たり判定：床タイルは false, それ以外で文字があれば true */
+    isSolidAt(x, y) {
+        const c = Math.floor(x / TILE_SIZE);
+        const r = Math.floor(y / TILE_SIZE);
+        if (r < 0 || c < 0 || r >= this.rows || c >= this.cols) return true;
+        const ch = this.map[r][c];
+
+        if (DECOR2_TILES.has(ch)) {
+            return false;
+        }
+        
+        if (DECOR_TILES.has(ch)) return false; // 床タイルは衝突なし
+        return !!ch;
+    }
+
+    /** 毎フレーム呼ぶ */
+    update() {
+        const view = this.camera.getViewRect();
+
+        // --- 床レイヤ描画 ---
+        this.decorCtx.clearRect(0,0,this.decorViewCanvas.width,this.decorViewCanvas.height);
+        this.decorCtx.drawImage(
+            this.decorCanvas,
+            view.left, view.top,
+            view.width, view.height,
+            0, 0,
+            view.width, view.height
+        );
+
+        // --- 壁レイヤ描画 ---
+        this.ctx.clearRect(0,0,this.viewCanvas.width,this.viewCanvas.height);
+        this.ctx.drawImage(
+            this.worldCanvas,
+            view.left, view.top,
+            view.width, view.height,
+            0, 0,
+            view.width, view.height
+        );
     }
 }

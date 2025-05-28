@@ -84,9 +84,9 @@ export class GameMain {
         this.FPS = 60;
         this.FRAME_TIME = 1000 / this.FPS; // 1000ms ÷ 60fps ≈ 16.6667ms
 
-        this.background = new Background(this.gameArea, 60);
+        this.background = new Background(this.gameArea,this.camera, 60);
 
-        this.wizard = new Wizard(100, 100,  this.background, this.gameArea, wizardDataTable.get("Wizard1"));
+        this.wizard = new Wizard(325, 325,  this.background, this.gameArea, wizardDataTable.get("Wizard1"));
 
 
         this.stageManager = new Stage(this.gameArea);
@@ -238,12 +238,16 @@ export class GameMain {
         /* 既存のキャラ更新ループの後ろ（最終行近く）に追加 */
         /* プレイヤーを追ってカメラ位置を更新 */
         if(this.wizard) this.camera.update(this.wizard);
+
+        this.background.update();                // ← 必ず先に
         
         // 登録したpawnsがある時
         while (this.AddNewPawns.length > 0) {
             const ch = this.AddNewPawns.shift();   // 先頭を取り出してキューから削除
             ch.BeginStart();                       // 初期化
-            this.pawns.push(ch);                   // 本隊に登録
+            if(ch.UseUpdate){
+                this.pawns.push(ch);                   // 本隊に登録
+            }
         }
 
         for (const ch of this.pawns) {

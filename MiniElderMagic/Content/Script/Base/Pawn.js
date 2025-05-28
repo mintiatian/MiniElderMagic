@@ -79,7 +79,20 @@ export class Pawn extends BaseAnime {
             return;
         }
 
+        this.UseUpdate = true;
         gameMain.AddNewPawns.push(this);
+    }
+
+    // --- 背景タイル衝突判定 ---------------------------------
+    #hitsWall(px, py) {
+        if (!gameMain.background) return false;
+        const r = this.r - 1;
+        return (
+            gameMain.background.isSolidAt(px - r, py) ||
+            gameMain.background.isSolidAt(px + r, py) ||
+            gameMain.background.isSolidAt(px, py - r) ||
+            gameMain.background.isSolidAt(px, py + r)
+        );
     }
 
     setSize(CHAR_SIZE) {
@@ -222,8 +235,18 @@ export class Pawn extends BaseAnime {
         this.preX = this.x;
         this.preY = this.y;
 
-        this.x += this.moveX;
-        this.y += this.moveY;
+        /* ----- X 軸 ----- */
+        if (this.moveX !== 0) {
+            const nx = this.x + this.moveX;
+            if (!this.#hitsWall(nx, this.y)) this.x = nx;
+            else this.moveX = 0;
+        }
+        /* ----- Y 軸 ----- */
+        if (this.moveY !== 0) {
+            const ny = this.y + this.moveY;
+            if (!this.#hitsWall(this.x, ny)) this.y = ny;
+            else this.moveY = 0;
+        }
 
 
         // 表示更新
@@ -303,5 +326,5 @@ export class Pawn extends BaseAnime {
             this.parentElement = null;
         }
     }
-    
+
 }

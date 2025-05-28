@@ -5,7 +5,7 @@ export const GameConfig = {
     baseHeight: 1080,
 
     /** ワールド全体を何倍に拡大して敷き詰めるか（1,2,3…） */
-    renderScale: 4,
+    renderScale: 6,
 };
 
 /** 動的に倍率を切り替えたいとき用 */
