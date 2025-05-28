@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <title>Emoji Map CSV Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root{--cell:32px}
+        *{box-sizing:border-box}
+        body{margin:0;background:#222;color:#eee;font-family:system-ui,sans-serif;overflow:hidden;user-select:none}
+        header{display:flex;align-items:center;gap:24px;padding:8px 16px;background:#111;border-bottom:1px solid #444}
+        h1{margin:0;font-size:1.2rem}
+        #mapSize{font-family:monospace;font-size:1rem;color:#6cf}
+        .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 16px;background:#1b1b1b;border-bottom:1px solid #333}
+        .palette{display:flex;gap:4px;flex-wrap:wrap;max-height:calc(var(--cell)*2 + 8px);overflow-x:auto}
+        .palette button{width:var(--cell);height:var(--cell);font-size:calc(var(--cell)*0.7);cursor:pointer;border:1px solid #555;background:#333}
+        .palette .sel{outline:2px solid #ff0}
+        .grid-wrap{width:100%;height:calc(100vh - 112px);overflow:hidden;cursor:grab}
+        #grid{display:grid;background:#444;grid-auto-rows:var(--cell);grid-auto-columns:var(--cell)}
+        .cell{width:var(--cell);height:var(--cell);display:flex;align-items:center;justify-content:center;font-size:calc(var(--cell)*0.7);background:#000}
+        input[type="number"]{width:60px}
+        button,input{font-size:0.9rem}
+    </style>
+</head>
+<body>
+<header>
+    <h1>Emoji Map Editor <span id="mapSize"></span></h1>
+</header>
+<div class="toolbar">
+    <input type="file" id="fileInput" accept=".csv" />
+    <button id="downloadBtn">Download CSV</button>
+    Brush <input type="number" id="brush" min="1" max="10" value="1" />
+    <div class="palette" id="palette"></div>
+    <span style="font-size:0.8rem;color:#aaa">(クリック:単独選択 / Shift+クリック:追加&除外)</span>
+</div>
+<div class="grid-wrap" id="viewport">
+    <div id="grid"></div>
+</div>
+<script>
+    // ---------------------- Config & State ----------------------
+    const paletteEmojis=["","🧱","⛰️","🏔️","🗻","🪨","🏠","🏡","🏘️","🏚️","🟫","👣","🌊","🌉","🌲","🌳","🌴","🌾","🍀","🌿","💀"];
+    let selectedEmojis=[""]; // default eraser
+    let brushSize=1;
+    let grid=[],cells=[],rows=0,cols=0;
+    const gridEl=document.getElementById('grid');
+    const paletteEl=document.getElementById('palette');
+    const brushEl=document.getElementById('brush');
+    let cellSize=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||32;
+    const MIN_CELL=16,MAX_CELL=96;
+    // ---------------------- Palette -----------------------------
+    function renderPalette(){
+        paletteEl.innerHTML='';
+        paletteEmojis.forEach(e=>{
+            const b=document.createElement('button');
+            b.textContent=e||'␣';
+            b.title=e||'blank';
+            b.dataset.emoji=e;
+            b.onclick=ev=>{
+                if(ev.shiftKey){ // toggle
+                    if(selectedEmojis.includes(e)){
+                        selectedEmojis=selectedEmojis.filter(x=>x!==e);
+                        b.classList.remove('sel');
+                    }else{
+                        selectedEmojis.push(e);
+                        b.classList.add('sel');
+                    }
+                }else{ // single
+                    selectedEmojis=[e];
+                    document.querySelectorAll('.palette .sel').forEach(x=>x.classList.remove('sel'));
+                    b.classList.add('sel');
+                }
+            };
+            paletteEl.appendChild(b);
+        });
+        paletteEl.querySelector('button').classList.add('sel');
+    }
+    renderPalette();
+    // ---------------------- CSV Loading & Rendering -------------
+    function loadCSV(text){
+        grid=text.trim().split(/\r?\n/).map(r=>r.split(','));
+        rows=grid.length;cols=grid[0].length;
+        document.getElementById('mapSize').textContent=`(${rows}×${cols})`;
+        renderGrid();
+    }
+    function renderGrid(){
+        gridEl.style.gridTemplateColumns=`repeat(${cols},var(--cell))`;
+        gridEl.innerHTML='';cells=[];
+        for(let r=0;r<rows;r++){
+            cells[r]=[];
+            for(let c=0;c<cols;c++){
+                const div=document.createElement('div');
+                div.className='cell';
+                div.textContent=grid[r][c]||'';
+                div.dataset.r=r;div.dataset.c=c;
+                gridEl.appendChild(div);
+                cells[r][c]=div;
+            }
+        }
+    }
+    // ---------------------- Painting Logic ----------------------
+    function randomEmoji(){return selectedEmojis[Math.floor(Math.random()*selectedEmojis.length)]||"";}
+    function paint(r,c){
+        const off=Math.floor(brushSize/2);
+        for(let dr=0;dr<brushSize;dr++){
+            for(let dc=0;dc<brushSize;dc++){
+                const rr=r+dr-off,cc=c+dc-off;
+                if(rr>=0&&rr<rows&&cc>=0&&cc<cols){
+                    const emoji=randomEmoji();
+                    grid[rr][cc]=emoji;
+                    cells[rr][cc].textContent=emoji;
+                }
+            }
+        }
+    }
+    // ---------------------- Interaction -------------------------
+    let painting=false,panning=false,startX=0,startY=0,scrollL=0,scrollT=0;
+    const viewport=document.getElementById('viewport');
+    function cellCoords(e){const t=e.target;if(!t.classList.contains('cell'))return null;return[+t.dataset.r,+t.dataset.c];}
+    viewport.addEventListener('mousedown',e=>{
+        const coords=cellCoords(e);
+        if(e.button===2){
+            panning=true;viewport.style.cursor='grabbing';startX=e.clientX;startY=e.clientY;scrollL=viewport.scrollLeft;scrollT=viewport.scrollTop;
+        }else if(e.button===0&&coords){painting=true;paint(...coords);}
+    });
+    viewport.addEventListener('mousemove',e=>{
+        if(panning){viewport.scrollLeft=scrollL-(e.clientX-startX);viewport.scrollTop=scrollT-(e.clientY-startY);}
+        else if(painting){const coords=cellCoords(e);if(coords)paint(...coords);}
+    });
+    window.addEventListener('mouseup',()=>{painting=false;panning=false;viewport.style.cursor='grab';});
+    viewport.addEventListener('contextmenu',e=>{e.preventDefault();const coords=cellCoords(e);if(coords){selectedEmojis=[""];paint(...coords);}});
+    // ----------------- WASD scrolling ---------------------------
+    window.addEventListener('keydown',e=>{
+        const step=64;
+        switch(e.key.toLowerCase()){
+            case 'w':viewport.scrollTop-=step;break;
+            case 's':viewport.scrollTop+=step;break;
+            case 'a':viewport.scrollLeft-=step;break;
+            case 'd':viewport.scrollLeft+=step;break;
+        }
+    });
+    // ----------------- Mouse Wheel Zoom -------------------------
+    viewport.addEventListener('wheel',e=>{
+        if(!e.ctrlKey){ // zoom when scrolling anywhere inside viewport
+            e.preventDefault();
+            const factor=e.deltaY<0?1.1:0.9;
+            const newSize=Math.max(MIN_CELL,Math.min(MAX_CELL,Math.round(cellSize*factor)));
+            if(newSize===cellSize)return;
+            const rect=viewport.getBoundingClientRect();
+            const mx=e.clientX-rect.left+viewport.scrollLeft;
+            const my=e.clientY-rect.top+viewport.scrollTop;
+            const ratio=newSize/cellSize;
+            cellSize=newSize;
+            document.documentElement.style.setProperty('--cell',cellSize+'px');
+            // adjust scroll so that point under mouse stays fixed
+            viewport.scrollLeft=mx*ratio-(e.clientX-rect.left);
+            viewport.scrollTop=my*ratio-(e.clientY-rect.top);
+        }
+    },{passive:false});
+    // ----------------- Brush size input -------------------------
+    brushEl.addEventListener('change',()=>{brushSize=Math.max(1,Math.min(10,Number(brushEl.value)||1));});
+    // ----------------- File I/O --------------------------------
+    fileInput.addEventListener('change',e=>{
+        const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>loadCSV(ev.target.result);r.readAsText(f,'utf-8');});
+    function downloadCSV(){const csv=grid.map(r=>r.join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`emoji_map_${Date.now()}.csv`;a.click();URL.revokeObjectURL(url);}
+    downloadBtn.onclick=downloadCSV;
+</script>
+</body>
+</html>
