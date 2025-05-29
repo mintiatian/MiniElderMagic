@@ -160,7 +160,14 @@
     /* ==========================
        8. ゲーム起動
        ========================== */
-    const gameMain = new GameMain(document.getElementById('game-area'));
+    const gameTopArea = document.getElementById('game-area');
+
+
+    const gameMainArea = document.createElement('game-main-area');
+    gameTopArea.appendChild(gameMainArea);
+
+    
+    const gameMain = new GameMain(gameTopArea,gameMainArea);
 </script>
 </body>
 </html>

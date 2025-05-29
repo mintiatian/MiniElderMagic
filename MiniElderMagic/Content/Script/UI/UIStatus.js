@@ -38,7 +38,7 @@ export class UIStatus extends UIBase{
         // ステータス情報を表示するテーブル
         this.statusTable = document.createElement('table');
         this.statusTable.style.width = '100%';
-        this.statusTable.style.borderCollapse = 'collapse';
+        //this.statusTable.style.borderCollapse = 'collapse';
         this.statusTable.style.marginBottom = '15px';
         this.element.appendChild(this.statusTable);
         
@@ -54,8 +54,8 @@ export class UIStatus extends UIBase{
         */
         
         // コンテナを親要素に追加
-        //this.parentElement.appendChild(this.element);
-        document.body.appendChild(this.element);
+        this.parentElement.appendChild(this.element);
+        //document.body.appendChild(this.element);
         this.element.style.display = 'none';
         this.element.style.position = 'fixed';     // カメラに流されない
         this.element.style.zIndex  = 1000;         // ゲーム画より前面

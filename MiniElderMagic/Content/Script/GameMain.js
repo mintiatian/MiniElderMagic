@@ -48,9 +48,10 @@ export class GameMain {
         }
     }
 
-    constructor(parentElement) {
+    constructor(gameTopArea,parentElement) {
         /* ───── 基本セットアップ ───── */
 
+        this.gameTopArea = gameTopArea;
         this.gameArea = parentElement;
         /* === カメラ初期化 (#game-area を渡す) === */
         this.camera = new Camera(this.gameArea);
@@ -96,7 +97,7 @@ export class GameMain {
         // HUDの生成
         const hud = new UIHud(this.gameArea);
         // ステータス画面の生成
-        this.statusUI = new UIStatus(this.gameArea, this.wizard);
+        this.statusUI = new UIStatus(this.gameTopArea, this.wizard);
         // デバッグ画面の生成
         const debugUI = new UIDebug(this.gameArea, this.wizard);
 

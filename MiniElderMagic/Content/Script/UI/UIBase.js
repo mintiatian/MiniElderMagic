@@ -48,6 +48,8 @@
             this.element.style.opacity   = '1';
             this.element.style.transform = 'scale(1)';
             }, 50);
+
+        this.updateDisplay();
     }
 
     /**
