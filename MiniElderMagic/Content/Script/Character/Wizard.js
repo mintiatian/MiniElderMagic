@@ -91,7 +91,10 @@ export class Wizard extends CharacterBase {
         /* ===== ビューポート → ワールド座標へ変換 ===== */
         this.mouseMoveHandler = (evt) => {
             // #game-area（＝this.element.parentElement）のスクリーン位置
+            //             const containerRect = this.background.parentElement.getBoundingClientRect();
+            
             const containerRect = this.element.parentElement.getBoundingClientRect();
+            //const containerRect = this.gameArea.getBoundingClientRect();
             // 補正後マウス座標（ワールド基準）
             const mouseXWorld = evt.clientX - containerRect.left;
             const mouseYWorld = evt.clientY - containerRect.top;

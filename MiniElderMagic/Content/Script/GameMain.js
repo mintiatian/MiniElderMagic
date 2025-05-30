@@ -48,11 +48,11 @@ export class GameMain {
         }
     }
 
-    constructor(gameTopArea,parentElement) {
+    constructor(gameArea,gameUiLayer) {
         /* ───── 基本セットアップ ───── */
 
-        this.gameTopArea = gameTopArea;
-        this.gameArea = parentElement;
+        this.gameUiLayer = gameUiLayer;
+        this.gameArea = gameArea;
         /* === カメラ初期化 (#game-area を渡す) === */
         this.camera = new Camera(this.gameArea);
         /* ───── 非同期テーブル読込 ───── */
@@ -87,7 +87,7 @@ export class GameMain {
 
         this.background = new Background(this.gameArea,this.camera, 60);
 
-        this.wizard = new Wizard(325, 325,  this.background, this.gameArea, wizardDataTable.get("Wizard1"));
+        this.wizard = new Wizard(325, 325,  this.background,this.gameArea, wizardDataTable.get("Wizard1"));
 
 
         this.stageManager = new Stage(this.gameArea);
@@ -95,14 +95,14 @@ export class GameMain {
 
 
         // HUDの生成
-        const hud = new UIHud(this.gameArea);
+        const hud = new UIHud(this.gameUiLayer);
         // ステータス画面の生成
-        this.statusUI = new UIStatus(this.gameTopArea, this.wizard);
+        this.statusUI = new UIStatus(this.gameUiLayer, this.wizard);
         // デバッグ画面の生成
-        const debugUI = new UIDebug(this.gameArea, this.wizard);
+        const debugUI = new UIDebug(this.gameUiLayer, this.wizard);
 
-        this.magicUI = new UIMagic(this.gameArea, this.wizard);
-        const itemList = new UIItemList(this.gameArea, this.wizard);
+        this.magicUI = new UIMagic(this.gameUiLayer, this.wizard);
+        const itemList = new UIItemList(this.gameUiLayer, this.wizard);
         //magicUI.update();
 
         // ショップ完了イベントのリスナー（一度だけ登録）
