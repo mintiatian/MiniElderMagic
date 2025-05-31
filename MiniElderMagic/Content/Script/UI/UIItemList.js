@@ -1,6 +1,6 @@
 ﻿/* UIItemList.js ----------------------------------------------------------- */
 import {UIBase} from './UIBase.js';
-import {itemDataTable} from '../Utils/DataTable.js';
+import {eventTileDataTable, itemDataTable} from '../Utils/DataTable.js';
 import {gameMain} from '../GameMain.js';
 
 /**
@@ -21,6 +21,7 @@ export class UIItemList extends UIBase {
             if (this.wizard.playerstatus.coins >= cost) {
                 this.wizard.playerstatus.coins -= cost;
                 this.wizard.addItem(item);
+                this.wizard.status.shopBuyCount++;
                 gameMain.statusUI.updateDisplay();
                 gameMain.magicUI.updateDisplay();
                 this.updateDisplay();
@@ -43,7 +44,7 @@ export class UIItemList extends UIBase {
         /* ───────── フレーム ───────── */
         this.element.classList.add('ui-shop');
         Object.assign(this.element.style, {
-            position: 'absolute', top: '50%', left: '50%',
+            position: 'absolute', top: '20%', left: '40%',
             transform: 'translate(-50%,-50%)',
             minWidth: '600px', maxWidth: '620px',
             padding: '12px 18px 18px',
@@ -99,10 +100,14 @@ export class UIItemList extends UIBase {
 
 
         //document.body.appendChild(this.element);
-        this.element.style.display = 'none';
-        this.element.style.position = 'fixed';     // カメラに流されない
-        this.element.style.zIndex  = 1000;         // ゲーム画より前面
+        this.element.style.position = 'absolute';  // 画面 or 親要素基準
+        this.element.style.left = '50%';       // 横 1/4（25 %）ライン
+        this.element.style.top = '50%';       // 縦 1/2（50 %）ライン
+        this.element.style.transform = 'translate(-50%, -50%)';  // 要素自身の中心を基準点に合わせる
+        this.element.style.zIndex = 1000;         // ゲーム画より前面
         this.hide();
+
+        this.filter = "";
     }
 
     /* ───────── フィルターボタン再生成 ───────── */
@@ -143,13 +148,22 @@ export class UIItemList extends UIBase {
         let items = table instanceof Map ? [...table.values()]
             : Array.isArray(table) ? [...table] : [];
 
-        this.rebuildFilterButtons(items);
 
-        if (this.currentFilter !== 'all') {
-            items = items.filter(it => it.filtertype === this.currentFilter);
+        /* ① 固定フィルターがあれば最優先で適用 */
+        if (this.filter) {
+            items = items.filter(it => it.filtertype === this.filter);
+            /* ボタンは不要なので隠す */
+            this.filterBar.style.display = 'none';
+        } else {
+            /* ② 従来どおりボタンを表示して currentFilter で絞る */
+            this.filterBar.style.display = 'flex';
+            this.rebuildFilterButtons(items);
+            if (this.currentFilter !== 'all') {
+                items = items.filter(it => it.filtertype === this.currentFilter);
+            }
         }
-        
-        
+
+
         items.sort((a, b) => {
             const costA = (() => {
                 const bp = Number(a.shopcost) || 0;
@@ -233,7 +247,29 @@ export class UIItemList extends UIBase {
 
     /* ───────── 表示 / 非表示 ───────── */
     show() {
+
+        // プレイヤーがいま踏んでいるタイル絵文字
+        const tileEmoji = gameMain.wizard?.eventTile ?? "";
+        if (!tileEmoji) return;                  // 空文字 → 何もなし
+
+        // eventTileDataTable.table は Map
+        if (!eventTileDataTable.table.has(tileEmoji)) return;
+
+        const evtTile = eventTileDataTable.get(tileEmoji);
+        if (evtTile?.type !== "shop") return;    // shop 以外は無視
+
+        /* -------- ショップ UI を開く -------- */
+        this.filter        = evtTile.event ?? "";  // 例: "potion"
+        this.currentFilter = "all";                // ボタン側リセット
         this.updateDisplay();
         super.show();
+    }
+
+    /* hide 時に固定フィルターを解除したい場合は任意で */
+    hide() {
+        super.hide();
+        this.filter = "";
+
+        
     }
 }

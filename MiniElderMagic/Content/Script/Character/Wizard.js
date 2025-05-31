@@ -1,11 +1,11 @@
 import {PlayerStatus} from "./playerStatus.js";
 import {STAFF_SIZE} from '../GameData.js';
-import {MagicBase} from "../Magic/MagicBase.js";
 import {CharacterBase} from "./CharacterBase.js";
-import {magicDataTable} from "../Utils/DataTable.js";
+import {RangeCircleMixin} from "../Base/RangeCircleMixin.js";
+import {gameMain} from "../GameMain.js";
 
-export class Wizard extends CharacterBase {
-    constructor(x, y, background, parentElement, charaData) {
+export class Wizard extends RangeCircleMixin(CharacterBase) {
+    constructor(x, y, parentElement, charaData) {
         super(x, y, parentElement, charaData);
 
 
@@ -88,27 +88,15 @@ export class Wizard extends CharacterBase {
         document.addEventListener('mousedown', this.mouseDownHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
 
+        this.clientX = 0;
+        this.clientY = 0;
         /* ===== ビューポート → ワールド座標へ変換 ===== */
         this.mouseMoveHandler = (evt) => {
-            // #game-area（＝this.element.parentElement）のスクリーン位置
-            //             const containerRect = this.background.parentElement.getBoundingClientRect();
             
-            const containerRect = this.element.parentElement.getBoundingClientRect();
-            //const containerRect = this.gameArea.getBoundingClientRect();
-            // 補正後マウス座標（ワールド基準）
-            const mouseXWorld = evt.clientX - containerRect.left;
-            const mouseYWorld = evt.clientY - containerRect.top;
-            const playerCenter = this.getPlayerCenter();   // こちらもワールド座標
-            // マウス方向に向けて回転
-            const dx = mouseXWorld - playerCenter.x;
-            const dy = mouseYWorld - playerCenter.y;
-            // 次フレーム用に保持
-            this.mouseX = mouseXWorld;
-            this.mouseY = mouseYWorld;
+            this.clientX = evt.clientX;
+            this.clientY = evt.clientY;
 
-            this.radian = Math.atan2(dy, dx);
-            this.setDir(this.radian);
-
+            this.UpdateMove();
 
         };
         document.addEventListener('mousemove', this.mouseMoveHandler);
@@ -119,6 +107,29 @@ export class Wizard extends CharacterBase {
         this.IsActive = false;
         this.SettingMagicData();
 
+        this.CircleCreate(gameMain.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
+        this.CircleCreate(gameMain.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
+
+        this.eventTile = "";
+    }
+    
+    UpdateMove(){
+        const containerRect = this.element.parentElement.getBoundingClientRect();
+
+        // 補正後マウス座標（ワールド基準）
+        const mouseXWorld = this.clientX - containerRect.left;
+        const mouseYWorld = this.clientY - containerRect.top;
+        const playerCenter = this.getPlayerCenter();   // こちらもワールド座標
+        // マウス方向に向けて回転
+        const dx = mouseXWorld - playerCenter.x;
+        const dy = mouseYWorld - playerCenter.y;
+        // 次フレーム用に保持
+        this.mouseX = mouseXWorld;
+        this.mouseY = mouseYWorld;
+
+
+        this.radian = Math.atan2(dy, dx);
+        this.setDir(this.radian);
     }
 
     SettingMagicData() {
@@ -165,6 +176,7 @@ export class Wizard extends CharacterBase {
             super.update(delta);
             return;
         }
+
 
         {
             /* ───────── 2. 入力ベクトル作成 ───────── */
@@ -239,14 +251,31 @@ export class Wizard extends CharacterBase {
         }
         if (this.isRightMouseDown) {
             // 右クリック押しっぱなし時の処理
+
+            if(!this.BarrierId) {
+                this.AddBarrier();
+            }
+        }
+        else{
+            if(this.BarrierId) {
+                this.RemoveBarrier();
+            }
         }
 
+        this.UpdateMove();
         /* ───────── 8. 描画など親クラス処理 ───────── */
         super.update(delta);
 
         /* ───────── 9. HP ゲージ・杖など更新 ───────── */
         this.updateStaffPosition();
 
+        //this.background.popDoEnemy(this.x,this.y);
+        this.CircleUpdate();     // ← 必ず最後に呼んで追従
+    }
+
+    hitsWall(px, py) {
+        this.eventTile = "";
+        return super.hitsWall(px, py);
     }
 
 
@@ -387,31 +416,25 @@ export class Wizard extends CharacterBase {
             return {x: this.x, y: this.y}; // 内部座標をフォールバックとして使用
         }
     }
-
-    /**
-     * @desc ダメージを受けたときの処理をオーバーライド
-     * @param {number} damage - 受けるダメージ量
-     */
-    /*
-    takeDamage(damage) {
-        // 親クラスのtakeDamageを呼び出す
-        super.takeDamage(damage);
-
-        // ダメージエフェクト（一時的に赤くする）
-        this.element.style.filter = 'brightness(2) sepia(1) hue-rotate(-50deg) saturate(7)';
-        setTimeout(() => {
-            this.element.style.filter = 'none';
-        }, 200);
-
-        // プレイヤー固有のHPゲージを更新
-        //this.playerHPGage.update(this.status.hp, this.status.maxHP);
+    getPlayerPosition() {
+        return {x: this.x, y: this.y}; // 内部座標をフォールバックとして使用
     }
-    */
+    
 
     // キャラクターが削除されるときに杖も削除
     ExitStart() {
+
+
+
         // クリックイベントリスナーを削除
         document.removeEventListener('click', this.clickHandler);
+        document.removeEventListener('wheel', this.mouseWheelHandler);
+        document.removeEventListener('contextmenu', this.contextMenuHandler);  // 右クリック
+        document.removeEventListener('mousedown', this.middleClickHandler);
+        document.removeEventListener('mousedown', this.mouseDownHandler);
+        document.removeEventListener('mouseup', this.mouseUpHandler);
+        document.removeEventListener('mousemove', this.mouseMoveHandler);
+        
 
         // 杖チェックインターバルをクリア
         if (this.staffCheckInterval) {
@@ -560,12 +583,16 @@ export class Wizard extends CharacterBase {
             case "mpregene":
                 this.status.mpregene += parseFloat(DropItemData.value);
                 break;
+            case "difficulty":
+                this.status.shopBuyCount += parseFloat(DropItemData.value);
+                this.status.shopBuyCount = Math.max(0, this.status.shopBuyCount);
+                break;
 
             case "attack":
                 this.status.attack += parseInt(DropItemData.value);
                 break;
             case "deffence":
-                this.status.deffence += parseInt(DropItemData.value);
+                this.status.deffence += parseFloat(DropItemData.value);
                 break;
             case "MaxSpeed":
                 this.status.MaxSpeed += parseFloat(DropItemData.value);
@@ -738,4 +765,5 @@ export class Wizard extends CharacterBase {
             // 例：全魔法の中からランダム選択とか
         }
     }
+    
 }

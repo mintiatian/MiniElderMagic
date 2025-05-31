@@ -24,6 +24,8 @@ export class Pawn extends BaseAnime {
         this.x = x;
         this.y = y;
 
+        this.preX = this.x;
+        this.preY = this.y;
 
         // true にすると当たり判定円を表示
         this.DEBUG_COLLISION = false;
@@ -84,14 +86,14 @@ export class Pawn extends BaseAnime {
     }
 
     // --- 背景タイル衝突判定 ---------------------------------
-    #hitsWall(px, py) {
+    hitsWall(px, py,forEnemy=false) {
         if (!gameMain.background) return false;
         const r = this.r - 1;
         return (
-            gameMain.background.isSolidAt(px - r, py) ||
-            gameMain.background.isSolidAt(px + r, py) ||
-            gameMain.background.isSolidAt(px, py - r) ||
-            gameMain.background.isSolidAt(px, py + r)
+            gameMain.background.isSolidAt(px - r, py,forEnemy) ||
+            gameMain.background.isSolidAt(px + r, py,forEnemy) ||
+            gameMain.background.isSolidAt(px, py - r,forEnemy) ||
+            gameMain.background.isSolidAt(px, py + r,forEnemy)
         );
     }
 
@@ -147,6 +149,10 @@ export class Pawn extends BaseAnime {
     setPosition(x, y) {
         this.x = x;
         this.y = y;
+
+        if(!this.x) {
+            console.trace("kokoayasi 3");
+        }
     }
 
     /** {x, y} を取得 */
@@ -162,7 +168,6 @@ export class Pawn extends BaseAnime {
     }
 
     BeginStart() {
-
     }
 
     update(delta) {
@@ -234,17 +239,22 @@ export class Pawn extends BaseAnime {
 
         this.preX = this.x;
         this.preY = this.y;
+        
+        if(!this.x){
+            console.trace("kokoayasi");
+        }
 
         /* ----- X 軸 ----- */
         if (this.moveX !== 0) {
             const nx = this.x + this.moveX;
-            if (!this.#hitsWall(nx, this.y)) this.x = nx;
+            if (!this.hitsWall(nx, this.y)) this.x = nx;
             else this.moveX = 0;
         }
         /* ----- Y 軸 ----- */
         if (this.moveY !== 0) {
             const ny = this.y + this.moveY;
-            if (!this.#hitsWall(this.x, ny)) this.y = ny;
+            
+            if (!this.hitsWall(this.x, ny)) this.y = ny;
             else this.moveY = 0;
         }
 
@@ -261,6 +271,9 @@ export class Pawn extends BaseAnime {
             this.x = this.preX;
             this.y = this.preY;
 
+            if(!this.x) {
+                console.trace("kokoayasi 2");
+            }
             this.moveX = 0;
             this.moveY = 0;
         }
@@ -316,6 +329,7 @@ export class Pawn extends BaseAnime {
     destroy() {
         //console.log('destroy');
         if (this.element && this.element.parentNode) {
+            this.clearAllEvents?.();
             this.parentElement.removeChild(this.element);
 
             if (this.DEBUG_COLLISION) {

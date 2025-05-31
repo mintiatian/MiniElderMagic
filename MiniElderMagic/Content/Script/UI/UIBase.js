@@ -41,12 +41,12 @@
 
         /* ----------- アニメーション ----------- */
         this.element.style.opacity   = '0';
-        this.element.style.transform = 'scale(0.9)';
+        //this.element.style.transform = 'scale(0.9)';
         this.element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
 
         setTimeout(() => {
             this.element.style.opacity   = '1';
-            this.element.style.transform = 'scale(1)';
+            //this.element.style.transform = 'scale(1)';
             }, 50);
 
         this.updateDisplay();
@@ -58,7 +58,7 @@
     hide() {
         // 非表示アニメーション
         this.element.style.opacity   = '0';
-        this.element.style.transform = 'scale(0.9)';
+        //this.element.style.transform = 'scale(0.9)';
 
 
         setTimeout(() => {

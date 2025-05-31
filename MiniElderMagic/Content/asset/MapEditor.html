@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8"/>
+    <title>Emoji Map CSV Editor – Multi-Layer</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <style>
+        :root {
+            --cell: 32px
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: #222;
+            color: #eee;
+            font-family: system-ui, sans-serif;
+            overflow: hidden;
+            user-select: none
+        }
+
+        /* ── ヘッダー／ツールバー ───────────────────────── */
+        header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 8px 16px;
+            background: #111;
+            border-bottom: 1px solid #444
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem
+        }
+
+        #mapSize {
+            font-family: monospace;
+            color: #6cf
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 8px 16px;
+            background: #1b1b1b;
+            border-bottom: 1px solid #333
+        }
+
+        .palette {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            max-height: 72px;
+            overflow-x: auto
+        }
+
+        .palette button {
+            width: 32px;
+            height: 32px;
+            font-size: 22px;
+            cursor: pointer;
+            border: 1px solid #555;
+            background: #333
+        }
+
+        .palette .sel {
+            outline: 2px solid #ff0
+        }
+
+        button, input {
+            font-size: 0.9rem
+        }
+
+        /* ── レイヤーパネル ────────────────────────────── */
+        .layer-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-left: 16px
+        }
+
+        .layer-panel label {
+            font-size: 0.85rem;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            color: #ddd
+        }
+
+        /* ── ビューポート＆レイヤー ─────────────────────── */
+        .grid-wrap {
+            width: 100%;
+            height: calc(100vh - 128px);
+            overflow: hidden;
+            cursor: grab;
+            position: relative
+        }
+
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: grid
+        }
+
+        .layer .cell {
+            width: var(--cell);
+            height: var(--cell);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--cell) * 0.7);
+        / / background: #000
+        }
+
+        .preview {
+            outline: 1px dashed #ff0;
+            opacity: 0.6
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Emoji Map Editor <span id="mapSize"></span></h1>
+    <button id="undoBtn" title="Undo (Ctrl+Z)">⬅️ Undo</button>
+    <button id="redoBtn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">Redo ➡️</button>
+</header>
+
+<div class="toolbar">
+    <input type="file" id="fileInput" accept=".csv" multiple/>
+    <button id="downloadBtn">Download Active CSV</button>
+
+    Brush <input type="number" id="brush" min="1" max="100" value="1" style="width:60px"/>
+    <span id="brushInfo" style="min-width:48px">1×1</span>
+    <!-- 描画モード -->
+    <label><input type="radio" name="mode" id="modeBrush" value="brush" checked> Brush</label>
+    <label><input type="radio" name="mode" id="modeRect" value="rect"> Fill&nbsp;Rect</label>
+
+    <div class="palette" id="palette"></div>
+
+    <!-- レイヤーチェックリスト -->
+    <div class="layer-panel" id="layerPanel"></div>
+</div>
+
+<div class="grid-wrap" id="viewport"></div>
+
+<script>
+    // ───────────────── Config ──────────────────────────
+    const paletteEmojis = ["","","", 
+        "🧱", "⛰️", "🏔️","🌋", "🗻", "🪨",  "🌊",
+        "🟫","🟩","🟨","🟥","🟫","🌉",
+        "🌲", "🌳", "🌴","🏝️", "🌾", "🍀", "🌿","🏜️","🪵",
+        "🏠", "🏡", "🏘️", "🏚️","🏕️","⛺","🏖️","🏟️","🎪","🏛️","🛖","🏦","🏰","⛪","🕌","🛕",
+        "👾","👹","👻","🐉","🧟","👺","🦇","🐺","🤖","🎃",
+    ];
+    const paletteColors = [                                // ← 新色チップ
+        "#0d0d0d", // きわめて濃いグレー
+        "#1a0000", // 漆黒に近い深紅
+        "#330000", // （既存）暗いワインレッド
+        "#1a0d00", // 焦げ茶寄り
+        "#1a1400", // ダークオリーブ
+        "#443300", // （既存）こげ茶＋黄味
+        "#1a1a00", // 黄味がかった墨色
+        "#001a00", // ダークフォレスト
+        "#002233", // 黒に近い深いシアン
+        "#00001a", // ミッドナイトブルー
+        "#1a0033", // ほぼ黒の藍紫
+        "#1a0014", // 黒味のあるバーガンディ
+        "#0d001a", // 漆黒寄りバイオレット
+        "#1a1a1a"  // ニアブラック（グレー系）
+    ];
+
+    const MIN_CELL = 4, MAX_CELL = 96;
+    let cellSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 32;
+
+    // ───────────────── State ────────────────────────────
+    const layers = [];          // {name,grid,cells,div,visible,undoStack,undoIdx}
+    let rows = 0, cols = 0;
+    let activeLayerIndex = -1;   // 描画対象
+    let selectedEmojis = [""];   // パレット選択
+    let brushSize = 1;
+    let painting = false, panning = false, startX = 0, startY = 0, scrollL = 0, scrollT = 0;
+    let previewCells = [];
+    let mode = 'brush';                 // ← Brush / rect
+    let dragStart = null;               // {r,c} in rect mode
+
+    // モード切替イベント
+    document.getElementById('modeBrush').onchange = () => mode = 'brush';
+    document.getElementById('modeRect').onchange = () => mode = 'rect';
+
+    // ───────────────── DOM refs ─────────────────────────
+    const viewport = document.getElementById('viewport');
+    const paletteEl = document.getElementById('palette');
+    const brushEl = document.getElementById('brush');
+    const brushInfo = document.getElementById('brushInfo');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const layerPanel = document.getElementById('layerPanel');
+
+
+    // ────────── Rect utilities ──────────
+    function rectIter(r1, c1, r2, c2, fn) {
+        const rs = Math.min(r1, r2), re = Math.max(r1, r2);
+        const cs = Math.min(c1, c2), ce = Math.max(c1, c2);
+        for (let r = rs; r <= re; r++) for (let c = cs; c <= ce; c++) fn(r, c);
+    }
+
+    function previewRect(r1, c1, r2, c2) {
+        clearPreview();
+        const l = layers[activeLayerIndex];
+        if (!l) return;
+        rectIter(r1, c1, r2, c2, (r, c) => {
+            const div = l.cells[r][c];
+            div.classList.add('preview');
+            previewCells.push(div);
+        });
+    }
+
+    // ───────────────── Palette ─────────────────────────
+    function renderPalette() {
+        paletteEl.innerHTML = '';
+        paletteEmojis.forEach(e => {
+            const b = document.createElement('button');
+            b.textContent = e || '␣';
+            b.title = e || 'blank';
+            b.onclick = ev => {
+                if (ev.shiftKey) {
+                    // 追加/除外
+                    if (selectedEmojis.includes(e)) {
+                        selectedEmojis = selectedEmojis.filter(x => x !== e);
+                        b.classList.remove('sel');
+                    } else {
+                        selectedEmojis.push(e);
+                        b.classList.add('sel');
+                    }
+                } else {
+                    selectedEmojis = [e];
+                    document.querySelectorAll('.palette .sel').forEach(x => x.classList.remove('sel'));
+                    b.classList.add('sel');
+                }
+            };
+            paletteEl.appendChild(b);
+        });
+        paletteEl.querySelector('button').classList.add('sel');
+
+        // --- 色チップボタン ---
+        paletteColors.forEach(col => {
+            const b = document.createElement('button');
+            b.style.background = col;          // ボタン自体を色付きに
+            b.dataset.color = col;
+            b.onclick = ev => {
+                if (ev.shiftKey) {
+                    if (selectedEmojis.includes(col)) {
+                        selectedEmojis = selectedEmojis.filter(x => x !== col);
+                        b.classList.remove('sel');
+                    } else {
+                        selectedEmojis.push(col);  // 文字列そのまま保持
+                        b.classList.add('sel');
+                    }
+                } else {
+                    selectedEmojis = [col];
+                    document.querySelectorAll('.palette .sel').forEach(x => x.classList.remove('sel'));
+                    b.classList.add('sel');
+                }
+            };
+            paletteEl.appendChild(b);
+        });
+
+    }
+
+    renderPalette();
+
+    // ───────────────── CSV → grid ──────────────────────
+    function parseCSV(text) {
+        return text.trim().split(/\r?\n/).map(r => r.split(','));
+    }
+
+    // ───────────────── Layer Handling ───────────────────
+    function addLayer(name, grid) {
+        // サイズ調整（最初のファイルで決定）
+        if (layers.length === 0) {
+            rows = grid.length;
+            cols = grid[0].length;
+            document.getElementById('mapSize').textContent = `(${rows}×${cols})`;
+        } else {
+            rows = Math.min(rows, grid.length);
+            cols = Math.min(cols, grid[0].length);
+            grid = grid.slice(0, rows).map(r => r.slice(0, cols));
+        }
+
+        const div = document.createElement('div');
+        div.className = 'layer';
+        div.style.gridTemplateColumns = `repeat(${cols},var(--cell))`;
+        viewport.appendChild(div);
+
+        const cells = [];
+        for (let r = 0; r < rows; r++) {
+            cells[r] = [];
+            for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+
+                const v = grid[r][c] || '';
+                if (v.startsWith('#')) {
+                    cell.style.background = v;
+                    cell.textContent = '';
+                } else {
+                    cell.textContent = v;
+                }
+
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                div.appendChild(cell);
+                cells[r][c] = cell;
+            }
+        }
+
+        const layer = {name, grid, cells, div, visible: true, undo: [grid.map(r => r.slice())], ui: null, undoIdx: 0};
+        layers.push(layer);
+        createLayerUI(layer, layers.length - 1);
+
+        if (activeLayerIndex === -1) setActiveLayer(0);
+    }
+
+    function createLayerUI(layer, idx) {
+        const row = document.createElement('label');
+        layer.ui = row;
+        row.innerHTML =
+            `<input type="checkbox" class="show" data-i="${idx}" checked>
+     <input type="radio"   name="paint" class="paint" data-i="${idx}">
+     ${layer.name}`;
+        layerPanel.appendChild(row);
+
+        // show/hide
+        row.querySelector('.show').onchange = e => {
+            layer.visible = e.target.checked;
+            layer.div.style.visibility = layer.visible ? 'visible' : 'hidden';
+        };
+        // set active
+        row.querySelector('.paint').onchange = () => setActiveLayer(idx);
+    }
+
+    function setActiveLayer(i) {
+        activeLayerIndex = i;
+        document.querySelectorAll('input.paint').forEach(r => {
+            r.checked = +r.dataset.i === i;
+        });
+
+
+        // ── クリック判定を持たせるのはアクティブだけ ──
+        layers.forEach((l, idx) => {
+            l.div.style.pointerEvents = idx === i ? 'auto' : 'none';
+            if (idx === i) {
+                // 最前面へ（appendChild で末尾に配置）
+                viewport.appendChild(l.div);
+            }
+        });
+
+        updateUndoRedoButtons();
+    }
+
+    // ───────────────── Undo/Redo ────────────────────────
+    function pushHistory(layer) {
+        layer.undo = layer.undo.slice(0, layer.undoIdx + 1);
+        layer.undo.push(layer.grid.map(r => r.slice()));
+        if (layer.undo.length > 100) layer.undo.shift();
+        layer.undoIdx = layer.undo.length - 1;
+    }
+
+    function undo() {
+        const l = layers[activeLayerIndex];
+        if (!l || l.undoIdx <= 0) return;
+        l.undoIdx--;
+        l.grid = l.undo[l.undoIdx].map(r => r.slice());
+        redrawLayer(l);
+        updateUndoRedoButtons();
+    }
+
+    function redo() {
+        const l = layers[activeLayerIndex];
+        if (!l || l.undoIdx >= l.undo.length - 1) return;
+        l.undoIdx++;
+        l.grid = l.undo[l.undoIdx].map(r => r.slice());
+        redrawLayer(l);
+        updateUndoRedoButtons();
+    }
+
+    function updateUndoRedoButtons() {
+        const l = layers[activeLayerIndex] || {undoIdx: 0, undo: [1]};
+        undoBtn.disabled = l.undoIdx <= 0;
+        redoBtn.disabled = l.undoIdx >= l.undo.length - 1;
+    }
+
+    // ───────────────── Drawing ─────────────────────────
+    function randomEmoji() {
+        return selectedEmojis[Math.floor(Math.random() * selectedEmojis.length)] || "";
+    }
+
+    function paint(r, c) {
+        const l = layers[activeLayerIndex];
+        if (!l) return;
+        const off = Math.floor(brushSize / 2);
+        for (let dr = 0; dr < brushSize; dr++) {
+            for (let dc = 0; dc < brushSize; dc++) {
+                const rr = r + dr - off, cc = c + dc - off;
+                if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) {
+                    const val = randomEmoji();         // 絵文字または #rrggbb
+                    l.grid[rr][cc] = val;
+                    const cell = l.cells[rr][cc];
+                    if (val.startsWith('#')) {
+                        cell.textContent = '';
+                        cell.style.background = val;
+                    } else {
+                        cell.textContent = val;
+                        cell.style.background = 'transparent';
+                    }
+                }
+            }
+        }
+    }
+
+    function redrawLayer(l) {
+        for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++) {
+
+                const v = l.grid[r][c] || '';
+                const cell = l.cells[r][c];
+                if (v.startsWith('#')) {
+                    cell.textContent = '';
+                    cell.style.background = v;
+                } else {
+                    cell.textContent = v;
+                    cell.style.background = 'transparent';
+                }
+            }
+    }
+
+    // ───────────────── Preview ─────────────────────────
+    function clearPreview() {
+        previewCells.forEach(div => div.classList.remove('preview'));
+        previewCells = [];
+    }
+
+    function showPreview(r, c) {
+        clearPreview();
+        const l = layers[activeLayerIndex];
+        if (!l) return;
+        const off = Math.floor(brushSize / 2);
+        for (let dr = 0; dr < brushSize; dr++) {
+            for (let dc = 0; dc < brushSize; dc++) {
+                const rr = r + dr - off, cc = c + dc - off;
+                if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) {
+                    const div = l.cells[rr][cc];
+                    div.classList.add('preview');
+                    previewCells.push(div);
+                }
+            }
+        }
+    }
+
+    // ───────────────── Interaction ─────────────────────
+    function cellCoords(e) {
+        const t = e.target;
+        return t.classList.contains('cell') ? [+t.dataset.r, +t.dataset.c] : null;
+    }
+
+    viewport.addEventListener('mousedown', e => {
+        const coords = cellCoords(e);
+        if (e.button === 2) { // パン
+            panning = true;
+            viewport.style.cursor = 'grabbing';
+            startX = e.clientX;
+            startY = e.clientY;
+            scrollL = viewport.scrollLeft;
+            scrollT = viewport.scrollTop;
+        } else if (e.button === 0 && coords) {   // 左ドラッグ
+            const l = layers[activeLayerIndex];
+            if (!l) return;
+            if (mode === 'brush') {
+                pushHistory(l);
+                painting = true;
+                paint(...coords);
+                showPreview(...coords);
+            } else { // rect
+                dragStart = {r: coords[0], c: coords[1]};
+                previewRect(dragStart.r, dragStart.c, coords[0], coords[1]);
+            }
+        }
+    });
+    viewport.addEventListener('mousemove', e => {
+        if (panning) {
+            viewport.scrollLeft = scrollL - (e.clientX - startX);
+            viewport.scrollTop = scrollT - (e.clientY - startY);
+        } else {
+            const coords = cellCoords(e);
+            if (!coords) return;
+
+            if (mode === 'brush') {
+                showPreview(...coords);
+                if (painting) paint(...coords);
+            } else if (dragStart) {
+                previewRect(dragStart.r, dragStart.c, coords[0], coords[1]);
+            }
+        }
+    });
+    window.addEventListener('mouseup', () => {
+        const l = layers[activeLayerIndex];
+        if (mode === 'rect' && dragStart && previewCells.length && l) {
+            // 実描画
+            const end = previewCells[previewCells.length - 1];
+            const r2 = +end.dataset.r, c2 = +end.dataset.c;
+            pushHistory(l);
+            rectIter(dragStart.r, dragStart.c, r2, c2, (r, c) => {
+                const val = randomEmoji();
+                l.grid[r][c] = val;
+                const cell = l.cells[r][c];
+                if (val.startsWith('#')) {
+                    cell.textContent = '';
+                    cell.style.background = val;
+                } else {
+                    cell.textContent = val;
+                    cell.style.background = 'transparent';
+                }
+            });
+        }
+        dragStart = null;                 // reset
+        painting = false;
+        panning = false;
+        viewport.style.cursor = 'grab';
+    });
+    viewport.addEventListener('mouseleave', clearPreview);
+    viewport.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        const coords = cellCoords(e);
+        if (coords) {
+            const l = layers[activeLayerIndex];
+            if (!l) return;
+            pushHistory(l);
+            selectedEmojis = [""];
+            paint(...coords);
+            showPreview(...coords);
+        }
+    });
+
+    // ───────────────── Shortcuts ───────────────────────
+    window.addEventListener('keydown', e => {
+        // Undo / Redo
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            undo();
+            return;
+        }
+        if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+            e.preventDefault();
+            redo();
+            return;
+        }
+
+        // WASD scroll
+        const step = 64;
+        switch (e.key.toLowerCase()) {
+            case 'w':
+                viewport.scrollTop -= step;
+                break;
+            case 's':
+                viewport.scrollTop += step;
+                break;
+            case 'a':
+                viewport.scrollLeft -= step;
+                break;
+            case 'd':
+                viewport.scrollLeft += step;
+                break;
+        }
+    });
+
+    // ───────────────── Zoom ────────────────────────────
+    viewport.addEventListener('wheel', e => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        const newSize = Math.max(MIN_CELL, Math.min(MAX_CELL, Math.round(cellSize * factor)));
+        if (newSize === cellSize) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const mx = e.clientX - rect.left + viewport.scrollLeft;
+        const my = e.clientY - rect.top + viewport.scrollTop;
+        const ratio = newSize / cellSize;
+
+        cellSize = newSize;
+        document.documentElement.style.setProperty('--cell', cellSize + 'px');
+        // 各レイヤーのCSS列幅再設定
+        layers.forEach(l => l.div.style.gridTemplateColumns = `repeat(${cols},var(--cell))`);
+
+        viewport.scrollLeft = mx * ratio - (e.clientX - rect.left);
+        viewport.scrollTop = my * ratio - (e.clientY - rect.top);
+    }, {passive: false});
+
+    // ───────────────── Brush Size ──────────────────────
+    function updateBrush() {
+        brushSize = Math.max(1, Math.min(100, Number(brushEl.value) || 1));
+        brushInfo.textContent = `${brushSize}×${brushSize}`;
+    }
+
+    brushEl.addEventListener('input', updateBrush);
+    updateBrush();
+
+    // ───────────────── File I/O ────────────────────────
+    document.getElementById('fileInput').addEventListener('change', e => {
+        const files = [...e.target.files];
+        if (!files.length) return;
+        files.forEach(f => {
+            const reader = new FileReader();
+            reader.onload = ev => addLayer(f.name, parseCSV(ev.target.result));
+            reader.readAsText(f, 'utf-8');
+        });
+        e.target.value = ''; // same file load again
+    });
+
+    // ダウンロード：アクティブレイヤーのみ
+    document.getElementById('downloadBtn').onclick = () => {
+        const l = layers[activeLayerIndex];
+        if (!l) return;
+        const csv = l.grid.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], {type: 'text/csv'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = l.name.replace(/\.csv$/, '') + '_edited.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    undoBtn.onclick = undo;
+    redoBtn.onclick = redo;
+    updateUndoRedoButtons();
+</script>
+</body>
+</html>

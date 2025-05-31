@@ -5,6 +5,7 @@
         this.parentElement = parentElement;
         this.emoji = emoji;
         this.element = document.createElement('div');
+        this.element.style.zIndex   = '100';
     }
 
     OnExitAnime(Tag, Type) {

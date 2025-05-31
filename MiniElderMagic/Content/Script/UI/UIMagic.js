@@ -56,14 +56,15 @@ export class UIMagic extends UIBase {
             }
         });
         
-        
 
         this.parentElement.appendChild(this.element);
-        //document.body.appendChild(this.element);
-        this.element.style.display = 'none';
-        this.element.style.position = 'fixed';     // カメラに流されない
+        this.element.style.position  = 'absolute';  // 画面 or 親要素基準
+        this.element.style.left      = '80%';       // 横 1/4（25 %）ライン
+        this.element.style.top       = '20%';       // 縦 1/2（50 %）ライン
+        this.element.style.transform = 'translate(-50%, 0%)';  // 要素自身の中心を基準点に合わせる
         this.element.style.zIndex  = 1000;         // ゲーム画より前面
         
+        this.hide();
     }
     _setMagic(index) {
         const list = this.wizard?.playerstatus?.HasMagics;

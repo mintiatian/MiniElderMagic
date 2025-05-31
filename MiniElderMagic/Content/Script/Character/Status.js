@@ -55,6 +55,8 @@ export class Status {
 
         this.MagicLevelDirFlag = true;
         this.AttackdirRatio = 1;
+        
+        this.shopBuyCount = 0;
     }    
 
     addMagicLevelUp() {

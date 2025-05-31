@@ -10,10 +10,13 @@ export class UIStatus extends UIBase{
         this.wizard = player;
         
         this.element.classList.add('status-element');
-        this.element.style.position = 'absolute';
-        this.element.style.top = '50%';
-        this.element.style.left = '20%';
-        this.element.style.transform = 'none';
+        
+        // ── 位置指定 ──────────────────────────────
+        this.element.style.position  = 'absolute';  // 画面 or 親要素基準
+        this.element.style.left      = '20%';       // 横 1/4（25 %）ライン
+        this.element.style.top       = '50%';       // 縦 1/2（50 %）ライン
+        this.element.style.transform = 'translate(-50%, -50%)';  // 要素自身の中心を基準点に合わせる
+        
         this.element.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
         this.element.style.padding = '20px';
         this.element.style.borderRadius = '10px';
@@ -41,17 +44,6 @@ export class UIStatus extends UIBase{
         //this.statusTable.style.borderCollapse = 'collapse';
         this.statusTable.style.marginBottom = '15px';
         this.element.appendChild(this.statusTable);
-        
-        /*
-        // ヘルプテキスト
-        const helpText = document.createElement('div');
-        helpText.textContent = 'Tabキーで閉じる';
-        helpText.style.marginTop = '15px';
-        helpText.style.fontSize = '14px';
-        helpText.style.opacity = '0.7';
-        helpText.style.textAlign = 'center';
-        this.element.appendChild(helpText);
-        */
         
         // コンテナを親要素に追加
         this.parentElement.appendChild(this.element);
@@ -97,7 +89,7 @@ export class UIStatus extends UIBase{
             { name: '💠MP', value: `${Math.floor(this.wizard.status.mp)} / ${this.wizard.status.maxMP}`, color: 'white' },
             { name: '🍷MP自動回復', value: `${this.shosuu(this.wizard.status.mpregene,1)}`, color: 'white' },
             { name: '🗡️攻撃力', value: this.wizard.status.attack, color: 'white' },
-            { name: '🛡️防御力', value: this.wizard.status.deffence, color: 'white' },
+            { name: '🛡️防御力', value: `${this.shosuu(this.wizard.status.deffence,1)}`, color: 'white' },
             { name: '🌀移動速度', value: this.shosuu(this.wizard.status.MaxSpeed,1), color: 'white' },
 
 

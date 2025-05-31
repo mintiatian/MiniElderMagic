@@ -6,14 +6,14 @@ MP,💧,mp,30,5,0.05,0,drop,MPを30回復する
 maxHP,❤️,maxHP,20,25,0.01,1,status,最大HPが20増加する
 maxMP,💠,maxMP,20,25,0.01,1,status,最大MPが20増加する
 mpregene,🍷,mpregene,0.1,15,0.01,1,status,MP自動回復量が0.1増加する
-deffence,🛡️,deffence,10,20,0.01,1,status,防御力が10増加する
+deffence,🛡️,deffence,0.5,20,0.01,1,status,防御力が0.5増加する
 MaxSpeed,🌀,MaxSpeed,0.01,15,0.01,1,status,移動速度が0.01上昇する
 attackPierceCount,🏹,attackPierceCount,1,15,0.01,1,magicstatus,魔法の貫通回数が1増える
 HomingRadius,🎯,HomingRadius,50,15,0.01,1,magicstatus,ホーミング察知距離が50増える
 HomingPower,🧲,HomingPower,0.1,15,0.01,1,magicstatus,ホーミング回転率を0.1あげる
 AddLifeTime,📡,AddLifeTime,50,30,0.01,1,magicstatus,射程が50増加する
 FireCnt,📒,FireCnt,1,100,0.01,1,magicstatus,魔法の数が1増える
-attack,🗡️,attack,10,20,0.01,1,magicstatus,攻撃力が10増加する
+attack,🗡️,attack,1,20,0.01,1,status,攻撃力が1増加する
 AddMaxSpeed,🚀,AddMaxSpeed,0.01,100,0.01,1,magicstatus,魔法の速度が0.01上昇する
 UseMP,🔋,UseMP,-5,100,0.01,1,magicstatus,魔法魔力が5減る
 RegistFIREBALL,🔥,RegistFIREBALL,-0.05,100,0.01,1,regist,魔法『FIREBALL』抵抗力が0.1あがる
@@ -53,3 +53,7 @@ shoplevel2,🏪,shoplevel,3,100,0,1,shop,ショップのLvが3になる
 shoplevel3,🏪,shoplevel,4,100,0,1,shop,ショップのLvが4になる
 DISCOUNT,💲,shopcost,5,0,0.01,1,shop,ショップ価格が5減少する
 DropCOIN,💰,coin,30,0,1,1,coin,コインを30枚獲得する
+INN,🛏,hp,-9999,30,0,1,inn,宿屋
+TEMP,🏕️,hp,-9999,0,0,1,tent,テントで寝る
+difficulty,⚔️,difficulty,-30,0,0,1,status,⚔️を30さげる
+DebugDropCOIN,💰,coin,30,0,1,1,status,debugコインを30枚獲得する

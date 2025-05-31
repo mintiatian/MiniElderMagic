@@ -1,5 +1,5 @@
 ﻿import {Character} from "../Base/Character.js";
-import {EnemyBase} from "../Character/EnemyBase.js";
+
 import {Wizard} from "../Character/Wizard.js";
 
 import {CollisionType, Pawn} from "../Base/Pawn.js";
@@ -64,10 +64,15 @@ export class MagicBase extends Character {
 
                 if (other instanceof MagicBase) return;
 
-                // エネミーだったら
-                if (this.owner instanceof EnemyBase){
-                    if (other instanceof EnemyBase) return;
+                /*
+                {
+                    import {EnemyBase} from "../Character/EnemyBase.js";
+                    // エネミーだったら
+                    if (this.owner instanceof EnemyBase){
+                        if (other instanceof EnemyBase) return;
+                    }
                 }
+                */
                 
                 // プレイヤーだったら
                 if (this.owner instanceof Wizard){

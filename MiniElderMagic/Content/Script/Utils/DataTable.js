@@ -226,3 +226,58 @@ export class MapDataTable {
     /** 2D 配列をそのまま返す */
     static getMap() { return this.map; }
 }
+
+export class MapColorDataTable {
+    /** @type {string[][]} 読み込んだマップ（空文字は空地） */
+    static map = [];
+
+    /**
+     * CSV からマップをロード（ヘッダー無し）
+     * @param {string} csvUrl 例: '/assets/map32x18.csv'
+     */
+    static async init(csvUrl) {
+        // header:false で “そのまま 2D 配列” を取得
+        this.map = await loadCSV(csvUrl, { header:false });
+    }
+
+    /** 2D 配列をそのまま返す */
+    static getMap() { return this.map; }
+}
+
+
+export class EnemyPopDataTable {
+    /** @type {string[][]} 読み込んだマップ（空文字は空地） */
+    static map = [];
+
+    /**
+     * CSV からマップをロード（ヘッダー無し）
+     * @param {string} csvUrl 例: '/assets/map32x18.csv'
+     */
+    static async init(csvUrl) {
+        // header:false で “そのまま 2D 配列” を取得
+        this.map = await loadCSV(csvUrl, { header:false });
+    }
+
+    /** 2D 配列をそのまま返す */
+    static getMap() { return this.map; }
+}
+
+
+export let eventTileDataTable = null;
+
+export class EventTileDataTable{
+    static table = new Map();
+    static get(id) { return this.table.get(id); }
+    static async init(csvUrl = '/assets/magic.csv') {
+        const rows = await loadCSV(csvUrl);          // [{id,emoji,useMP,…}, …]
+        for (const row of rows) {
+            this.table.set(row.id, new EventTileDataTable(row));
+        }
+        eventTileDataTable = this;
+    }
+    constructor({ id ,emoji ,type,event}){
+        this.emoji = emoji;
+        this.type = type;
+        this.event = event;
+    }
+}

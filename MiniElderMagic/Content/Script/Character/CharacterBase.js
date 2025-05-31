@@ -20,6 +20,8 @@ export class CharacterBase extends Character {
         // ステータス管理クラスのインスタンス
         this.status = new Status();
         this.setCharacterData(charaData);
+
+        this.BarrierId = "";
     }
 
     
@@ -156,8 +158,9 @@ export class CharacterBase extends Character {
      */
     takeDamage(MagicData,addAttack) {
 
-
         let ratio = 1.0;
+        
+
         switch (MagicData.id) {
             case "FIREBALL":     ratio = this.status.RegistFIREBALL;      break;
             case "ICE":          ratio = this.status.RegistICE;           break;
@@ -181,6 +184,11 @@ export class CharacterBase extends Character {
                 break;
         }
 
+        if(this.BarrierId) {
+            ratio *= 0.3;
+        }
+
+
         console.log("ratiocheck : ",(MagicData.damage+addAttack) * ratio,"=",(MagicData.damage+addAttack),"x",ratio);
         // statusオブジェクトにダメージを適用
         let damage = (MagicData.damage+addAttack) * ratio;
@@ -200,6 +208,16 @@ export class CharacterBase extends Character {
         const clamped = Math.min(Math.max(ratio, 0), 2);        // 0〜3 に丸める
         const hue = 120 - 120 * (clamped / 2);                  // 120→0 に反比例
         return `hsl(${hue}deg 100% 50%)`;                       // 彩度 100%, 輝度 50%
+    }
+    
+    AddBarrier(){
+        this.BarrierId = this.addOverlay("🟡");
+        this.MaxSpeed = 0;
+    }
+    RemoveBarrier(){
+        this.removeOverlay(this.BarrierId);
+        this.BarrierId = "";
+        this.MaxSpeed = this.status.MaxSpeed;
     }
     
     /**

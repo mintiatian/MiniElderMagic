@@ -16,7 +16,13 @@ import {
     enemyDataTable,
     wizardDataTable,
     ItemDataTable,
-    MagicDataTable, WizardDataTable, EnemyAIDataTable, MapDataTable,
+    MagicDataTable,
+    WizardDataTable,
+    EnemyAIDataTable,
+    MapDataTable,
+    MapColorDataTable,
+    EnemyPopDataTable,
+    EventTileDataTable,
 } from "./Utils/DataTable.js";
 import {UIItemList} from "./UI/UIItemList.js";
 
@@ -43,7 +49,9 @@ export class GameMain {
     FRAME_TIME; // 1000ms ÷ 60fps ≈ 16.6667ms
 
     initCount() {
-        if (++this._loadedCount === this._totalToLoad) {
+        ++this._loadedCount;
+        console.log("MasterLoad : ",this._loadedCount ," / ", this._totalToLoad)
+        if (this._loadedCount === this._totalToLoad) {
             this.init();                      // ← ここで後続処理
         }
     }
@@ -62,7 +70,10 @@ export class GameMain {
             enemy: 'https://docs.google.com/spreadsheets/d/1v_q-56Nb_CtzkIZBThYEuBWScLzRIBaiQlI5mtugv9w/export?format=csv',
             wizard: 'https://docs.google.com/spreadsheets/d/1CRTX72AUu4QXko0QUUq6X7LaNLxfy0YausEIx9zFBJA/export?format=csv',
             enemyai: 'https://docs.google.com/spreadsheets/d/16F7ksDu0R-01dE1ik7vZOADMWYiyqbCecUDhTVzOO5c/export?format=csv',
-            map_000: 'https://docs.google.com/spreadsheets/d/178l4JKlUGkUFAUFfU6Dt0yAyUwkOeCNQLc5tkn2BUSg/export?format=csv',
+            mapChip: 'https://docs.google.com/spreadsheets/d/178l4JKlUGkUFAUFfU6Dt0yAyUwkOeCNQLc5tkn2BUSg/export?format=csv',
+            mapColor: 'https://docs.google.com/spreadsheets/d/1fa4ZvsC3VE6mrOywsCM2H_3H8dGRoskF0LHAEz8-_VY/export?format=csv',
+            mapEnemyPop: 'https://docs.google.com/spreadsheets/d/1tKr0LiD74U8PhFlnU6alooSWucwTK0qY6xmm6PnZ6Zc/export?format=csv',
+            eventTile: 'https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv',
 
         };
 
@@ -75,7 +86,12 @@ export class GameMain {
         EnemyDataTable.init(urls.enemy).then(() => this.initCount());
         WizardDataTable.init(urls.wizard).then(() => this.initCount());
         EnemyAIDataTable.init(urls.enemyai).then(() => this.initCount());
-        MapDataTable.init(urls.map_000).then(() => this.initCount());
+        MapDataTable.init(urls.mapChip).then(() => this.initCount());
+
+        MapColorDataTable.init(urls.mapColor).then(() => this.initCount());
+        EnemyPopDataTable.init(urls.mapEnemyPop).then(() => this.initCount());
+
+        EventTileDataTable.init(urls.eventTile).then(() => this.initCount());
     }
 
     init() {
@@ -86,16 +102,19 @@ export class GameMain {
         this.FRAME_TIME = 1000 / this.FPS; // 1000ms ÷ 60fps ≈ 16.6667ms
 
         this.background = new Background(this.gameArea,this.camera, 60);
+        this.CharacterLayer = this.background.characterLayer;
 
-        this.wizard = new Wizard(325, 325,  this.background,this.gameArea, wizardDataTable.get("Wizard1"));
+        this.wizard = new Wizard(325, 325,this.CharacterLayer, wizardDataTable.get("Wizard1"));
 
 
-        this.stageManager = new Stage(this.gameArea);
-        this.stageManager.createEnemiesForStage(1, this.wizard);
+        //this.stageManager = new Stage(this.CharacterLayer);
+        //this.stageManager.createEnemiesForStage(1, this.wizard);
 
 
         // HUDの生成
-        const hud = new UIHud(this.gameUiLayer);
+        this.hud = new UIHud(this.gameUiLayer, this.wizard);
+        this.hud.updateDisplay();
+        this.hud.show();
         // ステータス画面の生成
         this.statusUI = new UIStatus(this.gameUiLayer, this.wizard);
         // デバッグ画面の生成
@@ -190,19 +209,19 @@ export class GameMain {
 
 
         // 前のフレームで生きていた敵を記録するための配列
-        this.previousLivingEnemies = [...this.stageManager.enemies];
+        //this.previousLivingEnemies = [...this.stageManager.enemies];
         // 敵の要素を追跡するためのMap（要素ID -> 要素）
-        this.enemyElementMap = new Map();
+        //this.enemyElementMap = new Map();
 
 
         this.lastTime = performance.now();
         this.accumulatedTime = 0; // 経過時間をためるための変数
 
-        console.log(`[GameMain] constructor end`);
 
 
         this.gameLoop = this.gameLoop.bind(this);
         requestAnimationFrame(this.gameLoop);
+        console.log(`[GameMain] constructor end`);
     }
 
 
@@ -240,7 +259,7 @@ export class GameMain {
         /* プレイヤーを追ってカメラ位置を更新 */
         if(this.wizard) this.camera.update(this.wizard);
 
-        this.background.update();                // ← 必ず先に
+        this.background.update(delta);                // ← 必ず先に
         
         // 登録したpawnsがある時
         while (this.AddNewPawns.length > 0) {
@@ -252,6 +271,7 @@ export class GameMain {
         }
 
         for (const ch of this.pawns) {
+
             ch.setKeyState?.(this.pressedKeys);
 
             ch.updateMovePre();
@@ -262,7 +282,7 @@ export class GameMain {
                 ch.isColliding(hitch);
             }
 
-            ch.updateMoveEnd();
+            ch.updateMoveEnd?.();
         }
 
         // 削除Pawnがある時
@@ -270,7 +290,7 @@ export class GameMain {
             const ch = this.ExitPawns.shift();   // 先頭を取り出してキューから削除
             ch.destroy();                       // 削除処理
         }
-
+        this.hud.updateDisplay();
     }
 
 

@@ -62,7 +62,6 @@
             width:100%; height:100%; /* 保険として残しておいても可 */
 
             z-index:5;          /* #game-area より大きければ任意 */
-            pointer-events:none;/* UI 以外のクリックを透過 */
         }
 
 
@@ -97,11 +96,12 @@
     import { Camera }                     from './Script/Camera.js';
 
     /* ========== #game-area をワールド全体とし、サイズを倍率で決定 ========== */
-    const world = document.getElementById('game-area');
+
+    const gameTopArea = document.getElementById('game-area');
 
     function resizeWorld(){
-        world.style.width  = GameConfig.baseWidth  * GameConfig.renderScale + 'px';
-        world.style.height = GameConfig.baseHeight * GameConfig.renderScale + 'px';
+        gameTopArea.style.width  = GameConfig.baseWidth  * GameConfig.renderScale + 'px';
+        gameTopArea.style.height = GameConfig.baseHeight * GameConfig.renderScale + 'px';
     }
     resizeWorld();
     window.addEventListener('renderScaleChanged', resizeWorld);
@@ -171,12 +171,11 @@
     /* ==========================
        8. ゲーム起動
        ========================== */
-    const gameTopArea = document.getElementById('game-area');
 
 
     const gameUiLayer = document.getElementById('game-ui-layer');
-    //gameTopArea.appendChild(gameMainArea);
 
+    gameTopArea.style.position = 'relative';   // もしくは 'relative' でも OK
     
     const gameMain = new GameMain(gameTopArea,gameUiLayer);
 </script>

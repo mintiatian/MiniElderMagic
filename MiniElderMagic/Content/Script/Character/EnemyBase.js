@@ -1,23 +1,23 @@
-
 import {Item} from '../Actor/Item.js';
 import {FireBall} from '../FireBall.js';
 import {CharacterBase} from "./CharacterBase.js";
+import {EventEmitterMixin} from "../Base/EventEmitterMixin.js";
 
 
-export class EnemyBase extends CharacterBase {
-    constructor(x, y, parentElement,charaData) {
-        super(x, y, parentElement,charaData);
+export class EnemyBase extends EventEmitterMixin(CharacterBase) {
+    constructor(x, y, parentElement, charaData) {
+        super(x, y, parentElement, charaData);
 
         this.parentElement = parentElement;
         this.hasDroppedCoins = false;           // コインをドロップしたかのフラグ
 
-        
+
         this.lastAttackTime = 0;       // 最後に攻撃した時間
 
 
         // プレイヤーへの参照
         this.playerTarget = null;
-        
+
         this.SetupMPGage()
         this.SetupHPGage();
     }
@@ -30,78 +30,120 @@ export class EnemyBase extends CharacterBase {
         this.playerTarget = player;
     }
 
-    /**
-     * @desc 毎フレーム呼び出され、敵の移動を行う
-     * ランダム移動の実装
-     */
+    /*  ── コンストラクタ側に追加しておくプロパティ ─────────────
+    constructor(...) {
+        ...
+        this._hasBarrier   = false;  // いまバリアを張っているか
+        this._barrierTimer = 0;      // 残り存続秒 (0 で未発動)
+    }
+    */
+
     update(delta) {
-
         super.update(delta);
-        
-        // HPが残っている場合のみ動く
-        if (this.status.hp > 0) {
-            // プレイヤーが設定されている場合、プレイヤーに向かって移動
-            if (this.playerTarget) {
-                // プレイヤーとの距離を計算
-                const dx = this.playerTarget.x - this.x;
-                const dy = this.playerTarget.y - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
 
-                // 検出半径内にプレイヤーがいる場合
-                if (distance < this.enemyAIData.detectionRadius) {
-                    // 攻撃範囲内ならば火球を発射
-                    if (distance <= this.enemyAIData.attackRange) {
-                        // 火球発射を試みる
-                        this.fire();
+        /* バリアの生存時間を監視 ★──────────────── */
+        if (this._hasBarrier) {
+            this._barrierTimer -= delta;
+            if (this._barrierTimer <= 0) {
+                this.RemoveBarrier();
+                this._hasBarrier = false;
+            }
+        }
 
-                        // 火球を撃った後も少し距離を保つ
-                        if (distance < this.enemyAIData.attacknearRange) {
-                            // プレイヤーから離れる
-                            const normalizedDx = dx / distance;
-                            const normalizedDy = dy / distance;
-                            this.x -= normalizedDx * this.MaxSpeed * 0.5;
-                            this.y -= normalizedDy * this.MaxSpeed * 0.5;
-                        } else {
-                            // 攻撃範囲内で維持
-                            const normalizedDx = dx / distance;
-                            const normalizedDy = dy / distance;
-                            this.x += normalizedDx * this.MaxSpeed * 0.2;
-                            this.y += normalizedDy * this.MaxSpeed * 0.2;
-                        }
-                    } else {
-                        // 攻撃範囲外ならプレイヤーに向かって移動
-                        // 移動方向を正規化
-                        const normalizedDx = dx / distance;
-                        const normalizedDy = dy / distance;
+        /* ──── 行動決定用の変数初期化 ────── */
+        let accel  = 0;
+        let strafe = 0;
+        let rad    = this.radian;
 
-                        // プレイヤーに向かって移動
-                        this.x += normalizedDx * this.MaxSpeed;
-                        this.y += normalizedDy * this.MaxSpeed;
-                    }
-                } else {
-                    // プレイヤーが検出範囲外の場合はランダム移動
-                    this.x += (Math.random() * 2 - 1) * this.MaxSpeed;
-                    this.y += (Math.random() * 2 - 1) * this.MaxSpeed;
+        /* HP が残っている & ターゲットがいる場合 ───── */
+        if (this.status.hp > 0 && this.playerTarget) {
+
+            const dx   = this.playerTarget.x - this.x;
+            const dy   = this.playerTarget.y - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            /* ★ バリア発動判定 ──────────────────── */
+            if (dist < this.enemyAIData.detectionRadius) {
+                // まだ張っていない & 乱数 10 % で AddBarrier
+                if (!this._hasBarrier && Math.random() < 0.01 && this.status.hp/this.status.maxHP<0.1) {
+                    this.AddBarrier();
+                    this._hasBarrier   = true;
+                    this._barrierTimer = 2000;   // 2 秒で自動解除
                 }
-            } else {
-                // プレイヤーが設定されていない場合はランダム移動
-                this.x += (Math.random() * 2 - 1) * this.MaxSpeed;
-                this.y += (Math.random() * 2 - 1) * this.MaxSpeed;
             }
 
-        }
-        // HPが0以下でまだコインをドロップしていない場合
-        else if (this.status.hp <= 0 && !this.hasDroppedCoins) {
-            // コインをドロップする
-            this.dropCoins();
-            this.hasDroppedCoins = true;
+            /* ------- 以下、移動 & 攻撃 AI は前と同じ -------- */
+            if (dist < this.enemyAIData.detectionRadius) {
+                rad = Math.atan2(dy, dx);
 
+                if (dist > this.enemyAIData.attackRange) {
+                    accel = +0.1;
+                } else if (dist < this.enemyAIData.attacknearRange) {
+                    accel = -0.1;
+                } else {
+                    this.fire();
+                    if (this._wanderTimer <= 0) {
+                        const r = Math.random();
+                        this._wanderAccel = r < 0.33 ? -0.1 : r < 0.66 ? 0 : +0.1;
+                        this._wanderTimer = 0.2 + Math.random() * 0.4;
+                    }
+                    accel = this._wanderAccel;
+                    this._wanderTimer -= delta;
+                }
+            } else {
+                /* 感知外：徘徊 */
+                if (!this._wanderTimer || this._wanderTimer <= 0) {
+                    this._wanderTimer = 3;
+                    rad = Math.random() * Math.PI * 2;
+                }
+                this._wanderTimer--;
+                accel = +0.6;
+            }
+
+        } else if (this.status.hp <= 0) {
+            /* 死亡時は即バリア解除 ★ */
+            if (this._hasBarrier) {
+                this.RemoveBarrier();
+                this._hasBarrier = false;
+            }
+            if (!this.hasDroppedCoins) {
+                this.dropCoins();
+                this.hasDroppedCoins = true;
+            } else if (!this.isFadingOut) {
+                this.ExitStart();
+            }
         }
-        else if (this.status.hp <= 0 && !this.isFadingOut) {
-            // フェードアウト
+
+        /* MoveBase 用パラメータ反映 */
+        this.radian       = rad;
+        this.acceleration = accel;
+        this.strafe       = strafe;
+
+        /* ターゲットとの距離が 3000 以上で退場処理 */
+        if (this.playerTarget) {
+            const { x, y } = this.playerTarget.getPlayerPosition();
+            const dx = x - this.x;
+            const dy = y - this.y;
+            const limit = 3000;
+
+            if (dx * dx + dy * dy >= limit * limit) {
+                // 退場時もバリア解除 ★
+                if (this._hasBarrier) {
+                    this.RemoveBarrier();
+                    this._hasBarrier = false;
+                }
+                this.ExitStart();
+            }
+        } else {
+            if (this._hasBarrier) {
+                this.RemoveBarrier();
+                this._hasBarrier = false;
+            }
             this.ExitStart();
         }
     }
+
+
 
 
     /**
@@ -120,8 +162,6 @@ export class EnemyBase extends CharacterBase {
             let item = new Item(x, y, this.parentElement);
         }
     }
-
-
 
 
     /**
@@ -155,9 +195,9 @@ export class EnemyBase extends CharacterBase {
             // プレイヤーの方向を計算（正規化）
             const normalizedDx = dx / distance;
             const normalizedDy = dy / distance;
-            
+
             this.radian = Math.atan2(normalizedDy, normalizedDx);
-            this.Fire(this.status.FireCnt1,this.status.FireCnt2,this.getPosition());
+            this.Fire(this.status.FireCnt1, this.status.FireCnt2, this.getPosition());
 
             return true;
         }
@@ -168,5 +208,16 @@ export class EnemyBase extends CharacterBase {
 
     SetAIData(enemyAIData) {
         this.enemyAIData = enemyAIData;
+    }
+
+    destroy() {
+        this.emit('destroyed', this);
+        super.destroy();
+        // --- 破棄イベント発火 -------------------------------
+        // payload に self を入れておくと購読側で enemy 情報を使える
+    }
+
+    hitsWall(px, py,forEnemy=false) {
+        return super.hitsWall(px,py,true);
     }
 }
