@@ -1,4 +1,0 @@
-id,emoji,MaxSpeed,hp,mp,mpregene,deffence,attackMagic,attack,attackPierceCount,HomingRadius,HomingPower,AddLifeTime,FireCnt1,FireCnt2,UseMP,AddMaxSpeed,coinDropCount,RegistFIREBALL,RegistICE,RegistLIGHTNING,RegistLIGHTNING,RegistMETEOR,RegistEXPLOSION,RegistGUST,RegistBUBBLE,RegistRAINBOW,RegistWEB,RegistPOISONSTING,RegistSWORDSLASH,RegistGREATAxe,RegistHAMMERCRUSH,RegistTRIDENTTHRUST,RegistSHIELDBASH
-Wizard1,🧙,0.3,200,30,0.3,0,LIGHTNING,30,1,800,0,0,1,0,0,0,3,1,1,0.8,1,1.1,1.1,1,1.5,1.2,1,1,1,1.2,1.2,0.9,1
-Wizard2,🧙‍♂️,0.3,150,30,0.3,0,GREATAxe,5,1,100,0,0,1,0,0,0,3,0.7,1.8,1,1,1.3,1.1,0.9,0.8,1.5,1,1,0.8,1.1,1.5,1,0.8
-Wizard3,🧙‍♀️,0.3,80,30,0.3,0,GUST,5,1,100,0,0,1,0,0,0,3,0.9,1,1.7,1.2,0.9,0.8,1.3,1,2,0.6,0.5,0.5,0.6,0.7,0.4,0.5

@@ -16,13 +16,22 @@
 
 <div class="toolbar">
     <input type="file" id="fileInput" accept=".csv" multiple>
+    <!-- （toolbar 内：Download Active CSV ボタンのすぐ後ろあたりに追加） -->
+    <button id="loadSetBtn">セットを読み込む</button>   <!-- ★ 追加 -->
+    <button id="saveSetBtn">セットを保存</button>
+    <!-- （toolbar の外でも OK。フォルダ選択用の隠し input） -->
+    <input type="file" id="dirInput" webkitdirectory style="display:none"> <!-- ★ 追加 -->
+
     <button id="downloadBtn">Download Active CSV</button>
     Brush <input type="number" id="brush" min="1" max="100" value="1" style="width:60px">
     <span id="brushInfo" style="min-width:48px">1×1</span>
 
     <label><input type="radio" name="mode" id="modeBrush" value="brush" checked> Brush</label>
     <label><input type="radio" name="mode" id="modeRect" value="rect"> Fill&nbsp;Rect</label>
-
+    <!-- ★ 追加：パレットカテゴリ切替 -->
+    <label><input type="radio" name="palCat" id="catTiles"   value="tiles"   checked> 🧱 タイル</label>
+    <label><input type="radio" name="palCat" id="catEnemies" value="enemies"> 👾 敵</label>
+    <label><input type="radio" name="palCat" id="catColors"  value="colors"> 🎨 色</label>
     <div class="palette" id="palette"></div>
     <div class="layer-panel" id="layerPanel"></div>
 </div>
@@ -33,6 +42,6 @@
 </div>
 
 <!-- ❖ 分割した JS を読み込む（モジュールにするとスコープが狭まるので type="module" 推奨） -->
-<script type="module" src="MapEditor.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
