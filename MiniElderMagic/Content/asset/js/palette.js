@@ -77,4 +77,17 @@ export class Palette {
     random() {
         return randomEmoji(this.selected);
     }
+
+    select(value){
+        this.selected = [value];
+        // ハイライトをリセット
+        this.el.querySelectorAll(".sel").forEach(b=>b.classList.remove("sel"));
+        // いま表示中のボタンから該当を探す
+        const btn = [...this.el.querySelectorAll("button")].find(b=>{
+            return (this.category==="colors")
+                ? b.title === value               // 色チップは title に値
+                : (value ? b.textContent===value : b.textContent==="␣");
+        });
+        if(btn) btn.classList.add("sel");
+    }
 }

@@ -22,8 +22,8 @@ export class UIHud extends UIBase {
             top: '12px',
 
             /* ★ ここでサイズを固定 ★ */
-            width: '180px',          // ← パネル横幅を固定
-            height: '190px',           // ← 必要なら高さも固定
+            width: '220px',          // ← パネル横幅を固定
+            height: '220px',           // ← 必要なら高さも固定
             boxSizing: 'border-box',     // padding を含めて計算させる
 
             padding: '8px 12px',
@@ -177,7 +177,7 @@ export class UIHud extends UIBase {
             const evtTile = eventTileDataTable.get(tileEmoji);
 
             /* タブ */
-            this.tabSpan.textContent = "TAB : " + this.wizard.eventTile + " " + evtTile.event;
+            this.tabSpan.textContent = "TAB : " + this.wizard.eventTile + " " + evtTile.title;
         }
         /* 敵出現数 (Background.CurrentPopCount) */
         const enemyCnt = gameMain?.background?.CurrentPopCount ?? 0;

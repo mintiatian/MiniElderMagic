@@ -4,10 +4,12 @@ import {Stair} from './Actor/Stair.js'; // デバッグ画面クラスをイン�
 import {Stage} from './Stage.js';
 
 import {UIHud} from './UI/UIHud.js';
+import {UIHubInventory} from './UI/UIHubInventory.js';
 import {UIStatus} from './UI/UIStatus.js'; // ステータス画面クラスをインポート
 import {UIDebug} from './UI/UIDebug.js'; // デバッグ画面クラスをインポート
 import {UIMagic} from './UI/UIMagic.js';
 
+import {UIEventDialog} from './UI/UIEventDialog.js';
 import {Camera}  from './Camera.js';
 import {GameConfig} from './Config.js';
 
@@ -22,7 +24,7 @@ import {
     MapDataTable,
     MapColorDataTable,
     EnemyPopDataTable,
-    EventTileDataTable,
+    EventTileDataTable, EventDataTable,
 } from "./Utils/DataTable.js";
 import {UIItemList} from "./UI/UIItemList.js";
 
@@ -74,6 +76,7 @@ export class GameMain {
             mapColor: 'https://docs.google.com/spreadsheets/d/1fa4ZvsC3VE6mrOywsCM2H_3H8dGRoskF0LHAEz8-_VY/export?format=csv',
             mapEnemyPop: 'https://docs.google.com/spreadsheets/d/1tKr0LiD74U8PhFlnU6alooSWucwTK0qY6xmm6PnZ6Zc/export?format=csv',
             eventTile: 'https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv',
+            event: 'https://docs.google.com/spreadsheets/d/1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc/export?format=csv',
 
         };
 
@@ -92,6 +95,7 @@ export class GameMain {
         EnemyPopDataTable.init(urls.mapEnemyPop).then(() => this.initCount());
 
         EventTileDataTable.init(urls.eventTile).then(() => this.initCount());
+        EventDataTable.init(urls.event).then(() => this.initCount());
     }
 
     init() {
@@ -123,6 +127,18 @@ export class GameMain {
         this.magicUI = new UIMagic(this.gameUiLayer, this.wizard);
         const itemList = new UIItemList(this.gameUiLayer, this.wizard);
         //magicUI.update();
+        
+        this.Inventory = new UIHubInventory(this.gameUiLayer);
+        this.Inventory.show();
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍞");
+
+
+        this.EventDialog = new UIEventDialog(this.gameUiLayer);
+
 
         // ショップ完了イベントのリスナー（一度だけ登録）
         document.addEventListener('shopCompleted', () => {
@@ -222,6 +238,9 @@ export class GameMain {
         this.gameLoop = this.gameLoop.bind(this);
         requestAnimationFrame(this.gameLoop);
         console.log(`[GameMain] constructor end`);
+
+
+        
     }
 
 

@@ -1,11 +1,13 @@
 /* -------------------------------------------------
  *  エディタ本体（レイヤー管理・描画・操作）
  * ------------------------------------------------- */
-import {DEFAULT_CELL} from "./constants.js";
-import {cloneGrid} from "./utils.js";
+
 import {Palette} from "./palette.js";
 import {Layer} from "./layer.js";
 import {Viewport} from "./viewport.js";
+import {DEFAULT_CELL, MIN_ROWS, MIN_COLS, paletteEnemyEmojis, paletteEmojis} from "./constants.js";
+import {padGrid} from "./utils.js";
+import {cloneGrid, isColor} from "./utils.js";
 
 export class Editor {
     /**
@@ -61,10 +63,9 @@ export class Editor {
 
     /* -------------- レイヤー操作 -------------------- */
     addLayer(name, grid) {
+        /* ---- ① 1 枚目のみ – 必要なら 108×192 まで拡張 ---- */
         if (this.layers.length === 0) {
-            // 最初のレイヤで行列決定
-            this.rows = grid.length;
-            this.cols = grid[0].length;
+            ({grid, rows: this.rows, cols: this.cols} = padGrid(grid, MIN_ROWS, MIN_COLS));
             this.mapSizeEl.textContent = `(${this.rows}×${this.cols})`;
             this.overlayEl.width = this.cols * DEFAULT_CELL;
             this.overlayEl.height = this.rows * DEFAULT_CELL;
@@ -75,8 +76,8 @@ export class Editor {
             this.viewport.applyWorldOffset(worldW, worldH);   // ★ 追加
 
         } else {
-            // サイズを先頭に合わせる
-            grid = grid.slice(0, this.rows).map(r => r.slice(0, this.cols));
+            /* ---- ② 2 枚目以降 – 既定サイズに合わせてパディング ---- */
+            ({grid} = padGrid(grid, this.rows, this.cols));
         }
         const layer = new Layer(name, grid, DEFAULT_CELL);
         this.layers.push(layer);
@@ -189,13 +190,18 @@ export class Editor {
     }
 
     _createLayerUI(layer, idx) {
-        const row = document.createElement("label");
+        const row = document.createElement('div');      // ← label → div
+        row.className = 'layer-row';                    // 好みでクラスを付ける
+
         row.innerHTML = `
-            <button class="reorder up"   data-i="${idx}" title="上へ">▲</button>
-            <button class="reorder down" data-i="${idx}" title="下へ">▼</button>
-            <input type="checkbox" class="show"  data-i="${idx}" checked>
-            <input type="radio"    name="paint" class="paint" data-i="${idx}">
-            ${layer.name}`;
+        <button class="reorder up"   data-i="${idx}" title="上へ">▲</button>
+        <button class="reorder down" data-i="${idx}" title="下へ">▼</button>
+
+        <!-- 表示 ON/OFF と描画選択だけを label で包む -->
+        <label><input type="checkbox" class="show"  data-i="${idx}" checked></label>
+        <label><input type="radio"    name="paint"  class="paint" data-i="${idx}"></label>
+
+        <span class="layer-name">${layer.name}</span>`;   // テキストは span
         this.layerPanel.appendChild(row);
 
         row.querySelector(".show").onchange = e => {
@@ -218,7 +224,27 @@ export class Editor {
     /* -------------- interaction handlers -------------- */
     _onMouseDown(ev) {
         const [r, c] = this.viewport.clientToCell(ev, DEFAULT_CELL);
-        if (ev.button === 0) {              // 左クリック
+        if (this.mode === "pick") {     /* ←★スポイト処理 */
+            const layer = this.activeLayer;
+            if (!layer) return;
+            const val = layer.grid?.[r]?.[c] ?? "";
+
+            /* カテゴリを自動判定してパレット＆ラジオを切替 */
+            if (isColor(val)) {
+                this.palette.setCategory("colors");
+                this.catColors.checked = true;
+            } else if (paletteEnemyEmojis.includes(val)) {
+                this.palette.setCategory("enemies");
+                this.catEnemies.checked = true;
+            } else {
+                this.palette.setCategory("tiles");
+                this.catTiles.checked = true;
+            }
+            this.palette.select(val);    // 選択状態を更新
+            /* ── スポイト完了 → ブラシへ戻す ───────────────── */
+            this.mode = "brush";                // 内部状態を切替
+            document.getElementById("modeBrush").checked = true;  // ラジオも更新
+        } else if (ev.button === 0) {              // 左クリック
             if (this.mode === "brush") {
                 this.activeLayer?.pushHistory();
                 this.painting = true;

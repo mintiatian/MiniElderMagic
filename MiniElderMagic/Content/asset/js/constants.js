@@ -22,3 +22,8 @@ export const paletteColors = [
 export const MIN_CELL = 4;
 export const MAX_CELL = 96;
 export const DEFAULT_CELL = 32;
+
+
+// mapの最小サイズ指定
+export const MIN_ROWS = 108;
+export const MIN_COLS = 192;

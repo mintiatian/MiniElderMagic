@@ -1,47 +1,75 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <title>Emoji Map CSV Editor – Canvas Edition</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <!-- ❖ 分割した CSS を読み込む -->
-    <link rel="stylesheet" href="MapEditor.css">
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="MapEditor.css" />
 </head>
 <body>
-<header>
-    <h1>Emoji Map Editor – Canvas <span id="mapSize"></span></h1>
-    <button id="undoBtn" title="Undo (Ctrl+Z)">⬅️ Undo</button>
-    <button id="redoBtn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">Redo ➡️</button>
-</header>
 
-<div class="toolbar">
+<!-- ── ヘッダー（ツールバーを 1 行に統合） ─────────── -->
+<header id="topbar">
+    <h1>MEM <span id="mapSize"></span></h1>
+
+    <!-- Undo / Redo / Sheets -->
+    <button id="undoBtn"  title="Undo (Ctrl+Z)">⬅️ Undo</button>
+    <button id="redoBtn"  title="Redo (Ctrl+Y / Ctrl+Shift+Z)">Redo ➡️</button>
+    <button id="runSheetsBtn" title="Google Sheets ↔ CSV ツールを起動">🗗 Sheets 更新ツール</button>
+
+    <!-- CSV 入出力 -->
     <input type="file" id="fileInput" accept=".csv" multiple>
-    <!-- （toolbar 内：Download Active CSV ボタンのすぐ後ろあたりに追加） -->
-    <button id="loadSetBtn">セットを読み込む</button>   <!-- ★ 追加 -->
-    <button id="saveSetBtn">セットを保存</button>
-    <!-- （toolbar の外でも OK。フォルダ選択用の隠し input） -->
-    <input type="file" id="dirInput" webkitdirectory style="display:none"> <!-- ★ 追加 -->
+    <button id="loadSetBtn">CSVLoad</button>
+    <button id="saveSetBtn">CSVSave</button>
+    <!-- フォルダ選択用 (hidden) -->
+    <input type="file" id="dirInput" webkitdirectory style="display:none">
 
     <button id="downloadBtn">Download Active CSV</button>
-    Brush <input type="number" id="brush" min="1" max="100" value="1" style="width:60px">
-    <span id="brushInfo" style="min-width:48px">1×1</span>
+    <!-- ※ ブラシ関連はサイドバーへ移動 -->
+</header>
 
-    <label><input type="radio" name="mode" id="modeBrush" value="brush" checked> Brush</label>
-    <label><input type="radio" name="mode" id="modeRect" value="rect"> Fill&nbsp;Rect</label>
-    <!-- ★ 追加：パレットカテゴリ切替 -->
-    <label><input type="radio" name="palCat" id="catTiles"   value="tiles"   checked> 🧱 タイル</label>
-    <label><input type="radio" name="palCat" id="catEnemies" value="enemies"> 👾 敵</label>
-    <label><input type="radio" name="palCat" id="catColors"  value="colors"> 🎨 色</label>
-    <div class="palette" id="palette"></div>
-    <div class="layer-panel" id="layerPanel"></div>
+<!-- ── ビューポート＋サイドバー ───────────────── -->
+<div class="main">
+    <!-- キャンバス領域 -->
+    <div id="viewport">
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <!-- 右サイドバー -->
+    <aside id="sidebar">
+        <!-- レイヤーパネル -->
+        <div class="layer-panel" id="layerPanel"></div>
+
+        <!-- パレットカテゴリ切替 -->
+        <div class="pal-cat-group">
+            <label><input type="radio" name="palCat" id="catColors"  value="colors"> 🎨 色</label>
+            <label><input type="radio" name="palCat" id="catTiles"   value="tiles"   checked> 🧱 タイル</label>
+            <label><input type="radio" name="palCat" id="catEnemies" value="enemies"> 👾 敵</label>
+        </div>
+
+        <!-- ▼ 追加：ブラシサイズ & 描画モード --------------------------- -->
+        <div class="tool-group">
+            <!-- ブラシサイズ -->
+            <label class="brush-size">
+                Brush&nbsp;Size
+                <input type="number" id="brush" min="1" max="100" value="1">
+                <span id="brushInfo">1×1</span>
+            </label>
+
+            <!-- 描画モード -->
+            <div class="mode-group">
+                <label><input type="radio" name="mode" id="modeBrush" value="brush" checked> Brush</label>
+                <label><input type="radio" name="mode" id="modeRect"  value="rect"> Fill&nbsp;Rect</label>
+                <label><input type="radio" name="mode" id="modePick"  value="pick"> 🩸 スポイト</label>
+            </div>
+        </div>
+        <!-- ▲ ---------------------------------------------------------- -->
+
+        <!-- パレット -->
+        <div class="palette" id="palette"></div>
+    </aside>
 </div>
 
-<div id="viewport">
-    <!-- layer canvases will be inserted here -->
-    <canvas id="overlay"></canvas>
-</div>
-
-<!-- ❖ 分割した JS を読み込む（モジュールにするとスコープが狭まるので type="module" 推奨） -->
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

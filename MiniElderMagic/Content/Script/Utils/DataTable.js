@@ -275,9 +275,30 @@ export class EventTileDataTable{
         }
         eventTileDataTable = this;
     }
-    constructor({ id ,emoji ,type,event}){
+    constructor({ id ,emoji ,type,event,title}){
         this.emoji = emoji;
         this.type = type;
         this.event = event;
+        this.title = title;
+    }
+}
+
+
+export let eventDataTable = null;
+
+export class EventDataTable{
+    static table = new Map();
+    static get(id) { return this.table.get(id); }
+    static async init(csvUrl = '/assets/magic.csv') {
+        const rows = await loadCSV(csvUrl);          // [{id,emoji,useMP,…}, …]
+        for (const row of rows) {
+            this.table.set(row.id, new EventDataTable(row));
+        }
+        eventDataTable = this;
+    }
+    constructor({ id ,titleEmoji ,text,mode}){
+        this.titleEmoji = titleEmoji;
+        this.text = text;
+        this.mode = mode;
     }
 }

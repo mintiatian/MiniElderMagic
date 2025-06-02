@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
-Google スプレッドシート ↔ CSV の DL / UL GUI ツール
+Google スプレッドシート ↔ CSV の DL / UL GUI ツール  ★ multi-upload + open-sheet 対応版
 
 依存:
     pip install requests gspread google-auth
 
 実行:
-    python download_and_update_sheets_gui.py
+    python download_and_update_sheets.py
 """
 
 from __future__ import annotations
 import csv
 import threading
+import webbrowser
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
@@ -23,15 +24,15 @@ from google.oauth2.service_account import Credentials
 # --- 設定 -------------------------------------------------------------------
 
 URLS = {
-#    "magic":      "https://docs.google.com/spreadsheets/d/14KPqmm0KQ-wlcgV-WMGqlqIwCCoz94hI8InyBMPmJdA/export?format=csv",
-#    "item":       "https://docs.google.com/spreadsheets/d/174mPJFw8fMOP5DAzL70FcuW549VnZK6FeVDcCkvfYfU/export?format=csv",
-#    "enemy":      "https://docs.google.com/spreadsheets/d/1v_q-56Nb_CtzkIZBThYEuBWScLzRIBaiQlI5mtugv9w/export?format=csv",
-#    "wizard":     "https://docs.google.com/spreadsheets/d/1CRTX72AUu4QXko0QUUq6X7LaNLxfy0YausEIx9zFBJA/export?format=csv",
-#    "enemyai":    "https://docs.google.com/spreadsheets/d/16F7ksDu0R-01dE1ik7vZOADMWYiyqbCecUDhTVzOO5c/export?format=csv",
+    # "magic":      "https://docs.google.com/spreadsheets/d/14KPqmm0KQ-wlcgV-WMGqlqIwCCoz94hI8InyBMPmJdA/export?format=csv",
+    # "item":       "https://docs.google.com/spreadsheets/d/174mPJFw8fMOP5DAzL70FcuW549VnZK6FeVDcCkvfYfU/export?format=csv",
+    # "enemy":      "https://docs.google.com/spreadsheets/d/1v_q-56Nb_CtzkIZBThYEuBWScLzRIBaiQlI5mtugv9w/export?format=csv",
+    # "wizard":     "https://docs.google.com/spreadsheets/d/1CRTX72AUu4QXko0QUUq6X7LaNLxfy0YausEIx9zFBJA/export?format=csv",
+    # "enemyai":    "https://docs.google.com/spreadsheets/d/16F7ksDu0R-01dE1ik7vZOADMWYiyqbCecUDhTVzOO5c/export?format=csv",
     "mapChip":    "https://docs.google.com/spreadsheets/d/178l4JKlUGkUFAUFfU6Dt0yAyUwkOeCNQLc5tkn2BUSg/export?format=csv",
     "mapColor":   "https://docs.google.com/spreadsheets/d/1fa4ZvsC3VE6mrOywsCM2H_3H8dGRoskF0LHAEz8-_VY/export?format=csv",
     "mapEnemyPop":"https://docs.google.com/spreadsheets/d/1tKr0LiD74U8PhFlnU6alooSWucwTK0qY6xmm6PnZ6Zc/export?format=csv",
-#    "eventTile":  "https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv",
+    # "eventTile":  "https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv",
 }
 
 SPREADSHEET_IDS = {
@@ -48,7 +49,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("CSV ダウンロード / アップロード ツール")
-        self.geometry("680x540")
+        self.geometry("720x600")
         self.resizable(False, False)
 
         self._build_download_frame()
@@ -90,7 +91,12 @@ class App(tk.Tk):
         self.ws_var = tk.StringVar(value="0")
         ttk.Entry(frame, textvariable=self.ws_var, width=6).grid(row=1, column=3, sticky="w", padx=4)
 
+        # ---- アップロード操作ボタン ----
         ttk.Button(frame, text="アップロード", command=self._upload_selected).grid(row=2, column=3, pady=6)
+        ttk.Button(frame, text="すべてアップロード", command=self._upload_all).grid(row=2, column=4, pady=6)
+
+        # ---- 選択シートをブラウザで開く ----
+        ttk.Button(frame, text="シートを開く", command=self._open_selected).grid(row=3, column=3, pady=(0, 6))
 
     def _build_log_frame(self):
         frame = ttk.LabelFrame(self, text="ログ")
@@ -142,48 +148,76 @@ class App(tk.Tk):
         if not sel:
             messagebox.showwarning("未選択", "アップロードするシートキーを選択してください。")
             return
-
         key = self.listbox.get(sel[0])
+        self._start_upload_thread([key])
+
+    def _upload_all(self):
+        """リストに表示されているすべてのシートをアップロード"""
+        self._start_upload_thread(list(URLS.keys()))
+
+    # --------------- 共通アップロード処理 ----------------
+
+    def _start_upload_thread(self, keys: list[str]):
         creds_path = Path(self.creds_var.get())
         if not creds_path.is_file():
             messagebox.showerror("資格情報エラー", "有効なサービスアカウント JSON を選択してください。")
             return
-
         try:
             sheet_index = int(self.ws_var.get())
         except ValueError:
             messagebox.showerror("番号エラー", "ワークシート番号は整数で入力してください。")
             return
-
-        csv_file = Path(self.out_var.get()) / f"{key}.csv"
-        if not csv_file.exists():
-            messagebox.showerror("ファイル未検出", f"{csv_file} が見つかりません。\nまずダウンロードしてください。")
-            return
-
+        csv_dir = Path(self.out_var.get())
         threading.Thread(
             target=self._upload_worker,
-            args=(key, creds_path, csv_file, sheet_index),
+            args=(keys, creds_path, csv_dir, sheet_index),
             daemon=True
         ).start()
 
-    def _upload_worker(self, key: str, creds_path: Path, csv_file: Path, ws_index: int):
-        self._log(f"=== アップロード開始: {csv_file.name} → {key} ===")
+    def _upload_worker(self, keys: list[str], creds_path: Path, csv_dir: Path, ws_index: int):
+        if len(keys) == 1:
+            self._log(f"=== アップロード開始: {keys[0]}.csv ===")
+        else:
+            self._log("=== すべてアップロード開始 ===")
+
         try:
             gc = self._authorize(creds_path)
-            spreadsheet_id = SPREADSHEET_IDS[key]
-            sh = gc.open_by_key(spreadsheet_id)
-            ws = sh.get_worksheet(ws_index)
-            self._log(f"'{sh.title}' シート '{ws.title}' にアップロード中 …")
+            for key in keys:
+                csv_file = csv_dir / f"{key}.csv"
+                if not csv_file.exists():
+                    self._log(f"✖ {csv_file.name} が見つかりません。スキップします。")
+                    continue
+                try:
+                    spreadsheet_id = SPREADSHEET_IDS[key]
+                    sh = gc.open_by_key(spreadsheet_id)
+                    ws = sh.get_worksheet(ws_index)
+                    self._log(f"'{sh.title}' シート '{ws.title}' に {csv_file.name} をアップロード中 …")
 
-            with csv_file.open(newline="", encoding="utf-8") as f:
-                data = list(csv.reader(f))
+                    with csv_file.open(newline="", encoding="utf-8") as f:
+                        data = list(csv.reader(f))
 
-            ws.clear()
-            ws.update("A1", data, value_input_option="RAW")
-            self._log("✔ アップロード完了")
+                    ws.clear()
+                    ws.update("A1", data, value_input_option="RAW")
+                    self._log(f"✔ {csv_file.name} アップロード完了")
+                except Exception as e:
+                    self._log(f"✖ {csv_file.name} アップロード失敗: {e}")
         except Exception as e:
-            self._log(f"✖ アップロード失敗: {e}")
+            self._log(f"✖ 認証失敗: {e}")
+
         self._log("=== アップロード処理終了 ===")
+
+    # ------------------------------ シートを開く -----------------------------
+
+    def _open_selected(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            messagebox.showwarning("未選択", "開くシートキーを選択してください。")
+            return
+        key = self.listbox.get(sel[0])
+        spreadsheet_id = SPREADSHEET_IDS[key]
+        url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
+        self._log(f"ブラウザで開きます → {url}")
+        webbrowser.open(url)
 
     # ---------------------------- util & auth ------------------------------
 
@@ -199,6 +233,7 @@ class App(tk.Tk):
 
 
 # ---------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     App().mainloop()

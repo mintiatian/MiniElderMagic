@@ -556,6 +556,9 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
     addItem(DropItemData) {
         switch (DropItemData.type) {
+            case "item":
+                gameMain.Inventory.addItem(DropItemData.emoji);
+                break;
             case "coin":
                 this.playerstatus.coins += parseInt(DropItemData.value);
                 break;

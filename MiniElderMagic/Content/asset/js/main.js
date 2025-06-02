@@ -27,7 +27,7 @@ const dirInput = document.getElementById("dirInput");    // ★ 追加
 
 const layerPanel = document.getElementById("layerPanel");
 const mapSizeEl = document.getElementById("mapSize");
-
+const runSheetsBtn = document.getElementById("runSheetsBtn");   // ★ 追加
 /* ----- インスタンス生成 ----- */
 const editor = new Editor({
     viewportEl, overlayEl, paletteEl, brushInput, brushInfo,
@@ -39,6 +39,18 @@ new FileIO(fileInput, downloadBtn, editor);
 function gridToCSV(grid) {
     return grid.map(r => r.join(",")).join("\n");
 }
+
+/* -------------------------------------------------
+ *  download_and_update_sheets.py 起動
+ * ------------------------------------------------- */
+runSheetsBtn.onclick = async () => {
+    // ―― Node/Electron が使える場合（ブラウザ ⇔ OS ブリッジあり）
+    const toolUrl = new URL('./SheetsCsvTool.html', location.href).href;
+
+    // 新しいタブ（ポップアップブロック回避のため onclick 内で呼ぶ）
+    window.open(toolUrl, '_blank', 'noopener');
+
+};
 
 saveSetBtn.onclick = async () => {
     /* 対象 3 レイヤーを名前で検索（大小文字無視） */
@@ -59,7 +71,7 @@ saveSetBtn.onclick = async () => {
         try {
             const dir = await window.showDirectoryPicker({id: "csv-set"});
             for (const {fileName, layer} of targets) {
-                const handle   = await dir.getFileHandle(fileName, {create: true});
+                const handle = await dir.getFileHandle(fileName, {create: true});
                 const writable = await handle.createWritable();
                 await writable.write(gridToCSV(layer.grid));
                 await writable.close();
@@ -112,12 +124,35 @@ dirInput.addEventListener("change", ev => {
 });
 
 /* ★ パレットカテゴリ切替 */
-catTiles.onchange = () => editor.palette.setCategory("tiles");
-catEnemies.onchange = () => editor.palette.setCategory("enemies");
-catColors.onchange = () => editor.palette.setCategory("colors");
+catTiles.onchange = () => {
+    if (!catTiles.checked) return;           // 反応はチェック時のみ
+    editor.palette.setCategory("tiles");
+    /* tiles ↔ mapChip.csv へフォーカス */
+    editor.setActiveLayer(
+        editor.layers.findIndex(l => /mapChip/i.test(l.name))
+    );
+};
+catEnemies.onchange = () => {
+    if (!catEnemies.checked) return;
+    editor.palette.setCategory("enemies");
+    /* enemies ↔ mapEnemyPop.csv */
+    editor.setActiveLayer(
+        editor.layers.findIndex(l => /mapEnemyPop/i.test(l.name))
+    );
+};
+catColors.onchange = () => {
+    if (!catColors.checked) return;
+    editor.palette.setCategory("colors");
+    /* colors ↔ mapColor.csv */
+    editor.setActiveLayer(
+        editor.layers.findIndex(l => /mapColor/i.test(l.name))
+    );
+};
 
 /* Brush / Rect モード切替（ラジオボタン） */
 const modeBrush = document.getElementById("modeBrush");
 const modeRect = document.getElementById("modeRect");
+const modePick = document.getElementById("modePick");
 modeBrush.onchange = () => (editor.mode = "brush");
 modeRect.onchange = () => (editor.mode = "rect");
+modePick.onchange = () => (editor.mode = "pick");

@@ -11,6 +11,7 @@
         // Tabキーのイベントリスナーを追加（バインドして1回だけ登録）
         this.handleKeyDownBound = this.handleKeyDown.bind(this);
         document.addEventListener('keydown', this.handleKeyDownBound);
+        this.parentElement.appendChild(this.element);
     }
 
     /**
