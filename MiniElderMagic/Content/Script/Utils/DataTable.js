@@ -1,4 +1,32 @@
 ﻿// data/MagicDataManager.js
+import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
+
+/**
+ * CSV ファイルを読み込んで配列（1 行 = 1 オブジェクト）を返す
+ *   - header: true なので 1 行目の見出しがキーになる
+ *   - dynamicTyping: true で "5" → 5 などに自動変換
+ * @param  {string} url   CSV ファイルの URL / パス
+ * @return {Promise<Object[]>}  パース済みデータ
+ */
+export async function loadCSV2(url) {
+    const csvText = await fetch(url).then(r => {
+        if (!r.ok)
+            throw new Error(`loadCSV: HTTP ${r.status} – ${url}`);
+        return r.text();
+    });
+
+    const { data, errors } = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+        transformHeader: h => h.trim(),
+    });
+
+    if (errors.length) {
+        console.warn('loadCSV: CSV parse errors', errors);
+    }
+    return data;   // 例: [{ id:'Event_01', titleEmoji:'🧑', text:'{...}', ... }, ...]
+}
 
 
 
@@ -290,7 +318,7 @@ export class EventDataTable{
     static table = new Map();
     static get(id) { return this.table.get(id); }
     static async init(csvUrl = '/assets/magic.csv') {
-        const rows = await loadCSV(csvUrl);          // [{id,emoji,useMP,…}, …]
+        const rows = await loadCSV2(csvUrl);          // [{id,emoji,useMP,…}, …]
         for (const row of rows) {
             this.table.set(row.id, new EventDataTable(row));
         }

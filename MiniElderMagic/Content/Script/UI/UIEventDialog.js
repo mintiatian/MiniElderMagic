@@ -1,291 +1,301 @@
-﻿/* -------------------------------------------------------------------------
- *  UIEventDialog.js
- * -------------------------------------------------------------------------
- *  画面中央に表示されるイベントダイアログ
- *   - タイトル絵文字（4×サイズ）
- *   - ファミコン風テキスト（1 文字ずつ表示／クリックで全文表示）
- *   - ボタンモード
- *       • "ok"   … OK ボタン１つ
- *       • "yesno"… はい / いいえ ボタン
- * ------------------------------------------------------------------------- */
-
-import { UIBase } from './UIBase.js';
-import {gameMain} from "../GameMain.js";
-import {eventDataTable, eventTileDataTable} from "../Utils/DataTable.js";
+﻿import {UIBase} from './UIBase.js';
+import {gameMain} from '../GameMain.js';
+import {eventDataTable, eventTileDataTable} from '../Utils/DataTable.js';
 
 export class UIEventDialog extends UIBase {
-    /**
-     * @param {HTMLElement} parentElement
-     * @param {Object=}     opts
-     *        opts.titleEmoji {string}  = '💬'   表示する絵文字
-     *        opts.text       {string}          本文 (改行 \n 可)
-     *        opts.mode       {'ok'|'yesno'} = 'ok'
-     *        opts.speed      {number}  = 30     1 文字あたり ms
-     *        opts.onResult   {function(result:'ok'|'yes'|'no')|null}
-     */
     constructor(parentElement, opts = {}) {
         super(parentElement);
-        const {
-            titleEmoji = '💬',
-            text       = '',
-            mode       = 'ok',
-            speed      = 80,
-            onResult   = null,
-        } = opts;
+        this._applyOpts(opts);
+        this._script = null;
+        this._pc = 0;
+        this._waiting = null;
+        this._lastAnswer = null;
+        this._buildDom();
+    }
 
-        /* ────── コンテナ ────── */
+    _applyOpts(opts) {
+        this.titleEmoji = opts.titleEmoji ?? '💬';
+        this.speed = opts.speed ?? 30;
+        this.getItemCount = opts.getItemCount ?? (() => 0);
+        this.changeItemCount = opts.changeItemCount ?? (() => {
+        });
+        this.onResult = opts.onResult ?? (() => {
+            console.log('UIEventDialog: onResult', this._lastAnswer);
+        });
+        this.onExit = opts.onExit ?? (() => {
+        });
+    }
+
+    run(script, opts = {}) {
+        if (opts && Object.keys(opts).length) this._applyOpts({...opts});
+        const s = typeof script === 'string' ? JSON.parse(script) : script;
+        if (!s.labelTable) {
+            s.labelTable = {};
+            s.commands.forEach((c, i) => {
+                if (c.operation === 'page' && c.pageId) s.labelTable[c.pageId] = i;
+            });
+        }
+        if (!s.entryPage) {
+            const p = s.commands.find(c => c.operation === 'page');
+            s.entryPage = p?.pageId ?? Object.keys(s.labelTable)[0];
+        }
+        this._script = s;
+        this._pc = s.labelTable[s.entryPage];
+        super.show();
+        return this._execute(s);
+    }
+
+    async runFromUrl(src, opts = {}) {
+        // src が生 JSON テキストの場合
+        if (src.trim().startsWith('{')) return this.run(src, opts);
+
+        const res = await fetch(src);
+        if (!res.ok) throw new Error(`UIEventDialog: fetch failed ${src}`);
+        const txt = await res.text();
+        return this.run(txt, opts);
+    }
+
+    showDialog(text = '', mode = 'ok', opts = {}) {
+        const cmds = [
+            {operation: 'page', pageId: 'body', text},
+            {operation: 'dialog', dialogMode: mode},
+            {operation: 'answer', answerValue: mode === 'yesno' ? 'yes' : 'ok'},
+            {operation: 'jump', targetPage: 'end'}
+        ];
+        if (mode === 'yesno') cmds.push({operation: 'answer', answerValue: 'no'}, {
+            operation: 'jump',
+            targetPage: 'end'
+        });
+        cmds.push({operation: 'page', pageId: 'end'}, {operation: 'exit'});
+        const script = {commands: cmds, labelTable: {body: 0, end: cmds.length - 2}, entryPage: 'body'};
+        return this.run(script, opts);
+    }
+
+    jumpExecute(targetPage) {
+        this._pc = this._script.labelTable[targetPage] - 1;
+    }
+
+    async _execute(script) {
+        while (this._pc < script.commands.length) {
+            const cmd = script.commands[this._pc];
+
+            console.log('UIEventDialog: pc next ', this._pc, 'cmd', script.commands[this._pc].operation);
+
+            switch (cmd.operation) {
+                case 'page':
+                    await this._opPage(cmd);
+                    break;
+                case 'dialog':
+                    await this._opDialog(cmd);
+                    break;
+                case 'answer':
+                    // 選択された答えと一致しなければ次の answer へスキップ
+                    if (this._lastAnswer !== cmd.answerValue) {
+                        while (++this._pc < script.commands.length) {
+                            const next = script.commands[this._pc];
+                            // 次の dialog で分岐ブロック終了
+                            if (next.operation === 'dialog') break;
+                            // 自分が選んだ answer に到達したら処理を続ける
+                            if (next.operation === 'answer' &&
+                                next.answerValue === this._lastAnswer) break;
+                        }
+                        // break した位置から再評価
+                        continue;
+                    }
+                    // 一致した answer ブロックを処理するときだけ
+                    // 必要ならここで _lastAnswer をクリアしてもよい
+                    break;
+                case 'condition':
+                    this._opCondition(cmd);
+                    break;
+                case 'changeItemCount':
+                    this._opChangeItem(cmd);
+                    break;
+                case 'jump': {
+                    const tgt = cmd.targetPage;
+                    if (!(tgt in this._script.labelTable)) {
+                        console.warn(`jump: "${tgt}" は labelTable に存在しません`);
+                        // 存在しない場合は強制終了でも良いし、次に進めても良い
+                        return this._exit();    // ← 任意の安全策
+                    }
+                    this._pc = this._script.labelTable[tgt];
+                    continue;                  // または return this._step();
+                }
+                case 'exit':
+                    this._onExit();
+                    return;
+                default:
+                    console.warn('UIEventDialog: unknown op', cmd.operation);
+            }
+            this._pc++;
+            //console.log('UIEventDialog: pc next ', this._pc, 'cmd',script.commands[this._pc].operation);
+        }
+    }
+
+    _buildDom() {
+        this.element.className = 'ui-event-dialog';
         Object.assign(this.element.style, {
             position: 'absolute',
-            left:     '50%',
-            top:      '50%',
-            transform: 'translate(-50%, -50%)',
-            width:    '60%',
-            maxWidth: '420px',
-            minWidth: '280px',
-            padding:  '16px 24px',
-            background: 'rgba(0,0,0,.8)',
-            color:      '#fff',
-            fontFamily: 'monospace',
-            border:     '2px solid #fff',
-            borderRadius:'8px',
-            boxShadow:  '0 4px 12px rgba(0,0,0,.5)',
-            zIndex:    9999,
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            zIndex: 1000
         });
-
-        /* ────── タイトル (絵文字) ────── */
-        this.titleEl = document.createElement('div');
-        this.titleEl.textContent = titleEmoji;
-        Object.assign(this.titleEl.style, {
-            fontSize:  '4rem',          // 約 4 倍
+        const win = document.createElement('div');
+        Object.assign(win.style, {
+            minWidth: '240px',
+            maxWidth: '60%',
+            padding: '20px',
+            borderRadius: '12px',
+            background: 'rgba(0,0,0,.70)',
+            backdropFilter: 'blur(4px)',
+            color: '#fff',
             textAlign: 'center',
-            lineHeight:'1',
-            marginBottom: '12px',
-            userSelect: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,.4)'
         });
-        this.element.appendChild(this.titleEl);
-
-        /* ────── テキストエリア ────── */
-        this.textEl = document.createElement('pre');
-        Object.assign(this.textEl.style, {
-            margin:        '0 auto 16px',
-            whiteSpace:    'pre-wrap',
-            minHeight:     '5em',       // 高さ確保
-            letterSpacing: '1px',
-        });
-        this.element.appendChild(this.textEl);
-
-        /* ────── ボタン ────── */
-        this.btnArea = document.createElement('div');
-        Object.assign(this.btnArea.style, {
-            display:       'flex',
-            justifyContent: mode === 'yesno' ? 'space-evenly' : 'center',
-            gap:           '24px',
-        });
-        this.element.appendChild(this.btnArea);
-
-        const makeButton = (label) => {
-            const btn = document.createElement('button');
-            btn.textContent = label;
-            Object.assign(btn.style, {
-                fontFamily: 'inherit',
-                fontSize:   '1rem',
-                padding:    '4px 18px',
-                cursor:     'pointer',
-            });
-            btn.onmouseenter = () => btn.style.filter = 'brightness(1.3)';
-            btn.onmouseleave = () => btn.style.filter = '';
-            return btn;
-        };
-
-        if (mode === 'yesno') {
-            const yesBtn = makeButton('はい');
-            const noBtn  = makeButton('いいえ');
-            yesBtn.onclick = () => this._finish('yes', onResult);
-            noBtn.onclick  = () => this._finish('no',  onResult);
-            this.btnArea.append(yesBtn, noBtn);
-        } else { // ok
-            const okBtn = makeButton('OK');
-            okBtn.onclick = () => this._finish('ok', onResult);
-            this.btnArea.appendChild(okBtn);
-        }
-
-        /* ────── タイプライター演出 ────── */
-        this._fullText = text.replace(/\r\n/g, '\n');
-        this._speed    = speed;
-        this._idx      = 0;
-        this._revealing = true;
-
-        /** @type {number|null} */
-        this._timer = setInterval(() => this._stepTypewriter(), this._speed);
-
-        // クリックで全文表示
-        this.element.addEventListener('click', () => {
-            if (this._revealing) {
-                this._showAll();
-            }
-        });
-        this.hide();
-        this.userClose = false;
-    }
-    
-    show(){
-
-        // プレイヤーがいま踏んでいるタイル絵文字
-        const tileEmoji = gameMain.wizard?.eventTile ?? "";
-        if (!tileEmoji) return;                  // 空文字 → 何もなし
-
-        if (!eventTileDataTable.table.has(tileEmoji)) return;
-
-        const evtTile = eventTileDataTable.get(tileEmoji);
-        if (evtTile?.type !== "event") return;    // shop 以外は無視
-
-        evtTile.event
-
-        this.eventData = eventDataTable.get(evtTile.event);
-        
-        this.update({
-            titleEmoji : this.eventData.titleEmoji,
-            text       : this.eventData.text,
-            mode       : this.eventData.mode,
-            onResult   : res => {
-                if(res === "yes"){
-                    this.nextText({
-                        text       : "ありがとう！",
-                        mode       : "ok",});
-                }
-            },
-        });
-        
-        
-        super.show();
+        this.element.appendChild(win);
+        this._titleEl = document.createElement('div');
+        this._titleEl.style.fontSize = '2.5rem';
+        win.appendChild(this._titleEl);
+        this._textEl = document.createElement('p');
+        Object.assign(this._textEl.style, {margin: '12px 0 24px', minHeight: '2em', whiteSpace: 'pre-wrap'});
+        win.appendChild(this._textEl);
+        this._btnArea = document.createElement('div');
+        Object.assign(this._btnArea.style, {display: 'flex', justifyContent: 'center', gap: '24px'});
+        win.appendChild(this._btnArea);
     }
 
-    /* ------------------ 内部メソッド ------------------ */
-
-    _stepTypewriter() {
-        if (this._idx >= this._fullText.length) {
-            clearInterval(this._timer);
-            this._revealing = false;
-            return;
-        }
-        this.textEl.textContent += this._fullText[this._idx++];
-    }
-
-    _showAll() {
-        clearInterval(this._timer);
-        this._revealing = false;
-        this.textEl.textContent = this._fullText;
-    }
-
-    /**
-     * @param {'ok'|'yes'|'no'} result
-     * @param {function|null} cb
-     */
-    _finish(result, cb) {
-        this.hide();              // UIBase が持つ破棄メソッド
-        if (cb) cb(result);
-    }
-
-    /* ------------------ Static helper ------------------ */
-
-    /**
-     * ダイアログ内容を上書きして再利用する
-     * @param {Object=} opts  ─ constructor と同じ項目（省略可）
-     */
-    update(opts = {}) {
-        const {
-            titleEmoji, text, mode,
-            speed,      onResult,
-        } = opts;
-
-        /* ─ タイトル絵文字 ─ */
-        if (titleEmoji !== undefined) {
-            this.titleEl.textContent = titleEmoji;
-        }
-
-        /* ─ 本文（タイプライターをリセット） ─ */
-        if (text !== undefined) {
-            clearInterval(this._timer);
-            this._fullText  = text.replace(/\r\n/g, '\n');
-            this._idx       = 0;
-            this._revealing = true;
-            this.textEl.textContent = '';
-            this._speed = speed ?? this._speed;
-            this._timer = setInterval(() => this._stepTypewriter(), this._speed);
-        }
-
-        /* ─ ボタン＆コールバック ─ */
-        if (mode !== undefined || onResult !== undefined) {
-            // いったん全部外して作り直し
-            this.btnArea.replaceChildren();
-            const makeButton = (label) => {
-                const b = document.createElement('button');
-                b.textContent = label;
-                Object.assign(b.style, {
-                    fontFamily: 'inherit', fontSize: '1rem',
-                    padding: '4px 18px', cursor: 'pointer',
-                });
-                b.onmouseenter = () => b.style.filter = 'brightness(1.3)';
-                b.onmouseleave = () => b.style.filter = '';
-                return b;
+    async _opPage(cmd) {
+        this._titleEl.textContent = this.titleEmoji;
+        await this._typeWriter(cmd.text ?? '');
+        this.element.style.pointerEvents = 'auto';
+        await new Promise(resolve => {
+            const clickHandler = () => {
+                this.element.removeEventListener('click', clickHandler);
+                this.element.style.pointerEvents = 'none';
+                resolve();
             };
+            this.element.addEventListener('click', clickHandler);
+        });
+    }
 
-            const cb = onResult ?? (()=>{});   // 未指定なら no-op
-            const m  = mode ?? (this._mode ?? 'ok');
-            this._mode = m;                    // 保存
-
-            Object.assign(this.btnArea.style, {
-                justifyContent: m === 'yesno' ? 'space-evenly' : 'center',
+    async _opDialog(cmd) {
+        const mode = cmd.dialogMode ?? 'ok';
+        this._btnArea.innerHTML = '';
+        this.element.style.pointerEvents = 'auto';
+        const makeBtn = (label, value) => {
+            const b = document.createElement('button');
+            b.textContent = label;
+            Object.assign(b.style, {
+                padding: '4px 16px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                border: 'none',
+                borderRadius: '6px',
+                background: '#444',
+                color: '#fff'
             });
-            if (m === 'yesno') {
-                const yesBtn = makeButton('はい');
-                const noBtn  = makeButton('いいえ');
-                yesBtn.onclick = () => this._finish('yes', cb);
-                noBtn.onclick  = () => this._finish('no',  cb);
-                this.btnArea.append(yesBtn, noBtn);
-            } else {
-                const okBtn = makeButton('OK');
-                okBtn.onclick = () => this._finish('ok', cb);
-                this.btnArea.append(okBtn);
-            }
+            b.onmouseenter = () => b.style.background = '#666';
+            b.onmouseleave = () => b.style.background = '#444';
+            b.onclick = () => {
+                this._lastAnswer = value;   // ★ ここを追加
+                this.element.style.pointerEvents = 'none';
+                this.onResult(value);
+                this._resolveWait();
+            };
+            this._btnArea.appendChild(b);
+        };
+        if (mode === 'yesno') {
+            makeBtn('はい', 'yes');
+            makeBtn('いいえ', 'no');
+        } else {
+            makeBtn('OK', 'ok');
+        }
+        await this._wait();
+        this._btnArea.innerHTML = '';
+    }
+
+    _opCondition(cmd) {
+        let pass;
+
+        /* --- 新フォーマット: items[] ------------- */
+        if (Array.isArray(cmd.items)) {
+            pass = cmd.items.every(cond => {
+                const need = Number(cond.count ?? 0);
+                return this.getItemCount(cond.item) >= need;
+            });
+
+            /* --- 旧フォーマット ----------------------- */
+        } else {
+            const have = this.getItemCount(cmd.checkItem);
+            pass = have >= (cmd.requiredCount ?? 0);
+        }
+
+        this.jumpExecute(pass ? cmd.successPage : cmd.failurePage);
+    }
+
+    _opChangeItem(cmd) {
+        this.changeItemCount(cmd.item, cmd.delta);
+    }
+
+    _onExit() {
+        this.onExit();
+        this.element.remove();
+    }
+
+    _typeWriter(text) {
+        return new Promise(res => {
+            this._textEl.textContent = '';
+            let idx = 0;
+            const timer = setInterval(() => {
+                this._textEl.textContent += text[idx++];
+                if (idx >= text.length) {
+                    clearInterval(timer);
+                    this._textEl.onclick = null;
+                    res();
+                }
+            }, this.speed);
+            this._textEl.onclick = () => {
+                clearInterval(timer);
+                this._textEl.textContent = text;
+                this._textEl.onclick = null;
+                res();
+            };
+        });
+    }
+
+    _wait() {
+        return new Promise(r => {
+            this._waiting = r;
+        });
+    }
+
+    _resolveWait() {
+        if (this._waiting) {
+            this._waiting();
+            this._waiting = null;
         }
     }
-    
-    hide(){
-        super.hide();
-        this.userClose = true;
-    }
 
-    handleKeyDown(event) {
-        // Tabキーが押されたときの処理
-        if (event.key === 'Tab') {
-            // デフォルトのTabキーの動作を防止
-            event.preventDefault();
+    show() {
+        const tileEmoji = gameMain.wizard?.eventTile ?? '';
+        if (tileEmoji && eventTileDataTable.table.has(tileEmoji)) {
+            const evtTile = eventTileDataTable.get(tileEmoji);
+            if (evtTile && evtTile.type === 'event') {
+                const eventData = eventDataTable.get(evtTile.event);
 
-            if (this.isVisible) {
-                this.hide();
-            } else {
-                if(this.userClose){
-                    this.userClose = false;
+                if (eventData) {
+                    this.runFromUrl(eventData.text, {
+                        titleEmoji: '🧙',
+                        getItemCount: id => gameMain.wizard.getItemCount(id),
+                        changeItemCount: (id, d) => gameMain.wizard.changeItemCount(id, d)
+                    });
                     return;
                 }
-
-                this.show();
             }
         }
-    }
-
-    /* ----------------- Static helper ----------------- */
-
-    /** 現在の画面で１つだけ使い回す簡易ユーティリティ */
-    static show(parent, opts = {}) {
-        // 既に開いていれば再利用
-        if (UIEventDialog._instance && !UIEventDialog._instance.disposed) {
-            UIEventDialog._instance.update(opts);
-            return UIEventDialog._instance;
-        }
-        // 新規生成
-        UIEventDialog._instance = new UIEventDialog(parent, opts);
-        return UIEventDialog._instance;
+        super.show();
     }
 }

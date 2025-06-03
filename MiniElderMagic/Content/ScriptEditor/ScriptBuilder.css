@@ -1,0 +1,110 @@
+﻿:root{
+    --gap:8px;
+    --card-bg:#2b2b2b;
+    --card-border:#444;
+    --accent:#6cf;
+    font-family:system-ui,sans-serif;
+    color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    height:100dvh;
+    background:#1b1b1b;
+    color:#eee;
+    overflow:hidden;
+}
+/* ── レイアウト ─────────────────────────── */
+header{
+    padding:6px 12px;
+    background:#111;
+    border-bottom:1px solid var(--card-border);
+    font-weight:bold;
+}
+main{
+    flex:1;
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:var(--gap);
+    padding:var(--gap);
+    overflow:hidden;
+}
+.card{
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:6px;
+    padding:var(--gap);
+    display:flex;
+    flex-direction:column;
+}
+
+/* ── リスト ─────────────────────────────── */
+#cmdList,
+#suggestList{
+    list-style:none;
+    padding:0;
+    margin:0;
+    overflow-y:auto;
+    flex:1;
+}
+#cmdList li,
+#suggestList li{
+    padding:4px 6px;
+    border-bottom:1px solid #333;
+    cursor:pointer;
+    font-size:.9rem;
+}
+#cmdList li:hover,
+#suggestList li:hover{background:#383838}
+#cmdList li.active{background:#555}
+
+/* ── ディテール ─────────────────────────── */
+.detail{
+    background:#111;
+    color:#0f0;
+    padding:8px 12px;
+    border:1px solid #444;
+    min-height:120px;
+    overflow:auto;
+    white-space:pre-wrap;
+}
+
+/* ── フォーム共通 ──────────────────────── */
+button{
+    padding:6px 10px;
+    border-radius:4px;
+    border:none;
+    background:var(--accent);
+    color:#000;
+    font-weight:bold;
+    cursor:pointer;
+}
+button:disabled{opacity:.4;cursor:default}
+button.full{width:100%}
+input,select,textarea{
+    width:100%;
+    padding:4px 6px;
+    border-radius:4px;
+    border:1px solid #666;
+    background:#222;
+    color:#eee;
+}
+textarea{resize:vertical}
+.field{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    margin-bottom:4px;
+}
+.field span{font-size:.8rem;color:#aaa}
+
+
+/* ── リスト ─────────────────────────────── */
+#cmdList li.related {               /* ★ 追加 */
+    background:#364b63;             /* お好みで色を変えてください */
+}
+#cmdList li.active  { background:#555 }
+/* active と related が重なる場合は active を優先 */
+#cmdList li.active.related { background:#555 }

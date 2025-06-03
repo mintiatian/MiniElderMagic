@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <title>イベントスクリプトビルダー</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="ScriptBuilder.css" />
+</head>
+<body>
+<header>イベントスクリプトビルダー</header>
+
+<main>
+    <!-- ── フォーム ────────────────────────── -->
+    <section class="card" id="formPane">
+        <h3>コマンド入力</h3>
+        <div class="field">
+            <span>Type</span>
+            <select id="cmdType">
+                <option value="page">page</option>
+                <option value="dialog">dialog</option>
+                <option value="answer">answer</option>
+                <option value="condition">condition</option>
+                <option value="jump">jump</option>
+                <option value="changeItemCount">changeItemCount</option>
+                <option value="exit">exit</option>
+            </select>
+        </div>
+        <div id="fieldZone"></div>
+        <button id="actionBtn">Add</button>
+
+        <button id="deleteBtn" disabled>Delete</button><!-- ★追加 -->
+    </section>
+
+    <!-- ── リスト・出力 ─────────────────────── -->
+    <section class="card">
+        <h3>コマンド一覧</h3>
+        <ul id="cmdList"></ul>
+        <pre id="detailZone" class="detail"></pre>
+
+        <button id="exportBtn" class="full">Export JSON</button>
+        <button id="importBtn"  class="full">Import JSON → Node</button>
+        
+        <button id="runBtn"    class="full">▶ Run in UIEventDialog</button>
+        <textarea id="output" rows="8" ></textarea>
+    </section>
+
+    <!-- ── サジェスト ─────────────────────── -->
+    <section class="card" id="suggestPane">
+        <h3>次に必要なノード候補</h3>
+        <ul id="suggestList"></ul>
+    </section>
+</main>
+
+<script type="module" src="ScriptBuilder.js" defer></script>
+</body>
+</html>

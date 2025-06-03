@@ -768,5 +768,11 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             // 例：全魔法の中からランダム選択とか
         }
     }
-    
+
+    getItemCount(id,delta){
+
+    }
+    changeItemCount(id,delta){
+
+    }
 }
