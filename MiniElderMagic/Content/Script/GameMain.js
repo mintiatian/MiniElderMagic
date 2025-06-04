@@ -134,6 +134,8 @@ export class GameMain {
         this.Inventory.addItem("🍄");
         this.Inventory.addItem("🍄");
         this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
         this.Inventory.addItem("🍞");
 
 

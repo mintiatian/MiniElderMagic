@@ -1,10 +1,10 @@
 ﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8"/>
     <title>イベントスクリプトビルダー</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="stylesheet" href="ScriptBuilder.css" />
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <link rel="stylesheet" href="ScriptBuilder.css"/>
 </head>
 <body>
 <header>イベントスクリプトビルダー</header>
@@ -29,6 +29,17 @@
         <button id="actionBtn">Add</button>
 
         <button id="deleteBtn" disabled>Delete</button><!-- ★追加 -->
+
+        <!-- ── イベント ID 一覧 ───────────────────── -->
+        <section class="card" id="eventIdPane">
+            <h3>イベント ID 一覧</h3>
+            <!-- size を指定すると「リストボックス」表示になる -->
+            <select id="eventIdList" size="10" style="width:100%"></select>
+        </section>
+        <button id="applyJsonBtn" class="full">CSVTable <- JSON</button>
+        <button id="saveEventCsvBtn" class="full">Save Event CSV</button>
+        <!-- ★ ここを追加 ↓↓↓ -->
+        <button id="openSheetsCsvToolBtn" class="full">Open Sheets CSV Tool</button>
     </section>
 
     <!-- ── リスト・出力 ─────────────────────── -->
@@ -38,10 +49,10 @@
         <pre id="detailZone" class="detail"></pre>
 
         <button id="exportBtn" class="full">Export JSON</button>
-        <button id="importBtn"  class="full">Import JSON → Node</button>
-        
-        <button id="runBtn"    class="full">▶ Run in UIEventDialog</button>
-        <textarea id="output" rows="8" ></textarea>
+        <button id="importBtn" class="full">Import JSON → Node</button>
+
+        <button id="runBtn" class="full">▶ Run in UIEventDialog</button>
+        <textarea id="output" rows="8"></textarea>
     </section>
 
     <!-- ── サジェスト ─────────────────────── -->

@@ -324,9 +324,8 @@ export class EventDataTable{
         }
         eventDataTable = this;
     }
-    constructor({ id ,titleEmoji ,text,mode}){
+    constructor({ id ,titleEmoji ,text}){
         this.titleEmoji = titleEmoji;
         this.text = text;
-        this.mode = mode;
     }
 }

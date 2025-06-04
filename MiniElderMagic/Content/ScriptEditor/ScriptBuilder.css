@@ -71,6 +71,12 @@ main{
     white-space:pre-wrap;
 }
 
+/* items editor --------------------------------------------------- */
+.items-zone         { display:flex; flex-direction:column; gap:4px; }
+.item-row           { display:grid; grid-template-columns:2.5fr 1fr auto; gap:4px; }
+.item-row input     { width:100%; }
+.item-row button    { padding:0 8px; font-weight:bold; }
+
 /* ── フォーム共通 ──────────────────────── */
 button{
     padding:6px 10px;

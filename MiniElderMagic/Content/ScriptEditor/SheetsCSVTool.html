@@ -1,0 +1,160 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <title>CSV ↔ Google Sheets (ServiceAccount) – Folder Overwrite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body{font-family:system-ui,sans-serif;background:#222;color:#eee;margin:0;padding:24px}
+        h1{font-size:1.4rem;margin:0 0 20px}
+        section{border:1px solid #444;border-radius:8px;padding:16px;margin-bottom:24px}
+        label,button{font-size:1rem}
+        button{padding:6px 14px;margin-top:10px;cursor:pointer;border-radius:6px;border:1px solid #666;background:#333;color:#eee}
+        button:disabled{opacity:.4;cursor:not-allowed}
+        #log{white-space:pre-wrap;font-family:monospace;background:#111;padding:12px;height:240px;overflow:auto;border-radius:6px;border:1px solid #444}
+    </style>
+</head>
+<body>
+<h1>CSV ↔ Google Sheets (ServiceAccount)</h1>
+
+<!-- フォルダ選択 -->
+<section>
+    <h2>フォルダ選択</h2>
+    <p>CSV (<code>eventDataTable.csv</code>) とサービスアカウント JSON を同じフォルダに入れてください。</p>
+    <button id="selectDirBtn">フォルダを選択</button>
+    <p id="dirStatus">未選択</p>
+</section>
+
+<!-- 操作ボタン -->
+<section>
+    <h2>操作</h2>
+    <button id="downloadBtn" disabled>シート → CSV (上書き)</button>
+    <button id="uploadBtn" disabled>CSV → シート (index 0)</button>
+</section>
+
+<!-- ログ -->
+<section>
+    <h2>ログ</h2>
+    <div id="log"></div>
+</section>
+
+<script type="module">
+    import { KJUR } from "https://cdn.jsdelivr.net/npm/jsrsasign@10/+esm";
+
+    /* スプレッドシート ID を自分のものに書き換えてください */
+    const SHEETS = {
+        eventDataTable   : { id: "1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc" },
+    };
+
+    /* ---------- UI ---------- */
+    const selectDirBtn = document.getElementById('selectDirBtn');
+    const dirStatus    = document.getElementById('dirStatus');
+    const downloadBtn  = document.getElementById('downloadBtn');
+    const uploadBtn    = document.getElementById('uploadBtn');
+    const logEl        = document.getElementById('log');
+
+    /* ---------- 状態 ---------- */
+    let dirHandle   = null;       // FileSystemDirectoryHandle
+    let SA          = null;       // サービスアカウント情報
+    let csvHandles  = {};         // { filename: FileSystemFileHandle }
+    let accessToken = null;
+    let tokenExp    = 0;
+
+    /* ---------- ログ ---------- */
+    const log = (m)=>{logEl.textContent += m+"\n";logEl.scrollTop=1e6};
+
+    /* ---------- アクセストークン ---------- */
+    async function getAccessToken(){
+        const now = Math.floor(Date.now()/1000);
+        if(accessToken && now < tokenExp-60) return accessToken;
+        const jwt = KJUR.jws.JWS.sign(null,{alg:"RS256",typ:"JWT"},{iss:SA.client_email,scope:"https://www.googleapis.com/auth/spreadsheets",aud:"https://oauth2.googleapis.com/token",iat:now,exp:now+3600},SA.private_key);
+        const res = await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion:jwt})}).then(r=>r.json());
+        if(!res.access_token) throw new Error(JSON.stringify(res));
+        accessToken = res.access_token; tokenExp = now+res.expires_in; return accessToken;
+    }
+
+    /* ---------- CSV ⇄ Array ---------- */
+    function parseCsv(text){
+        const rows=text.trim().split(/\r?\n/).map(l=>{const out=[],len=l.length;let cur="",q=false;for(let i=0;i<len;++i){const c=l[i];if(c=='"'){if(q && l[i+1]=='"'){cur+='"';++i;}else q=!q;}else if(c==',' && !q){out.push(cur);cur="";}else cur+=c;}out.push(cur);return out;});
+        const max=Math.max(...rows.map(r=>r.length));rows.forEach(r=>{while(r.length<max)r.push("");});return rows;
+    }
+    function arrayToCsv(arr){return arr.map(r=>r.map(v=>{if(v==null)return"";const s=String(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n');}
+
+    /* ---------- ディレクトリ読み込み ---------- */
+    selectDirBtn.addEventListener('click', async ()=>{
+        if(!window.showDirectoryPicker){alert('このブラウザは File System Access API をサポートしていません');return;}
+        try{
+            dirHandle = await window.showDirectoryPicker();
+            await loadFolder(dirHandle);
+        }catch(e){if(e.name!=='AbortError')alert(e.message);}
+    });
+
+    async function loadFolder(handle){
+        csvHandles = {}; SA=null;
+        for await (const [name, entry] of handle.entries()){
+            if(entry.kind==='file'){
+                if(name.endsWith('.csv')) csvHandles[name]=entry;
+                else if(name.endsWith('.json') && !SA){const file=await entry.getFile(); SA=JSON.parse(await file.text());}
+            }
+        }
+        dirStatus.textContent = `CSV ${Object.keys(csvHandles).length} 件, JSON ${SA? 'OK':'なし'}`;
+        if(!SA){downloadBtn.disabled=uploadBtn.disabled=true;alert('サービスアカウント JSON が見つかりません');return;}
+        try{await getAccessToken();downloadBtn.disabled=uploadBtn.disabled=false;log(`サービスアカウント ${SA.client_email} で認証完了`);}catch(err){alert('トークン取得失敗:'+err.message);}
+    }
+
+    /* ---------- 先頭シート名取得 ---------- */
+    async function getFirstSheetName(id){
+        const token=await getAccessToken();
+        const meta=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets(properties(index,title))`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json());
+        const first=meta.sheets.find(s=>s.properties.index===0)||meta.sheets[0];
+        return first.properties.title;
+    }
+
+    /* ---------- シートクリア ---------- */
+    async function clearSheet(id,name){
+        const token=await getAccessToken();
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(name)}:clear`,{method:'POST',headers:{Authorization:`Bearer ${token}`}});
+    }
+
+    /* ---------- アップロード ---------- */
+    uploadBtn.addEventListener('click',async()=>{
+        uploadBtn.disabled=true;
+        try{
+            for(const [key,{id}] of Object.entries(SHEETS)){
+                const fileHandle=csvHandles[`${key}.csv`];
+                if(!fileHandle){log(`✕ ${key}.csv がフォルダにありません`);continue;}
+                const file=await fileHandle.getFile();
+                const rows=parseCsv(await file.text());
+                const sheetName=await getFirstSheetName(id);
+                await clearSheet(id,sheetName);
+                const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(sheetName+'!A1')}?valueInputOption=RAW`;
+                const token=await getAccessToken();
+                await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({range:`${sheetName}!A1`,majorDimension:'ROWS',values:rows})});
+                log(`✓ ${key}.csv → ${sheetName}`);
+            }
+            log('=== アップロード完了 ===');
+        }catch(err){alert('アップロード失敗:'+err.message);}finally{uploadBtn.disabled=false;}
+    });
+
+    /* ---------- ダウンロード ---------- */
+    downloadBtn.addEventListener('click',async()=>{
+        downloadBtn.disabled=true;
+        try{
+            for(const [key,{id}] of Object.entries(SHEETS)){
+                const sheetName=await getFirstSheetName(id);
+                const token=await getAccessToken();
+                const data=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(sheetName)}?majorDimension=ROWS`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json());
+                const csv=arrayToCsv(data.values||[]);
+                let fileHandle=csvHandles[`${key}.csv`];
+                if(!fileHandle){fileHandle=await dirHandle.getFileHandle(`${key}.csv`,{create:true}); csvHandles[`${key}.csv`]=fileHandle;}
+                const writable=await fileHandle.createWritable();
+                await writable.write(csv);
+                await writable.close();
+                log(`↓ ${key}.csv 上書き保存`);
+            }
+            log('=== ダウンロード完了 ===');
+        }catch(err){alert('ダウンロード失敗:'+err.message);}finally{downloadBtn.disabled=false;}
+    });
+</script>
+</body>
+</html>

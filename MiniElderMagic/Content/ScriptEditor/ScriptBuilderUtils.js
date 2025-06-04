@@ -60,3 +60,9 @@ export function createSelect(values, current) {
     sel.value = current ?? values[0];
     return sel;
 }
+
+/* ── items で使う絵文字一覧 ───────────────── */
+export const ITEM_OPTIONS = [
+    '🍄','🍞','🍗','🍎','🧀','🥛','🥘','🧿','🔮','🌟','🕯️','💎','📿','🏺',
+    '🗝️','🪣','🧵','🪶','📜','🖋️','💍','⌚','💀'
+];
