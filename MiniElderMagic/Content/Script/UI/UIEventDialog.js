@@ -68,6 +68,7 @@ export class UIEventDialog extends UIBase {
         });
         cmds.push({operation: 'page', pageId: 'end'}, {operation: 'exit'});
         const script = {commands: cmds, labelTable: {body: 0, end: cmds.length - 2}, entryPage: 'body'};
+
         return this.run(script, opts);
     }
 
@@ -242,7 +243,9 @@ export class UIEventDialog extends UIBase {
 
     _onExit() {
         this.onExit();
-        this.element.remove();
+
+        this.element.style.opacity   = '0';
+        //this.element.remove();
     }
 
     _typeWriter(text) {
@@ -288,9 +291,9 @@ export class UIEventDialog extends UIBase {
 
                 if (eventData) {
                     this.runFromUrl(eventData.text, {
-                        titleEmoji: '🧙',
-                        getItemCount: id => gameMain.wizard.getItemCount(id),
-                        changeItemCount: (id, d) => gameMain.wizard.changeItemCount(id, d)
+                        titleEmoji: eventData.titleEmoji,
+                        getItemCount: (id) => gameMain.wizard.getItemCount(id),
+                        changeItemCount: (id, delta) => gameMain.wizard.changeItemCount(id, delta)
                     });
                     return;
                 }

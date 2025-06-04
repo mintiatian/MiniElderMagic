@@ -769,8 +769,8 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         }
     }
 
-    getItemCount(id,delta){
-
+    getItemCount(id){
+        return gameMain.Inventory.getItemCount(id);
     }
     changeItemCount(id,delta){
 
