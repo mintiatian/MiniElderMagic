@@ -1,4 +1,4 @@
-﻿import {$, FIELD_DEFS, createSelect, ITEM_OPTIONS} from './ScriptBuilderUtils.js';
+﻿import {$, FIELD_DEFS, createSelect, ITEM_OPTIONS, HUMAN_EMOJIS} from './ScriptBuilderUtils.js';
 import {ScriptBuilderModel} from './ScriptBuilderModel.js';
 import {EventDataTable} from "../Script/Utils/DataTable.js";
 import {saveEventCsvToFolder} from './ImportExportService.js';
@@ -38,7 +38,12 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
                 const id = this.eventIdListEl.value;
                 const data = EventDataTable.get(id);      // Map から取得
                 if (!data) return;
-
+                this.titleEmojiSel.value = data.titleEmoji ?? '';
+                if (!this.titleEmojiSel.value && data.titleEmoji) {
+                    // リストに無い絵文字だった場合は option を動的に挿入
+                    const opt = new Option(data.titleEmoji, data.titleEmoji, true, true);
+                    this.titleEmojiSel.prepend(opt);
+                }
                 this.selectedEventId = id;                // ★追加
                 // data.text は JSON 文字列なので整形して表示
                 try {
@@ -50,6 +55,9 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
                     // パース失敗時はそのまま表示
                     this.outputEl.value = data.text ?? '';
                 }
+                this.titleEmojiInput.value = data.titleEmoji ?? '';
+                this._setupEmojiAutocomplete();   // ★ 追加
+
                 this.applyJsonBtn.disabled = false;       // 選んだので押せる
             });
 
@@ -80,7 +88,10 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             this.suggestListEl = $('#suggestList');
             this.importBtn = $('#importBtn');
             this.runAllBtn = $('#runAllBtn');   // ★追加
-            this.exportBtn = $('#exportBtn')
+            this.exportBtn = $('#exportBtn');
+            this.titleEmojiSel   = $('#titleEmojiSelect');
+            this._populateEmojiSelect();     // ★ 追加
+
             // Model -> View
             this.model.onChange(() => {
                 this._renderList();
@@ -94,6 +105,31 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             this._populateEventIdList();   // ★追加 (モデル監視登録の後あたり)
 
 
+        }
+
+        /* --------------------------------------------------
+ *  titleEmoji 用 <select> に人間アイコンを流し込む
+ * -------------------------------------------------- */
+        _populateEmojiSelect() {
+            const sel = this.titleEmojiSel;
+            HUMAN_EMOJIS.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = e;
+                sel.appendChild(opt);
+            });
+        }
+
+        /* --------------------------------------------------
+  +     titleEmoji 用 datalist を生成
+  +   * -------------------------------------------------- */
+        _setupEmojiAutocomplete() {
+            const listEl = $('#personEmojiList');
+            if (!listEl) return;                     // 念のため
+            for (const e of HUMAN_EMOJIS) {
+                const opt = document.createElement('option');
+                opt.value = e;
+                listEl.appendChild(opt);
+            }
         }
 
         /* --------------------------------------------------
@@ -124,7 +160,9 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
 
             // 確認用に textarea を整形して再表示
             this.outputEl.value = JSON.stringify(obj, null, 2);
-            //alert(`Event "${id}" の text を更新しました`);
+
+            const emoji = this.titleEmojiSel.value;
+            if (emoji) evt.titleEmoji = emoji;      // 空なら元値を保持
         }
 
         /* -------------------------------------------------- */
