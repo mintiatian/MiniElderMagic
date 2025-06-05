@@ -79,7 +79,8 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             this.outputEl = $('#output');
             this.suggestListEl = $('#suggestList');
             this.importBtn = $('#importBtn');
-
+            this.runAllBtn = $('#runAllBtn');   // ★追加
+            this.exportBtn = $('#exportBtn')
             // Model -> View
             this.model.onChange(() => {
                 this._renderList();
@@ -91,6 +92,8 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             this._renderSuggestions();
             this.selectedEventId = null;
             this._populateEventIdList();   // ★追加 (モデル監視登録の後あたり)
+
+
         }
 
         /* --------------------------------------------------
@@ -121,7 +124,7 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
 
             // 確認用に textarea を整形して再表示
             this.outputEl.value = JSON.stringify(obj, null, 2);
-            alert(`Event "${id}" の text を更新しました`);
+            //alert(`Event "${id}" の text を更新しました`);
         }
 
         /* -------------------------------------------------- */
@@ -190,7 +193,7 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             this.actionBtn.addEventListener('click', () => this._handleAddOrUpdate());
             this.deleteBtn.addEventListener('click', () => this._handleDelete());
 
-            $('#exportBtn').addEventListener('click', () => {
+            this.exportBtn.addEventListener('click', () => {
                 this.outputEl.value = JSON.stringify(this.model.exportPayload(), null, 2);
             });
 
@@ -201,6 +204,18 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
                 if (document.activeElement.tagName.match(/^(INPUT|TEXTAREA)$/)) return;
                 e.preventDefault();
                 this._moveSelection(e.key === 'ArrowUp' ? -1 : 1);
+            });
+
+            /* ---------- 一括実行ボタン ---------- */
+            this.runAllBtn?.addEventListener('click', () => {
+                // ① Import
+                this.importBtn.click();
+                // ② Export
+                this.exportBtn.click();
+                // ③ Apply
+                this.applyJsonBtn.click();
+
+
             });
         }
 
