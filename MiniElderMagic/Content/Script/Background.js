@@ -9,7 +9,7 @@
 import {TILE_SIZE} from './GameData.js';
 import {
     MapDataTable,
-    MapColorDataTable, EnemyPopDataTable, enemyDataTable, enemyAIDataTable,        // ★ 色データテーブル
+    MapColorDataTable, EnemyPopDataTable, enemyDataTable, enemyAIDataTable, EventDataTable, MapEventDataTable,        // ★ 色データテーブル
 } from './Utils/DataTable.js';
 
 import {EnemyBase} from './Character/EnemyBase.js';
@@ -17,12 +17,26 @@ import {CharacterDataTable} from './Utils/DataTable.js';
 import {gameMain} from './GameMain.js';
 
 // 下層レイヤにだけ描き、当たり判定も無視する “床” タイル
-const DECOR_TILES = new Set(['🟫', '👣', '🌉']);               // キャラの下 / 踏める
+const DECOR_TILES = new Set(['🟫', '👣', '🌉', '🏠', '🏡', '🏕️']);               // キャラの下 / 踏める
 const DECOR2_TILES = new Set(['🌿', '🌾', '🌴', '🌳', '🍀', '🌲']); // キャラの上 / 衝突なし
 
+// アイテムで船を持っていたら
+// アイテムの🚢を持っていたら🌊の上に乗れる
+// 水の上をのタイルに乗ったらWizardが🚢に変わるそれ以外では魔法使いの絵文字
+
+
 const ENEMY_ONLYWALL_TILES = new Set(['🟫']);               // キャラの下 / 踏める
-const EVENT_TILES = new Set(['🏠', '🏡', '🏕️']);               // キャラの下 / 踏める
+
 export class Background {
+
+
+    DECOR_TILES_VOLCANO = new Set(['🌋']);
+    DECOR_TILES_DESERT = new Set(['🟨']);
+    DECOR_TILES_ICE = new Set(['🟦', '⬜']);
+    DECOR_TILES_SEA = new Set(['🌊']);
+    DECOR_TILES_SKY = new Set(['🗻']);
+
+    
     /**
      * @param {HTMLElement} gameArea #game-area
      * @param {Camera}      camera   カメラ（ワールド→ビューポート座標変換用）
@@ -35,8 +49,8 @@ export class Background {
         this.tile = TILE_SIZE;
         this.map = MapDataTable.getMap();          // 2D 配列: タイル文字列
         this.mapColor = MapColorDataTable.getMap();     // 2D 配列: '#rrggbb' or '' (透明)
-
         this.mapEnemyPop = EnemyPopDataTable.getMap();     // なんのエネミーがPopするかの情報
+        this.mapEvent = MapEventDataTable.getMap();
 
         this.CurrentPopCount = 0;
         this.MinPopRadius = 300;
@@ -137,10 +151,23 @@ export class Background {
                 if (!ch) continue;
 
 
-                if (DECOR_TILES.has(ch)) {
+
+                if (this.DECOR_TILES_VOLCANO.has(ch)) {
                     // 床デコ（衝突なし・キャラの下）
                     floorCtx.fillText(ch, cx, cy);
-                } else if (EVENT_TILES.has(ch)) {
+                }else if (this.DECOR_TILES_DESERT.has(ch)) {
+                    // 床デコ（衝突なし・キャラの下）
+                    floorCtx.fillText(ch, cx, cy);
+                } else if (this.DECOR_TILES_ICE.has(ch)) {
+                    // 床デコ（衝突なし・キャラの下）
+                    floorCtx.fillText(ch, cx, cy);
+                } else if (this.DECOR_TILES_SKY.has(ch)) {
+                    // 床デコ（衝突なし・キャラの下）
+                    floorCtx.fillText(ch, cx, cy);
+                } else if (this.DECOR_TILES_SEA.has(ch)) {
+                    // 床デコ（衝突なし・キャラの下）
+                    floorCtx.fillText(ch, cx, cy);
+                } else if (DECOR_TILES.has(ch)) {
                     // 床デコ（衝突なし・キャラの下）
                     floorCtx.fillText(ch, cx, cy);
                 } else {
@@ -195,20 +222,73 @@ export class Background {
             // マップ範囲外・衝突タイル上は NG
             if (this.isSolidAt(spawnX, spawnY)) continue;
 
-            const c = Math.floor(spawnX / this.tile);
-            const r = Math.floor(spawnY / this.tile);
-
-            // Pop テーブルに敵が設定されていないマスはスキップ
-            const enemyEmoji = this.mapEnemyPop?.[r]?.[c] ?? '';
+            const pos = this.getTilePos(spawnX, spawnY);
+            const enemyEmoji = this.getMapValue('enemyPop', spawnX, spawnY);   // ←★★ここ
             if (!enemyEmoji) continue;
 
             // 生成に成功したらカウントを進めて終了
-            if (this.CreateEnemy(r, c, enemyEmoji)) {
+            if (this.CreateEnemy(pos.row, pos.col, enemyEmoji)) {
                 ++this.CurrentPopCount;
                 break;
             }
         }
     }
+
+    /* =========================================================
+     * ① ワールド座標 → タイル座標(row, col) 変換
+     * =======================================================*/
+    /**
+     * 指定ワールド座標 (x, y) が属するタイル位置を返す
+     * @param {number} x  ワールド X 座標
+     * @param {number} y  ワールド Y 座標
+     * @returns {{row:number, col:number, inBounds:boolean}}
+     *          マップ外なら inBounds が false
+     */
+    getTilePos(x, y) {
+        const col = Math.floor(x / this.tile);
+        const row = Math.floor(y / this.tile);
+        const inBounds = !(row < 0 || col < 0 || row >= this.rows || col >= this.cols);
+        return {row, col, inBounds};
+    }
+
+    /* =========================================================
+     * ② 任意マップテーブルから値を取り出す
+     * =======================================================*/
+    /**
+     * 'tile' | 'color' | 'enemyPop' | 'event' のいずれかを指定して
+     * 対応するテーブルの値を取得する
+     * @param {'tile'|'color'|'enemyPop'|'event'} type
+     * @param {number} row
+     * @param {number} col
+     * @returns {string|null}  存在しなければ null
+     */
+    getMapValue(type, x, y) {
+        const {row, col, inBounds} = this.getTilePos(x, y);
+
+        let table;
+        switch (type) {
+            case 'tile':
+                table = this.map;
+                break;
+            case 'color':
+                table = this.mapColor;
+                break;
+            case 'enemyPop':
+                table = this.mapEnemyPop;
+                break;
+            case 'event':
+                table = this.mapEvent;
+                break;
+            default:
+                console.warn(`getMapValue: 不明な type '${type}'`);
+                return null;
+        }
+
+        // テーブルが存在しない、または範囲外なら null
+        if (!table?.[row]?.[col]) return null;
+        return table[row][col];
+    }
+
 
     /**
      * タイル座標を受け取り、EnemyBase を生成して GameMain へ登録
@@ -256,28 +336,41 @@ export class Background {
      * @param {boolean} [forEnemy=false]  true のとき敵用コリジョン判定
      */
     isSolidAt(x, y, forEnemy = false) {
-        const c = Math.floor(x / this.tile);
-        const r = Math.floor(y / this.tile);
+        // ワールド座標 → タイル情報
+        const {row: r, col: c, inBounds} = this.getTilePos(x, y);
+        if (!inBounds) return true;
 
-        if (r < 0 || c < 0 || r >= this.rows || c >= this.cols) return true;
-
-        const ch = this.map[r][c];
+        const ch = this.getMapValue('tile', x, y);   // ←★★ここ
         if (!ch) return false;          // 空白は通過
 
         /* ===== 敵専用の衝突判定 ===== */
         if (forEnemy) {
             // 敵が引っ掛かるのは ENEMY_ONLYWALL_TILES に列挙されたタイルのみ
             // （それ以外のタイル・空白・イベント・デコは通過可）
-            if (ENEMY_ONLYWALL_TILES.has(ch)){
-                return true;  
-            } 
+            if (ENEMY_ONLYWALL_TILES.has(ch)) {
+                return true;
+            }
         }
 
-        if (DECOR_TILES.has(ch)) return false;
-        if (EVENT_TILES.has(ch)) {
-            if (gameMain.wizard) gameMain.wizard.eventTile = ch;
-            return false;
+
+
+
+        if (gameMain.Inventory.hasItem("🐦", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+            if (this.DECOR_TILES_VOLCANO.has(ch)) return false;
         }
+        if (gameMain.Inventory.hasItem("🐫", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+            if (this.DECOR_TILES_DESERT.has(ch)) return false;
+        }
+        if (gameMain.Inventory.hasItem("🛷", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+            if (this.DECOR_TILES_ICE.has(ch)) return false;
+        }
+        if (gameMain.Inventory.hasItem("🦅", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+            if (this.DECOR_TILES_SKY.has(ch)) return false;
+        }
+        if (gameMain.Inventory.hasItem("⛵", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+            if (this.DECOR_TILES_SEA.has(ch)) return false;
+        }
+        if (DECOR_TILES.has(ch)) return false;
         return !DECOR2_TILES.has(ch);   // それ以外は壁扱い
     }
 

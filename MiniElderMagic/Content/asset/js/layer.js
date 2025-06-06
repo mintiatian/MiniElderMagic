@@ -42,6 +42,7 @@ export class Layer {
                 this.ctx.font = `${this.cell * 0.7}px serif`;
                 this.ctx.textAlign = "center";
                 this.ctx.textBaseline = "middle";
+                this.ctx.fillStyle = "#FFF";
                 this.ctx.fillText(val, x + this.cell / 2, y + this.cell / 2);
             }
         }

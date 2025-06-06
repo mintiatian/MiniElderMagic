@@ -1,6 +1,6 @@
 /* UIHud.js --------------------------------------------------------------- */
 import {UIBase} from './UIBase.js';
-import {eventTileDataTable} from "../Utils/DataTable.js";
+import {eventDataTable, eventTileDataTable} from "../Utils/DataTable.js";
 import {gameMain} from "../GameMain.js";        // ★ 追加
 /**
  * 画面左上にコイン枚数を表示する HUD
@@ -143,6 +143,10 @@ export class UIHud extends UIBase {
         this.updateDisplay();
     }
 
+    handleKeyDown(event) {
+        // Tabキーが押されたときの処理
+    }
+
     /** プレイヤーを後から差し替える場合 */
     setWizard(wizard) {
         this.wizard = wizard;
@@ -164,7 +168,17 @@ export class UIHud extends UIBase {
         const coins = this.wizard?.playerstatus?.coins ?? 0;
         this.textSpan.textContent = ": " + String(coins);
 
-
+        const event = gameMain.background.getMapValue("event",this.wizard.x,this.wizard.y);
+        this.tabSpan.textContent = "TAB : Status";
+        if(event !== null) {
+            console.log(event);
+            if(eventDataTable.table.has(event)){
+                const eventData = eventDataTable.get(event);
+                
+                this.tabSpan.textContent = "TAB : "+eventData.type+" - "+eventData.mode;
+            }
+        }
+        /*
         // プレイヤーがいま踏んでいるタイル絵文字
         const tileEmoji = this.wizard?.eventTile ?? "";
         //if (!tileEmoji) return;                  // 空文字 → 何もなし
@@ -176,9 +190,10 @@ export class UIHud extends UIBase {
 
             const evtTile = eventTileDataTable.get(tileEmoji);
 
-            /* タブ */
             this.tabSpan.textContent = "TAB : " + this.wizard.eventTile + " " + evtTile.title;
-        }
+        }*/
+        
+        
         /* 敵出現数 (Background.CurrentPopCount) */
         const enemyCnt = gameMain?.background?.CurrentPopCount ?? 0;
         this.enemySpan.textContent = ": " + String(enemyCnt);

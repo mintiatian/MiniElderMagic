@@ -273,6 +273,24 @@ export class MapColorDataTable {
 }
 
 
+export class MapEventDataTable {
+    /** @type {string[][]} 読み込んだマップ（空文字は空地） */
+    static map = [];
+
+    /**
+     * CSV からマップをロード（ヘッダー無し）
+     * @param {string} csvUrl 例: '/assets/map32x18.csv'
+     */
+    static async init(csvUrl) {
+        // header:false で “そのまま 2D 配列” を取得
+        this.map = await loadCSV(csvUrl, { header:false });
+    }
+
+    /** 2D 配列をそのまま返す */
+    static getMap() { return this.map; }
+}
+
+
 export class EnemyPopDataTable {
     /** @type {string[][]} 読み込んだマップ（空文字は空地） */
     static map = [];
@@ -324,8 +342,10 @@ export class EventDataTable{
         }
         eventDataTable = this;
     }
-    constructor({ id ,titleEmoji ,text}){
+    constructor({ id ,titleEmoji ,text,type,mode}){
         this.titleEmoji = titleEmoji;
         this.text = text;
+        this.type = type;
+        this.mode = mode;
     }
 }

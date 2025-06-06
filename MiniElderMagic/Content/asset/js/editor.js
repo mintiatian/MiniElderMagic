@@ -9,6 +9,10 @@ import {DEFAULT_CELL, MIN_ROWS, MIN_COLS, paletteEnemyEmojis, paletteEmojis} fro
 import {padGrid} from "./utils.js";
 import {cloneGrid, isColor} from "./utils.js";
 
+
+import {UIEventDialog} from '../../Script/UI/UIEventDialog.js';
+import {eventDataTable} from "../../Script/Utils/DataTable.js";
+
 export class Editor {
     /**
      * @param {object} deps - 必要な DOM と初期値
@@ -16,7 +20,7 @@ export class Editor {
     constructor({
                     viewportEl, overlayEl, paletteEl, brushInput, brushInfo,
                     undoBtn, redoBtn, layerPanel, mapSizeEl,
-                    catTiles, catEnemies, catColors          // ★ 追加
+                    catTiles, catEnemies, catColors, catEventlist          // ★ 追加
                 }) {
         /* DOM refs */
         this.viewportEl = viewportEl;
@@ -31,6 +35,7 @@ export class Editor {
         this.catTiles = catTiles;
         this.catEnemies = catEnemies;
         this.catColors = catColors;
+        this.catEventlist = catEventlist;
 
         /* サブ管理クラス */
         this.palette = new Palette(paletteEl);
@@ -53,6 +58,8 @@ export class Editor {
     _guessCategory(name) {
         if (/mapColor/i.test(name)) return "colors";
         if (/mapEnemyPop/i.test(name)) return "enemies";
+        if (/mapChip/i.test(name)) return "tiles";
+        if (/mapEvent/i.test(name)) return "mapEvent";
         return "tiles";                      // mapChip など
     }
 
@@ -106,6 +113,7 @@ export class Editor {
         this.catTiles.checked = cat === "tiles";
         this.catEnemies.checked = cat === "enemies";
         this.catColors.checked = cat === "colors";
+        this.catEventlist.checked = cat === "mapEvent";
 
         /* Undo/Redo ボタン更新 */
         this._updateUndoRedoButtons();
@@ -116,13 +124,27 @@ export class Editor {
         const layer = this.activeLayer;
         if (!layer) return;
         const off = Math.floor(this.brushSize / 2);
-        for (let dr = 0; dr < this.brushSize; dr++)
+        for (let dr = 0; dr < this.brushSize; dr++) {
             for (let dc = 0; dc < this.brushSize; dc++) {
                 const rr = r + dr - off, cc = c + dc - off;
                 if (rr < 0 || cc < 0 || rr >= this.rows || cc >= this.cols) continue;
                 layer.grid[rr][cc] = this.palette.random();
                 layer.drawCell(rr, cc);
             }
+        }
+    }
+    _getGrid(r, c) {
+        const layer = this.activeLayer;
+        if (!layer) return;
+        const off = Math.floor(this.brushSize / 2);
+        for (let dr = 0; dr < this.brushSize; dr++) {
+            for (let dc = 0; dc < this.brushSize; dc++) {
+                const rr = r + dr - off, cc = c + dc - off;
+                if (rr < 0 || cc < 0 || rr >= this.rows || cc >= this.cols) continue;
+                return layer.grid[rr][cc];
+            }
+        }
+        return null;
     }
 
     _clearOverlay() {
@@ -236,9 +258,12 @@ export class Editor {
             } else if (paletteEnemyEmojis.includes(val)) {
                 this.palette.setCategory("enemies");
                 this.catEnemies.checked = true;
-            } else {
+            } else if (paletteEmojis.includes(val)) {
                 this.palette.setCategory("tiles");
                 this.catTiles.checked = true;
+            } else {
+                this.palette.setCategory("mapEvent");
+                this.catEventlist.checked = true;
             }
             this.palette.select(val);    // 選択状態を更新
             /* ── スポイト完了 → ブラシへ戻す ───────────────── */
@@ -250,6 +275,22 @@ export class Editor {
                 this.painting = true;
                 this._paintAt(r, c);
                 this._showBrushPreview(r, c);
+            } else if (this.mode === "event") {
+
+                this._showBrushPreview(r, c);
+                const eventName =this._getGrid(r, c);
+                console.log("event:", eventName);
+                
+                const eventData = eventDataTable.get(eventName);
+                document.querySelectorAll('.ui-event-dialog').forEach((e) => e.remove());
+                const dlg = new UIEventDialog(document.body, {
+                    titleEmoji: eventData.titleEmoji,
+                    getItemCount: () => 99,
+                    changeItemCount: () => {
+                    },
+                    onExit: () => console.log('dialog closed'),
+                });
+                dlg.run(eventData.text);
             } else {
                 this.dragStart = {r, c};
                 this._showRectPreview(r, c, r, c);
@@ -272,7 +313,7 @@ export class Editor {
             return;
         }
         const [r, c] = this.viewport.clientToCell(ev, DEFAULT_CELL);
-        if (this.mode === "brush") {
+        if (this.mode === "brush" || this.mode === "event") {
             this._showBrushPreview(r, c);
             if (this.painting) this._paintAt(r, c);
         } else if (this.dragStart) {

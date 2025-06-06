@@ -43,6 +43,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             return this.staffElement;
         };
 
+
         // 杖要素を初期作成
         this.createStaffElement();
 
@@ -92,7 +93,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.clientY = 0;
         /* ===== ビューポート → ワールド座標へ変換 ===== */
         this.mouseMoveHandler = (evt) => {
-            
+
             this.clientX = evt.clientX;
             this.clientY = evt.clientY;
 
@@ -110,10 +111,10 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.CircleCreate(gameMain.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
         this.CircleCreate(gameMain.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
 
-        this.eventTile = "";
+        //this.changeShip();
     }
-    
-    UpdateMove(){
+
+    UpdateMove() {
         const containerRect = this.element.parentElement.getBoundingClientRect();
 
         // 補正後マウス座標（ワールド基準）
@@ -252,15 +253,16 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         if (this.isRightMouseDown) {
             // 右クリック押しっぱなし時の処理
 
-            if(!this.BarrierId) {
+            if (!this.BarrierId) {
                 this.AddBarrier();
             }
-        }
-        else{
-            if(this.BarrierId) {
+        } else {
+            if (this.BarrierId) {
                 this.RemoveBarrier();
             }
         }
+        
+        this.changeShip();
 
         this.UpdateMove();
         /* ───────── 8. 描画など親クラス処理 ───────── */
@@ -273,8 +275,47 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.CircleUpdate();     // ← 必ず最後に呼んで追従
     }
 
+    changeShip() {
+
+        const ch = gameMain.background.getMapValue("tile", this.x, this.y);
+
+        if (gameMain.background.DECOR_TILES_VOLCANO.has(ch)) {
+            if(gameMain.Inventory.hasItem("🐦",1)) {
+                this.emoji = '🐦';
+                this.element.textContent = this.emoji;
+            }
+        }
+        else if (gameMain.background.DECOR_TILES_DESERT.has(ch)) {
+            if(gameMain.Inventory.hasItem("🐫",1)) {
+                this.emoji = '🐫';
+                this.element.textContent = this.emoji;
+            }
+        }
+        else if (gameMain.background.DECOR_TILES_ICE.has(ch)) {
+            if(gameMain.Inventory.hasItem("🛷",1)) {
+                this.emoji = '🛷';
+                this.element.textContent = this.emoji;
+            }
+        }
+        else if (gameMain.background.DECOR_TILES_SEA.has(ch)) {
+            if(gameMain.Inventory.hasItem("⛵",1)) {
+                this.emoji = '⛵';
+                this.element.textContent = this.emoji;
+            }
+        }
+        else if (gameMain.background.DECOR_TILES_SKY.has(ch)) {
+            if(gameMain.Inventory.hasItem("🦅",1)) {
+                this.emoji = '🦅';
+                this.element.textContent = this.emoji;
+            }
+        }
+        else{
+            this.emoji = this.charaData.emoji;
+            this.element.textContent = this.emoji;
+        }
+    }
+
     hitsWall(px, py) {
-        this.eventTile = "";
         return super.hitsWall(px, py);
     }
 
@@ -416,14 +457,14 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             return {x: this.x, y: this.y}; // 内部座標をフォールバックとして使用
         }
     }
+
     getPlayerPosition() {
         return {x: this.x, y: this.y}; // 内部座標をフォールバックとして使用
     }
-    
+
 
     // キャラクターが削除されるときに杖も削除
     ExitStart() {
-
 
 
         // クリックイベントリスナーを削除
@@ -434,7 +475,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         document.removeEventListener('mousedown', this.mouseDownHandler);
         document.removeEventListener('mouseup', this.mouseUpHandler);
         document.removeEventListener('mousemove', this.mouseMoveHandler);
-        
+
 
         // 杖チェックインターバルをクリア
         if (this.staffCheckInterval) {
@@ -576,7 +617,6 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                 break;
 
 
-
             case "maxHP":
                 this.status.maxHP += parseInt(DropItemData.value);
                 break;
@@ -642,22 +682,54 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                 break;
 
 
-            case "RegistFIREBALL": this.status.RegistFIREBALL += parseFloat(DropItemData.value); break;
-            case "RegistICE":          this.status.RegistICE          += parseFloat(DropItemData.value); break;
-            case "RegistLIGHTNING":    this.status.RegistLIGHTNING    += parseFloat(DropItemData.value); break;
-            case "RegistTORNADO":      this.status.RegistTORNADO      += parseFloat(DropItemData.value); break;
-            case "RegistMETEOR":       this.status.RegistMETEOR       += parseFloat(DropItemData.value); break;
-            case "RegistEXPLOSION":    this.status.RegistEXPLOSION    += parseFloat(DropItemData.value); break;
-            case "RegistGUST":         this.status.RegistGUST         += parseFloat(DropItemData.value); break;
-            case "RegistBUBBLE":       this.status.RegistBUBBLE       += parseFloat(DropItemData.value); break;
-            case "RegistRAINBOW":      this.status.RegistRAINBOW      += parseFloat(DropItemData.value); break;
-            case "RegistWEB":          this.status.RegistWEB          += parseFloat(DropItemData.value); break;
-            case "RegistPOISONSTING":  this.status.RegistPOISONSTING  += parseFloat(DropItemData.value); break;
-            case "RegistSWORDSLASH":   this.status.RegistSWORDSLASH   += parseFloat(DropItemData.value); break;
-            case "RegistGREATAxe":     this.status.RegistGREATAxe     += parseFloat(DropItemData.value); break;
-            case "RegistHAMMERCRUSH":  this.status.RegistHAMMERCRUSH  += parseFloat(DropItemData.value); break;
-            case "RegistTRIDENTTHRUST":this.status.RegistTRIDENTTHRUST+= parseFloat(DropItemData.value); break;
-            case "RegistSHIELDBASH":   this.status.RegistSHIELDBASH   += parseFloat(DropItemData.value); break;
+            case "RegistFIREBALL":
+                this.status.RegistFIREBALL += parseFloat(DropItemData.value);
+                break;
+            case "RegistICE":
+                this.status.RegistICE += parseFloat(DropItemData.value);
+                break;
+            case "RegistLIGHTNING":
+                this.status.RegistLIGHTNING += parseFloat(DropItemData.value);
+                break;
+            case "RegistTORNADO":
+                this.status.RegistTORNADO += parseFloat(DropItemData.value);
+                break;
+            case "RegistMETEOR":
+                this.status.RegistMETEOR += parseFloat(DropItemData.value);
+                break;
+            case "RegistEXPLOSION":
+                this.status.RegistEXPLOSION += parseFloat(DropItemData.value);
+                break;
+            case "RegistGUST":
+                this.status.RegistGUST += parseFloat(DropItemData.value);
+                break;
+            case "RegistBUBBLE":
+                this.status.RegistBUBBLE += parseFloat(DropItemData.value);
+                break;
+            case "RegistRAINBOW":
+                this.status.RegistRAINBOW += parseFloat(DropItemData.value);
+                break;
+            case "RegistWEB":
+                this.status.RegistWEB += parseFloat(DropItemData.value);
+                break;
+            case "RegistPOISONSTING":
+                this.status.RegistPOISONSTING += parseFloat(DropItemData.value);
+                break;
+            case "RegistSWORDSLASH":
+                this.status.RegistSWORDSLASH += parseFloat(DropItemData.value);
+                break;
+            case "RegistGREATAxe":
+                this.status.RegistGREATAxe += parseFloat(DropItemData.value);
+                break;
+            case "RegistHAMMERCRUSH":
+                this.status.RegistHAMMERCRUSH += parseFloat(DropItemData.value);
+                break;
+            case "RegistTRIDENTTHRUST":
+                this.status.RegistTRIDENTTHRUST += parseFloat(DropItemData.value);
+                break;
+            case "RegistSHIELDBASH":
+                this.status.RegistSHIELDBASH += parseFloat(DropItemData.value);
+                break;
 
         }
     }
@@ -769,10 +841,15 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         }
     }
 
-    getItemCount(id){
+    getItemCount(id) {
         return gameMain.Inventory.getItemCount(id);
     }
-    changeItemCount(id,delta){
 
+    changeItemCount(emoji, delta) {
+        if (emoji === "🪙") {
+            this.playerstatus.addCoins(delta);
+        } else {
+            gameMain.Inventory.changeItemCount(emoji, delta);
+        }
     }
 }

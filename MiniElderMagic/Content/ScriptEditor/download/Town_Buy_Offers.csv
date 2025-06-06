@@ -1,0 +1,33 @@
+TownId,TownName,Item,BuyPrice,Reason
+1,グリーン村,🗝️,1118.0,High Demand
+1,グリーン村,🏺,1014.0,High Demand
+1,グリーン村,📿,910.0,High Demand
+1,グリーン村,💎,806.0,High Demand
+1,グリーン村,🕯️,702.0,High Demand
+1,グリーン村,🌟,598.0,High Demand
+1,グリーン村,🔮,494.0,High Demand
+1,グリーン村,🧿,390.0,High Demand
+2,タイドポート,🧵,1326.0,High Demand
+2,タイドポート,🪣,1222.0,High Demand
+2,タイドポート,🥘,390.0,High Demand
+2,タイドポート,🥛,195.0,High Demand
+2,タイドポート,🍗,78.0,High Demand
+2,タイドポート,🍎,78.0,High Demand
+2,タイドポート,🍄,52.0,High Demand
+2,タイドポート,🍞,21.67,High Demand
+3,クラフト市,🖋️,1638.0,High Demand
+3,クラフト市,📜,1534.0,High Demand
+3,クラフト市,🗝️,1118.0,High Demand
+3,クラフト市,💎,806.0,High Demand
+3,クラフト市,🔮,494.0,High Demand
+4,アカデメイア,💀,1950.0,High Demand
+4,アカデメイア,🪶,1430.0,High Demand
+4,アカデメイア,🗝️,1118.0,High Demand
+4,アカデメイア,🏺,1014.0,High Demand
+4,アカデメイア,🧿,390.0,High Demand
+5,王都,💀,2250.0,Royal Demand (Rare)
+5,王都,⌚,2130.0,Royal Demand (Rare)
+5,王都,💍,2010.0,Royal Demand (Rare)
+5,王都,🪶,1430.0,High Demand
+5,王都,🌟,598.0,High Demand
+5,王都,🧿,390.0,High Demand

@@ -244,7 +244,7 @@ export class UIEventDialog extends UIBase {
     _onExit() {
         this.onExit();
 
-        this.element.style.opacity   = '0';
+        this.element.style.opacity = '0';
         //this.element.remove();
     }
 
@@ -283,13 +283,17 @@ export class UIEventDialog extends UIBase {
     }
 
     show() {
-        const tileEmoji = gameMain.wizard?.eventTile ?? '';
-        if (tileEmoji && eventTileDataTable.table.has(tileEmoji)) {
-            const evtTile = eventTileDataTable.get(tileEmoji);
-            if (evtTile && evtTile.type === 'event') {
-                const eventData = eventDataTable.get(evtTile.event);
 
-                if (eventData) {
+
+        const event = gameMain.background.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
+
+        if (event !== null) {
+            console.log(event);
+            if (eventDataTable.table.has(event)) {
+                const eventData = eventDataTable.get(event);
+
+                if (eventData.type === "event") {
+
                     this.runFromUrl(eventData.text, {
                         titleEmoji: eventData.titleEmoji,
                         getItemCount: (id) => gameMain.wizard.getItemCount(id),
@@ -298,7 +302,8 @@ export class UIEventDialog extends UIBase {
                     return;
                 }
             }
+            super.show();
         }
-        super.show();
+
     }
 }

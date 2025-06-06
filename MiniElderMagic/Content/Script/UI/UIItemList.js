@@ -1,6 +1,6 @@
 ﻿/* UIItemList.js ----------------------------------------------------------- */
 import {UIBase} from './UIBase.js';
-import {eventTileDataTable, itemDataTable} from '../Utils/DataTable.js';
+import {eventDataTable, eventTileDataTable, itemDataTable} from '../Utils/DataTable.js';
 import {gameMain} from '../GameMain.js';
 
 /**
@@ -248,7 +248,26 @@ export class UIItemList extends UIBase {
     /* ───────── 表示 / 非表示 ───────── */
     show() {
 
-        // プレイヤーがいま踏んでいるタイル絵文字
+
+        const event = gameMain.background.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
+
+        if (event !== null) {
+            console.log(event);
+            if (eventDataTable.table.has(event)) {
+                const eventData = eventDataTable.get(event);
+
+                if(eventData.type === "shop"){
+                    /* -------- ショップ UI を開く -------- */
+                    this.filter        = eventData.mode;  // 例: "potion"
+                    this.currentFilter = "all";                // ボタン側リセット
+                    this.updateDisplay();
+                    super.show();
+                }
+            }
+        }
+
+        /*
+                // プレイヤーがいま踏んでいるタイル絵文字
         const tileEmoji = gameMain.wizard?.eventTile ?? "";
         if (!tileEmoji) return;                  // 空文字 → 何もなし
 
@@ -258,11 +277,11 @@ export class UIItemList extends UIBase {
         const evtTile = eventTileDataTable.get(tileEmoji);
         if (evtTile?.type !== "shop") return;    // shop 以外は無視
 
-        /* -------- ショップ UI を開く -------- */
         this.filter        = evtTile.event ?? "";  // 例: "potion"
         this.currentFilter = "all";                // ボタン側リセット
         this.updateDisplay();
         super.show();
+        */
     }
 
     /* hide 時に固定フィルターを解除したい場合は任意で */

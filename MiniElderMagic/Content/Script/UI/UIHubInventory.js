@@ -116,6 +116,41 @@ export class UIHubInventory extends UIBase {
     }
     AddItem(emoji) { return this.addItem(emoji); }
 
+
+    /**
+     * emoji で指定したアイテムの所持数を `delta` 分だけ増減させる
+     *  - `delta > 0` : 追加（スタック上限 10 を超える場合は空きスロットへ分配）
+     *  - `delta < 0` : 消費（足りない場合は出来る限り減らして false を返す）
+     * @param {string} emoji  アイテム識別用の絵文字
+     * @param {number} delta  正＝増加 / 負＝減少
+     * @returns {boolean}     すべての増減に成功したか
+     */
+    changeItemCount(emoji, delta) {
+        if (!delta) return true;                 // 0 なら何もしない
+
+        /* ---------- 追加 ---------- */
+        if (delta > 0) {
+            for (let i = 0; i < delta; i++) {
+                if (this.addItem(emoji) === -1) return false; // 空きなし
+            }
+            return true;
+        }
+
+        /* ---------- 消費 ---------- */
+        let need = -delta;                       // 減らしたい残個数
+        for (let i = 0; i < this.items.length && need > 0; i++) {
+            const slot = this.items[i];
+            if (slot && slot.emoji === emoji) {
+                const dec = Math.min(slot.count, need);
+                slot.count -= dec;
+                need -= dec;
+                if (slot.count <= 0) this.items[i] = null;
+                this._updateSlotDisplay(i);
+            }
+        }
+        return need === 0;                       // 減らし切れたら true
+    }
+    
     /** スロット消費 */
     consume(index, dec = 1) {
         const data = this.items[index];

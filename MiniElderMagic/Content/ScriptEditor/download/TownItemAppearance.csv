@@ -1,6 +1,16 @@
-TownId,TownName,AppearingItems
-1,グリーン村,🍞 🍄 🍗 🍎 🧀 🥛 🥘
-2,タイドポート,🧿 🔮 🌟 🕯️ 🏺 🗝️
-3,クラフト市,🧵 🪣 🪶 📿
-4,アカデメイア,📜 🖋️ 💎
-5,王都,💀 ⌚ 💍 💎
+TownId,TownName,GiveItem,GiveCount,ReceiveItem,ReceiveCount,TradeType
+1,グリーン村,🍄,3,🍗,2,Equitable
+1,グリーン村,🍄,3,🍎,2,Equitable
+1,グリーン村,🍗,1,🍎,1,Equitable
+2,タイドポート,🧿,5,🔮,4,Equitable
+2,タイドポート,🌟,5,🏺,3,Equitable
+2,タイドポート,🧿,3,🌟,2,Equitable
+3,クラフト市,🪣,3,📿,4,Equitable
+3,クラフト市,🧵,2,📿,3,Equitable
+3,クラフト市,🪶,2,📿,3,Equitable
+4,アカデメイア,🖋️,1,💎,2,Equitable
+4,アカデメイア,📜,1,💎,2,Equitable
+4,アカデメイア,📜,1,🖋️,1,Equitable
+5,王都,💎,2,💍,1,Rare Acquisition
+5,王都,💎,2,⌚,1,Rare Acquisition
+5,王都,💎,2,💀,1,Rare Acquisition

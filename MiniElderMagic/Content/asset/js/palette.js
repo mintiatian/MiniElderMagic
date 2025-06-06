@@ -4,6 +4,7 @@
 import {randomEmoji} from "./utils.js";
 import {paletteEmojis, paletteEnemyEmojis, paletteColors} from "./constants.js";
 
+import {eventDataTable, EventDataTable} from "../../Script/Utils/DataTable.js";
 export class Palette {
     /** @param {HTMLElement} container */
     constructor(container) {
@@ -18,7 +19,7 @@ export class Palette {
     }
 
     setCategory(cat = "tiles") {
-        if (!["tiles", "enemies", "colors"].includes(cat) || this.category === cat) return;
+        if (!["tiles", "enemies", "colors","mapEvent"].includes(cat) || this.category === cat) return;
         this.category = cat;
         this.selected = [""];
         this._render();
@@ -57,6 +58,7 @@ export class Palette {
 
     _render() {
         this.el.innerHTML = "";
+        // ここでパレットを変える
         switch (this.category) {
             case "tiles":
                 paletteEmojis.forEach(e => this.el.appendChild(this._makeButton(e, false)));
@@ -66,6 +68,15 @@ export class Palette {
                 break;
             case "colors":
                 paletteColors.forEach(c => this.el.appendChild(this._makeButton(c, true)));
+                break;
+            case "mapEvent":
+                //paletteColors.forEach(c => this.el.appendChild(this._makeButton(c, true)));
+                eventDataTable.table.keys().forEach(key => {
+                    console.log(key);
+                    this.el.appendChild(this._makeButton(key, false));
+                });
+
+                //paletteEmojis.forEach(e => this.el.appendChild(this._makeButton(e, false)));
                 break;
         }
         // デフォルト選択
