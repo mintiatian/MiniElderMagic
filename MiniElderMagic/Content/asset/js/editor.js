@@ -5,7 +5,7 @@
 import {Palette} from "./palette.js";
 import {Layer} from "./layer.js";
 import {Viewport} from "./viewport.js";
-import {DEFAULT_CELL, MIN_ROWS, MIN_COLS, paletteEnemyEmojis, paletteEmojis} from "./constants.js";
+import {DEFAULT_CELL, MIN_ROWS, MIN_COLS, paletteEnemyEmojis, paletteEmojis,paletteExDropEmojis} from "./constants.js";
 import {padGrid} from "./utils.js";
 import {cloneGrid, isColor} from "./utils.js";
 
@@ -20,7 +20,7 @@ export class Editor {
     constructor({
                     viewportEl, overlayEl, paletteEl, brushInput, brushInfo,
                     undoBtn, redoBtn, layerPanel, mapSizeEl,
-                    catTiles, catEnemies, catColors, catEventlist          // ★ 追加
+                    catTiles, catEnemies, catColors, catEventlist,catDroplist          // ★ 追加
                 }) {
         /* DOM refs */
         this.viewportEl = viewportEl;
@@ -36,6 +36,7 @@ export class Editor {
         this.catEnemies = catEnemies;
         this.catColors = catColors;
         this.catEventlist = catEventlist;
+        this.catDroplist = catDroplist;
 
         /* サブ管理クラス */
         this.palette = new Palette(paletteEl);
@@ -60,6 +61,7 @@ export class Editor {
         if (/mapEnemyPop/i.test(name)) return "enemies";
         if (/mapChip/i.test(name)) return "tiles";
         if (/mapEvent/i.test(name)) return "mapEvent";
+        if (/mapDrop/i.test(name)) return "exDrop";
         return "tiles";                      // mapChip など
     }
 
@@ -114,6 +116,9 @@ export class Editor {
         this.catEnemies.checked = cat === "enemies";
         this.catColors.checked = cat === "colors";
         this.catEventlist.checked = cat === "mapEvent";
+        this.catDroplist.checked = cat === "exDrop";
+
+        
 
         /* Undo/Redo ボタン更新 */
         this._updateUndoRedoButtons();
@@ -261,6 +266,9 @@ export class Editor {
             } else if (paletteEmojis.includes(val)) {
                 this.palette.setCategory("tiles");
                 this.catTiles.checked = true;
+            } else if (paletteExDropEmojis.includes(val)) {
+                this.palette.setCategory("exDrop");
+                this.catDroplist.checked = true;
             } else {
                 this.palette.setCategory("mapEvent");
                 this.catEventlist.checked = true;

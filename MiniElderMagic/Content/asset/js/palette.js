@@ -2,9 +2,10 @@
  *  パレット UI
  * ------------------------------------------------- */
 import {randomEmoji} from "./utils.js";
-import {paletteEmojis, paletteEnemyEmojis, paletteColors} from "./constants.js";
+import {paletteEmojis, paletteEnemyEmojis, paletteColors, paletteExDropEmojis} from "./constants.js";
 
 import {eventDataTable, EventDataTable} from "../../Script/Utils/DataTable.js";
+
 export class Palette {
     /** @param {HTMLElement} container */
     constructor(container) {
@@ -19,7 +20,7 @@ export class Palette {
     }
 
     setCategory(cat = "tiles") {
-        if (!["tiles", "enemies", "colors","mapEvent"].includes(cat) || this.category === cat) return;
+        if (!["tiles", "enemies", "colors", "mapEvent","exDrop"].includes(cat) || this.category === cat) return;
         this.category = cat;
         this.selected = [""];
         this._render();
@@ -66,6 +67,9 @@ export class Palette {
             case "enemies":
                 paletteEnemyEmojis.forEach(e => this.el.appendChild(this._makeButton(e, false)));
                 break;
+            case "exDrop":
+                paletteExDropEmojis.forEach(e => this.el.appendChild(this._makeButton(e, false)));
+                break;
             case "colors":
                 paletteColors.forEach(c => this.el.appendChild(this._makeButton(c, true)));
                 break;
@@ -75,8 +79,6 @@ export class Palette {
                     console.log(key);
                     this.el.appendChild(this._makeButton(key, false));
                 });
-
-                //paletteEmojis.forEach(e => this.el.appendChild(this._makeButton(e, false)));
                 break;
         }
         // デフォルト選択
@@ -89,16 +91,16 @@ export class Palette {
         return randomEmoji(this.selected);
     }
 
-    select(value){
+    select(value) {
         this.selected = [value];
         // ハイライトをリセット
-        this.el.querySelectorAll(".sel").forEach(b=>b.classList.remove("sel"));
+        this.el.querySelectorAll(".sel").forEach(b => b.classList.remove("sel"));
         // いま表示中のボタンから該当を探す
-        const btn = [...this.el.querySelectorAll("button")].find(b=>{
-            return (this.category==="colors")
+        const btn = [...this.el.querySelectorAll("button")].find(b => {
+            return (this.category === "colors")
                 ? b.title === value               // 色チップは title に値
-                : (value ? b.textContent===value : b.textContent==="␣");
+                : (value ? b.textContent === value : b.textContent === "␣");
         });
-        if(btn) btn.classList.add("sel");
+        if (btn) btn.classList.add("sel");
     }
 }

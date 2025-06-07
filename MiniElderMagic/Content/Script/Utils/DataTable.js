@@ -88,11 +88,17 @@ export let itemDataTable = null;
 
 export class ItemDataTable{
     static table = new Map();
+    static emojiToId = new Map();
     static get(id) { return this.table.get(id); }
+    /** 追加: emoji から id を取得する */
+    static getIdByEmoji(emoji) {
+        return this.emojiToId.get(emoji) ?? null;   // 見つからなければ null
+    }
     static async init(csvUrl = '/assets/magic.csv') {
         const rows = await loadCSV(csvUrl);          // [{id,emoji,useMP,…}, …]
         for (const row of rows) {
             this.table.set(row.id, new ItemDataTable(row));
+            this.emojiToId.set(row.emoji, row.id);   // 逆引きマップを構築
         }
         itemDataTable = this;
     }
@@ -218,12 +224,13 @@ export class EnemyAIDataTable{
         }
         enemyAIDataTable = this;
     }
-    constructor({ id ,detectionRadius,attackRange,attacknearRange,attackCooldown,coinDropCount}){
+    constructor({ id ,detectionRadius,attackRange,attacknearRange,attackCooldown,coinDropCount,extraDropItem}){
         this.detectionRadius = detectionRadius;
         this.attackRange = attackRange;
         this.attacknearRange = attacknearRange;       
         this.attackCooldown = attackCooldown;
         this.coinDropCount = coinDropCount;
+        this.extraDropItem = extraDropItem;
     }
 }
 
@@ -272,7 +279,22 @@ export class MapColorDataTable {
     static getMap() { return this.map; }
 }
 
+export class EnemyPopDataTable {
+    /** @type {string[][]} 読み込んだマップ（空文字は空地） */
+    static map = [];
 
+    /**
+     * CSV からマップをロード（ヘッダー無し）
+     * @param {string} csvUrl 例: '/assets/map32x18.csv'
+     */
+    static async init(csvUrl) {
+        // header:false で “そのまま 2D 配列” を取得
+        this.map = await loadCSV(csvUrl, { header:false });
+    }
+
+    /** 2D 配列をそのまま返す */
+    static getMap() { return this.map; }
+}
 export class MapEventDataTable {
     /** @type {string[][]} 読み込んだマップ（空文字は空地） */
     static map = [];
@@ -290,8 +312,7 @@ export class MapEventDataTable {
     static getMap() { return this.map; }
 }
 
-
-export class EnemyPopDataTable {
+export class ItemDropPopDataTable {
     /** @type {string[][]} 読み込んだマップ（空文字は空地） */
     static map = [];
 

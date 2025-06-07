@@ -24,7 +24,7 @@ import {
     MapDataTable,
     MapColorDataTable,
     EnemyPopDataTable,
-    EventTileDataTable, EventDataTable, MapEventDataTable,
+    EventTileDataTable, EventDataTable, MapEventDataTable, ItemDropPopDataTable,
 } from "./Utils/DataTable.js";
 import {UIItemList} from "./UI/UIItemList.js";
 
@@ -76,6 +76,7 @@ export class GameMain {
             mapColor: 'https://docs.google.com/spreadsheets/d/1fa4ZvsC3VE6mrOywsCM2H_3H8dGRoskF0LHAEz8-_VY/export?format=csv',
             mapEnemyPop: 'https://docs.google.com/spreadsheets/d/1tKr0LiD74U8PhFlnU6alooSWucwTK0qY6xmm6PnZ6Zc/export?format=csv',
             mapEvent: 'https://docs.google.com/spreadsheets/d/1O08oReBUjC22NyOL-902NcZaZdeGtxj3FNRsBYbkDCY/export?format=csv',
+            mapDropPopItem: 'https://docs.google.com/spreadsheets/d/1vrdjApsk2xD-IaNrskusJPwARl7x0KazGLBTy7LTV3o/export?format=csv',
             eventTile: 'https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv',
             event: 'https://docs.google.com/spreadsheets/d/1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc/export?format=csv',
 
@@ -95,6 +96,7 @@ export class GameMain {
         MapColorDataTable.init(urls.mapColor).then(() => this.initCount());
         EnemyPopDataTable.init(urls.mapEnemyPop).then(() => this.initCount());
         MapEventDataTable.init(urls.mapEvent).then(() => this.initCount());
+        ItemDropPopDataTable.init(urls.mapDropPopItem).then(() => this.initCount());
 
         EventTileDataTable.init(urls.eventTile).then(() => this.initCount());
         EventDataTable.init(urls.event).then(() => this.initCount());

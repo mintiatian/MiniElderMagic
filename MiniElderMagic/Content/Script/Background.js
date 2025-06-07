@@ -9,7 +9,14 @@
 import {TILE_SIZE} from './GameData.js';
 import {
     MapDataTable,
-    MapColorDataTable, EnemyPopDataTable, enemyDataTable, enemyAIDataTable, EventDataTable, MapEventDataTable,        // ★ 色データテーブル
+    MapColorDataTable,
+    EnemyPopDataTable,
+    enemyDataTable,
+    enemyAIDataTable,
+    EventDataTable,
+    MapEventDataTable,
+    ItemDropPopDataTable,
+    ItemDataTable        // ★ 色データテーブル
 } from './Utils/DataTable.js';
 
 import {EnemyBase} from './Character/EnemyBase.js';
@@ -36,7 +43,7 @@ export class Background {
     DECOR_TILES_SEA = new Set(['🌊']);
     DECOR_TILES_SKY = new Set(['🗻']);
 
-    
+
     /**
      * @param {HTMLElement} gameArea #game-area
      * @param {Camera}      camera   カメラ（ワールド→ビューポート座標変換用）
@@ -51,6 +58,7 @@ export class Background {
         this.mapColor = MapColorDataTable.getMap();     // 2D 配列: '#rrggbb' or '' (透明)
         this.mapEnemyPop = EnemyPopDataTable.getMap();     // なんのエネミーがPopするかの情報
         this.mapEvent = MapEventDataTable.getMap();
+        this.mapItemDropPop = ItemDropPopDataTable.getMap();
 
         this.CurrentPopCount = 0;
         this.MinPopRadius = 300;
@@ -151,11 +159,10 @@ export class Background {
                 if (!ch) continue;
 
 
-
                 if (this.DECOR_TILES_VOLCANO.has(ch)) {
                     // 床デコ（衝突なし・キャラの下）
                     floorCtx.fillText(ch, cx, cy);
-                }else if (this.DECOR_TILES_DESERT.has(ch)) {
+                } else if (this.DECOR_TILES_DESERT.has(ch)) {
                     // 床デコ（衝突なし・キャラの下）
                     floorCtx.fillText(ch, cx, cy);
                 } else if (this.DECOR_TILES_ICE.has(ch)) {
@@ -178,7 +185,9 @@ export class Background {
         }
 
         this.popTimer = 0;
+        this.MAXBASE_POP_COUNT = 5;
         this.PopTimerMax = 3000;
+        this.PopTimerMin = 2000;
         this.popTimer = this.PopTimerMax;
 
 
@@ -192,7 +201,8 @@ export class Background {
         this.popTimer -= delta;
         //console.log(this.popTimer);
         if (this.popTimer <= 0) {
-            this.popTimer = this.PopTimerMax;
+            this.popTimer = this.PopTimerMax - (gameMain.wizard.status.shopBuyCount / 30);
+            this.popTimer = Math.max(this.PopTimerMin, this.PopTimerMax);
             this.popDoEnemy(Pawn.x, Pawn.y);
         }
     }
@@ -204,7 +214,7 @@ export class Background {
      * @param {number} y ワールド Y 座標
      */
     popDoEnemy(x, y) {
-        const MAX_POP_COUNT = 5 * (1.0 + gameMain.wizard.status.shopBuyCount / 30);                         // 同時出現上限
+        const MAX_POP_COUNT = this.MAXBASE_POP_COUNT * (1.0 + gameMain.wizard.status.shopBuyCount / 30);                         // 同時出現上限
 
 
         if (this.CurrentPopCount >= MAX_POP_COUNT) return;
@@ -226,8 +236,15 @@ export class Background {
             const enemyEmoji = this.getMapValue('enemyPop', spawnX, spawnY);   // ←★★ここ
             if (!enemyEmoji) continue;
 
+
+            const extraItemEmoji = this.getMapValue('itemDropPop', spawnX, spawnY);
+
+            // ItemデータからIDを取得する
+            const extraDropID = ItemDataTable.getIdByEmoji(extraItemEmoji);
+
+
             // 生成に成功したらカウントを進めて終了
-            if (this.CreateEnemy(pos.row, pos.col, enemyEmoji)) {
+            if (this.CreateEnemy(pos.row, pos.col, enemyEmoji, extraDropID)) {
                 ++this.CurrentPopCount;
                 break;
             }
@@ -257,7 +274,7 @@ export class Background {
     /**
      * 'tile' | 'color' | 'enemyPop' | 'event' のいずれかを指定して
      * 対応するテーブルの値を取得する
-     * @param {'tile'|'color'|'enemyPop'|'event'} type
+     * @param {'tile'|'color'|'enemyPop'|'event'|'itemDropPop'} type
      * @param {number} row
      * @param {number} col
      * @returns {string|null}  存在しなければ null
@@ -279,6 +296,9 @@ export class Background {
             case 'event':
                 table = this.mapEvent;
                 break;
+            case 'itemDropPop':
+                table = this.mapItemDropPop;
+                break;
             default:
                 console.warn(`getMapValue: 不明な type '${type}'`);
                 return null;
@@ -295,9 +315,10 @@ export class Background {
      * @param {number} r タイル行
      * @param {number} c タイル列
      * @param {string} emoji Pop マップに書かれていた絵文字
+     * @param {string} extraDropID Pop マップに書かれていた追加Drop情報
      * @returns {boolean} 生成に成功したか
      */
-    CreateEnemy(r, c, emoji) {
+    CreateEnemy(r, c, emoji, extraDropID) {
         // 絵文字 → CharacterDataTable 行を検索
         let enemyData = null;
         let enemyId = "INVADER";
@@ -316,7 +337,7 @@ export class Background {
         const worldX = c * this.tile + this.tile * 0.5;
         const worldY = r * this.tile + this.tile * 0.5;
 
-        const enemy = new EnemyBase(worldX, worldY, this.characterLayer, enemyData);
+        const enemy = new EnemyBase(worldX, worldY, this.characterLayer, enemyData, extraDropID);
 
         const enemyAIData = enemyAIDataTable.get(enemyId);
         enemy.SetAIData(enemyAIData);
@@ -351,8 +372,6 @@ export class Background {
                 return true;
             }
         }
-
-
 
 
         if (gameMain.Inventory.hasItem("🐦", 1) || gameMain.Inventory.hasItem("🦉", 1)) {

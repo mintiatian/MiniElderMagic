@@ -5,12 +5,13 @@ import {EventEmitterMixin} from "../Base/EventEmitterMixin.js";
 
 
 export class EnemyBase extends EventEmitterMixin(CharacterBase) {
-    constructor(x, y, parentElement, charaData) {
+    constructor(x, y, parentElement, charaData, extraDropID) {
         super(x, y, parentElement, charaData);
 
         this.parentElement = parentElement;
         this.hasDroppedCoins = false;           // コインをドロップしたかのフラグ
 
+        this.extraDropID = extraDropID;
 
         this.lastAttackTime = 0;       // 最後に攻撃した時間
 
@@ -51,30 +52,36 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         }
 
         /* ──── 行動決定用の変数初期化 ────── */
-        let accel  = 0;
+        let accel = 0;
         let strafe = 0;
-        let rad    = this.radian;
+        let rad = this.radian;
 
         /* HP が残っている & ターゲットがいる場合 ───── */
         if (this.status.hp > 0 && this.playerTarget) {
 
-            const dx   = this.playerTarget.x - this.x;
-            const dy   = this.playerTarget.y - this.y;
+            const dx = this.playerTarget.x - this.x;
+            const dy = this.playerTarget.y - this.y;
             const dist = Math.hypot(dx, dy);
 
             /* ★ バリア発動判定 ──────────────────── */
             if (dist < this.enemyAIData.detectionRadius) {
                 // まだ張っていない & 乱数 10 % で AddBarrier
-                if (!this._hasBarrier && Math.random() < 0.01 && this.status.hp/this.status.maxHP<0.1) {
+                if (!this._hasBarrier && Math.random() < 0.01 && this.status.hp / this.status.maxHP < 0.1) {
                     this.AddBarrier();
-                    this._hasBarrier   = true;
+                    this._hasBarrier = true;
                     this._barrierTimer = 2000;   // 2 秒で自動解除
                 }
             }
 
             /* ------- 以下、移動 & 攻撃 AI は前と同じ -------- */
             if (dist < this.enemyAIData.detectionRadius) {
-                rad = Math.atan2(dy, dx);
+
+                if (Math.random() < 0.8) {
+                    rad = Math.atan2(dy, dx);   // ← 実際の方向
+                } else {
+                    rad = Math.random() * Math.PI * 2;
+                }
+                
 
                 if (dist > this.enemyAIData.attackRange) {
                     accel = +0.1;
@@ -91,11 +98,17 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
                     this._wanderTimer -= delta;
                 }
             } else {
+
                 /* 感知外：徘徊 */
                 if (!this._wanderTimer || this._wanderTimer <= 0) {
                     this._wanderTimer = 3;
-                    rad = Math.random() * Math.PI * 2;
+                    if (Math.random() < 0.1) {
+                        rad = Math.atan2(dy, dx);   // ← 実際の方向
+                    } else {
+                        rad = Math.random() * Math.PI * 2;
+                    }
                 }
+
                 this._wanderTimer--;
                 accel = +0.6;
             }
@@ -115,13 +128,13 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         }
 
         /* MoveBase 用パラメータ反映 */
-        this.radian       = rad;
+        this.radian = rad;
         this.acceleration = accel;
-        this.strafe       = strafe;
+        this.strafe = strafe;
 
         /* ターゲットとの距離が 3000 以上で退場処理 */
         if (this.playerTarget) {
-            const { x, y } = this.playerTarget.getPlayerPosition();
+            const {x, y} = this.playerTarget.getPlayerPosition();
             const dx = x - this.x;
             const dy = y - this.y;
             const limit = 3000;
@@ -144,8 +157,6 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
     }
 
 
-
-
     /**
      * @desc 敵の周りにコインを配置する
      * @param {number} count - 生成するコインの数（デフォルトは設定値）
@@ -161,6 +172,18 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
             const y = centerY + Math.sin(angle) * dist;
             let item = new Item(x, y, this.parentElement);
         }
+
+        if (this.extraDropID !== null) {
+            const randomValue = Math.random();
+            if (1 >= randomValue) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 20 + Math.random() * 40;
+                const x = centerX + Math.cos(angle) * dist;
+                const y = centerY + Math.sin(angle) * dist;
+                let item = new Item(x, y, this.parentElement, this.extraDropID);
+            }
+        }
+
     }
 
 
@@ -217,7 +240,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         // payload に self を入れておくと購読側で enemy 情報を使える
     }
 
-    hitsWall(px, py,forEnemy=false) {
-        return super.hitsWall(px,py,true);
+    hitsWall(px, py, forEnemy = false) {
+        return super.hitsWall(px, py, true);
     }
 }

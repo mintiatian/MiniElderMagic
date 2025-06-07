@@ -299,10 +299,9 @@ export class UIEventDialog extends UIBase {
                         getItemCount: (id) => gameMain.wizard.getItemCount(id),
                         changeItemCount: (id, delta) => gameMain.wizard.changeItemCount(id, delta)
                     });
-                    return;
+                    super.show();
                 }
             }
-            super.show();
         }
 
     }

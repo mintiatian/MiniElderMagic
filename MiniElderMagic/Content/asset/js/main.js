@@ -48,6 +48,7 @@ export class MapEditorMain {
         this.catEnemies  = $("catEnemies");
         this.catColors   = $("catColors");
         this.catEventlist   = $("catEventlist");
+        this.catDroplist   = $("catDroplist");
         this.brushInput  = $("brush");
         this.brushInfo   = $("brushInfo");
 
@@ -83,7 +84,8 @@ export class MapEditorMain {
             catTiles  : this.catTiles,
             catEnemies: this.catEnemies,
             catColors : this.catColors,
-            catEventlist : this.catEventlist
+            catEventlist : this.catEventlist,
+            catDroplist : this.catDroplist
         });
         new FileIO(this.fileInput, this.downloadBtn, this.editor);
 
@@ -116,6 +118,7 @@ export class MapEditorMain {
         this.catEnemies.onchange = () => this.catEnemies.checked && this._selectCategory("enemies", /mapEnemyPop/i);
         this.catColors .onchange = () => this.catColors .checked && this._selectCategory("colors", /mapColor/i);
         this.catEventlist .onchange = () => this.catEventlist .checked && this._selectCategory("EventList", /mapEvent/i);
+        this.catDroplist .onchange = () => this.catDroplist .checked && this._selectCategory("exDrop", /mapDrop/i);
 
         /* ブラシ / 矩形 / ピック モード */
         this.modeBrush.onchange = () => this.editor.mode = "brush";
@@ -139,13 +142,13 @@ export class MapEditorMain {
     }
 
     async _saveCsvSet() {
-        const targets = ["mapColor.csv", "mapChip.csv", "mapEnemyPop.csv", "mapEvent.csv"].map(fn => ({
+        const targets = ["mapColor.csv", "mapChip.csv", "mapEnemyPop.csv", "mapEvent.csv", "mapDrop.csv"].map(fn => ({
             fileName: fn,
             layer   : this.editor.layers.find(l => l.name.toLowerCase() === fn.toLowerCase())
         }));
 
         if (targets.some(t => !t.layer)) {
-            alert("保存対象のレイヤーが見つかりません。3 つとも読み込んでから実行してください。");
+            alert("保存対象のレイヤーが見つかりません。"+targets.length+" つとも読み込んでから実行してください。");
             return;
         }
 
@@ -183,7 +186,7 @@ export class MapEditorMain {
 
     async _loadCsvSet(fileList) {
         const files = Array.from(fileList);
-        const order = ["mapColor.csv", "mapChip.csv", "mapEnemyPop.csv", "mapEvent.csv"];
+        const order = ["mapColor.csv", "mapChip.csv", "mapEnemyPop.csv", "mapEvent.csv", "mapDrop.csv"];
 
         for (const name of order) {
             const f = files.find(x => x.name === name);
