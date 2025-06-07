@@ -185,7 +185,7 @@ export class Background {
         }
 
         this.popTimer = 0;
-        this.MAXBASE_POP_COUNT = 5;
+        this.MAXBASE_POP_COUNT = 1;
         this.PopTimerMax = 3000;
         this.PopTimerMin = 2000;
         this.popTimer = this.PopTimerMax;
