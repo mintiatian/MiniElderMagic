@@ -107,11 +107,21 @@ export class MapEditorMain {
         this.saveSetBtn.onclick = () => this._saveCsvSet();
 
         /* CSV 3 点セット読込 */
-        this.loadSetBtn.onclick = () => this.dirInput.click();
-        this.dirInput.addEventListener("change", ev => {
-            this._loadCsvSet(ev.target.files);
-            ev.target.value = "";          // 選択状態をリセット
-        });
+        this.loadSetBtn.onclick = async () => {
+            try {
+                const src = await this.pickDirectory("read");
+
+                if (src instanceof FileList) {
+                    // フォールバック: 既存処理を再利用
+                    await this._loadCsvSet(src);
+                } else {
+                    // FileSystemDirectoryHandle 版
+                    await this._loadCsvSetFromHandle(src);
+                }
+            } catch (e) {
+                if (e.name !== "AbortError") console.warn(e);
+            }
+        };
 
         /* パレットカテゴリ切替 */
         this.catTiles .onchange = () => this.catTiles .checked && this._selectCategory("tiles" , /mapChip/i);
@@ -127,6 +137,62 @@ export class MapEditorMain {
         this.modeEvent .onchange = () => this.editor.mode = "event";
         
     }
+    async _loadCsvSetFromHandle(dir) {
+        const order = [
+            "mapColor.csv",
+            "mapChip.csv",
+            "mapEnemyPop.csv",
+            "mapEvent.csv",
+            "mapDrop.csv"
+        ];
+
+        for (const name of order) {
+            let fh;
+            try { fh = await dir.getFileHandle(name); }
+            catch { console.warn(`${name} が見つかりません`); continue; }
+
+            const file = await fh.getFile();
+            const csv  = await file.text();
+            this.editor.addLayer(name, parseCSV(csv));
+        }
+    }
+    /**
+     * フォルダを選択し、読み書きモード／フォールバックを吸収したハンドルを返す
+     * @param {"read"|"readwrite"} mode
+     * @returns {Promise<FileSystemDirectoryHandle|FileList>}  フォールバック時は FileList
+     */
+    async pickDirectory(mode = "read") {
+        // ★ File System Access API が使えればそちらを優先
+        if (window.showDirectoryPicker) {
+            try {
+                const dir = await window.showDirectoryPicker({
+                    startIn: "documents"
+                });
+                // 権限確認
+                const perm = await dir.requestPermission({ mode });
+                if (perm === "granted") return dir;
+            } catch (err) {
+                if (err.name !== "AbortError") console.warn(err);
+                throw err; // ユーザーキャンセルなど
+            }
+        }
+
+        // ★ 非対応ブラウザ → input[type=file]+webkitdirectory でフォールバック
+        return new Promise((res, rej) => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.webkitdirectory = true;
+            input.hidden = true;
+            document.body.appendChild(input);
+            input.onchange = () => {
+                document.body.removeChild(input);
+                if (input.files.length) res(input.files);
+                else rej(new Error("No folder selected"));
+            };
+            input.click();
+        });
+    }
+
 
     _selectCategory(cat, layerRegex) {
         this.editor.palette.setCategory(cat);

@@ -13,8 +13,8 @@ export class DebugMovementLogger {
         return [
             'time,mode,x,y,dist,rad,accel',
             ...this.rows.map(r =>
-                [r.t, r.m, r.x.toFixed(1), r.y.toFixed(1),
-                    r.d.toFixed(1), r.r.toFixed(3), r.a.toFixed(2)].join(',')
+                [r.t, r.m, r.x, r.y,
+                    r.d, r.r, r.a].join(',')
             )
         ].join('\n');
     }

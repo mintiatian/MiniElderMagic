@@ -1,7 +1,7 @@
 import {Actor} from '../Base/Actor.js';
 import {CollisionType} from "../Base/Pawn.js";
 import {itemDataTable} from "../Utils/DataTable.js";
-
+import {gameMain} from '../GameMain.js';
 
 export class Item extends Actor {
     /**
@@ -11,7 +11,7 @@ export class Item extends Actor {
      * @param {string} specifyDropID - ドロップ指定
      */
     constructor(x, y, parentElement, specifyDropID = null) {
-
+        const LIFE_TIME = 60000;       // 15 秒
 
         let DropItemData = null;
 
@@ -25,7 +25,7 @@ export class Item extends Actor {
                 break; // ← これでループを抜けられる
             }
         }
-        
+
         // 指定ドロップ
         if (specifyDropID !== null) {
             DropItemData = itemDataTable.get(specifyDropID);
@@ -42,6 +42,16 @@ export class Item extends Actor {
         //console.log(DropItemData.emoji);
         this.setCollisionType(CollisionType.TRIGGER);
 
+
+        this._lifeRemain = LIFE_TIME;   // ms
+        this._expired = false;            // 二重 Exit 防止
+
+        // ここで丸背景用のクラスを足す
+        this.element.classList.add('item-round');
+
+        // （必要なら）円形サイズに合わせてヒットボックスを更新
+        this.width = this.element.offsetWidth;
+        this.height = this.element.offsetHeight;
     }
 
     /**
@@ -49,11 +59,19 @@ export class Item extends Actor {
      */
     update(delta) {
         super.update(delta);
+
+        if (this._expired) return;          // 既に消滅処理済み
+
+        this._lifeRemain -= delta;
+        if (this._lifeRemain <= 0) {
+            this._expired = true;
+            this.ExitStart();               // 時間切れで削除
+        }
     }
 
     TriggerBegin(other) {
         super.TriggerBegin(other);
-        if (other.emoji === "🧙") {
+        if (other.emoji === gameMain.wizard.emoji) {
 
             other.addItem(this.DropItemData);
 

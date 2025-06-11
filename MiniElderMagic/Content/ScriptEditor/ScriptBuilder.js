@@ -630,7 +630,7 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             changeItemCount: () => {
             },
             onExit: () => console.log('dialog closed'),
-        });
+        },false);
         dlg.run(json);
     });
 })();

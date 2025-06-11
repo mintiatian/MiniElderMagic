@@ -21,8 +21,6 @@ export class MoveBase {
 
         if (this.owner instanceof Wizard) {
             if (this.owner.pressedKeys?.['run']) {
-                //isRunning = true;
-                //        runMultiplier = 1;
             }
         }
 

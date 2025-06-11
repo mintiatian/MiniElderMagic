@@ -171,7 +171,7 @@ export class UIHud extends UIBase {
         const event = gameMain.background.getMapValue("event",this.wizard.x,this.wizard.y);
         this.tabSpan.textContent = "TAB : Status";
         if(event !== null) {
-            console.log(event);
+            //console.log(event);
             if(eventDataTable.table.has(event)){
                 const eventData = eventDataTable.get(event);
                 

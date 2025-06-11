@@ -3,7 +3,7 @@ import {gameMain} from '../GameMain.js';
 import {eventDataTable, eventTileDataTable} from '../Utils/DataTable.js';
 
 export class UIEventDialog extends UIBase {
-    constructor(parentElement, opts = {}) {
+    constructor(parentElement, opts = {},thisHideStart=true) {
         super(parentElement);
         this._applyOpts(opts);
         this._script = null;
@@ -11,6 +11,10 @@ export class UIEventDialog extends UIBase {
         this._waiting = null;
         this._lastAnswer = null;
         this._buildDom();
+        
+        if(thisHideStart){
+            this.hide();
+        }
     }
 
     _applyOpts(opts) {
@@ -20,7 +24,7 @@ export class UIEventDialog extends UIBase {
         this.changeItemCount = opts.changeItemCount ?? (() => {
         });
         this.onResult = opts.onResult ?? (() => {
-            console.log('UIEventDialog: onResult', this._lastAnswer);
+            //console.log('UIEventDialog: onResult', this._lastAnswer);
         });
         this.onExit = opts.onExit ?? (() => {
         });
@@ -80,7 +84,7 @@ export class UIEventDialog extends UIBase {
         while (this._pc < script.commands.length) {
             const cmd = script.commands[this._pc];
 
-            console.log('UIEventDialog: pc next ', this._pc, 'cmd', script.commands[this._pc].operation);
+            //console.log('UIEventDialog: pc next ', this._pc, 'cmd', script.commands[this._pc].operation);
 
             switch (cmd.operation) {
                 case 'page':
@@ -171,6 +175,7 @@ export class UIEventDialog extends UIBase {
     async _opPage(cmd) {
         this._titleEl.textContent = this.titleEmoji;
         await this._typeWriter(cmd.text ?? '');
+        
         this.element.style.pointerEvents = 'auto';
         await new Promise(resolve => {
             const clickHandler = () => {
@@ -288,7 +293,6 @@ export class UIEventDialog extends UIBase {
         const event = gameMain.background.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
 
         if (event !== null) {
-            console.log(event);
             if (eventDataTable.table.has(event)) {
                 const eventData = eventDataTable.get(event);
 

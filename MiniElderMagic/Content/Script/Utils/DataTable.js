@@ -184,13 +184,16 @@ export class CharacterDataTable {
 
 export class EnemyDataTable extends CharacterDataTable {
     static table = new Map();
+    static emojiToId  = new Map();
     static get(id) { return this.table.get(id); }
-
+    static getIdByEmoji(emoji) {
+        return this.emojiToId.get(emoji) ?? null;
+    }
     static async init(csvUrl = '/assets/magic.csv') {
         const rows = await loadCSV(csvUrl);          // [{id,emoji,useMP,…}, …]
         for (const row of rows) {
             this.table.set(row.id, new CharacterDataTable(row));
-            //console.log(row.id,row);
+            this.emojiToId.set(row.emoji, row.id); // 逆引き
         }
         enemyDataTable = this;
     }
@@ -224,13 +227,41 @@ export class EnemyAIDataTable{
         }
         enemyAIDataTable = this;
     }
-    constructor({ id ,detectionRadius,attackRange,attacknearRange,attackCooldown,coinDropCount,extraDropItem}){
-        this.detectionRadius = detectionRadius;
-        this.attackRange = attackRange;
-        this.attacknearRange = attacknearRange;       
-        this.attackCooldown = attackCooldown;
-        this.coinDropCount = coinDropCount;
-        this.extraDropItem = extraDropItem;
+    constructor({ id ,emoji,detectionRadius,attackRange,attacknearRange,attackCooldown,coinDropCount,
+
+                    BARRIER_HP_THRESHOLD,
+                    BARRIER_PROBABILITY,
+                    BARRIER_DURATION_MS,
+                    MODE_ORBIT_PROB,
+                    MODE_TIMER_MIN_MS,
+                    MODE_TIMER_MAX_MS,
+                    APPROACH_ANGLE_JITTER,
+                    APPROACH_ACCEL,
+                    RETREAT_ACCEL,
+                    ORBIT_RADIUS,
+                    ORBIT_DIFF_THRESHOLD,
+                    ORBIT_CORRECT_ACCEL,
+                    EXIT_DISTANCE_LIMIT}){
+        this.detectionRadius = parseFloat(detectionRadius);
+        this.attackRange = parseFloat(attackRange);
+        this.attacknearRange = parseFloat(attacknearRange);    
+        this.attackCooldown = parseFloat(attackCooldown);
+        this.coinDropCount = parseInt(coinDropCount);
+
+
+        this.BARRIER_HP_THRESHOLD = parseFloat( BARRIER_HP_THRESHOLD);
+        this.BARRIER_PROBABILITY = parseFloat(BARRIER_PROBABILITY);
+        this.BARRIER_DURATION_MS = parseFloat(BARRIER_DURATION_MS);      
+        this.MODE_ORBIT_PROB = parseFloat(MODE_ORBIT_PROB);      
+        this.MODE_TIMER_MIN_MS = parseFloat(MODE_TIMER_MIN_MS);      
+        this.MODE_TIMER_MAX_MS = parseFloat(MODE_TIMER_MAX_MS);      
+        this.APPROACH_ANGLE_JITTER = parseFloat(APPROACH_ANGLE_JITTER);      
+        this.APPROACH_ACCEL = parseFloat(APPROACH_ACCEL);      
+        this.RETREAT_ACCEL = parseFloat(RETREAT_ACCEL);     
+        this.ORBIT_RADIUS = parseFloat(ORBIT_RADIUS);
+        this.ORBIT_DIFF_THRESHOLD = parseFloat(ORBIT_DIFF_THRESHOLD);  
+        this.ORBIT_CORRECT_ACCEL = parseFloat(ORBIT_CORRECT_ACCEL); 
+        this.EXIT_DISTANCE_LIMIT = parseFloat(EXIT_DISTANCE_LIMIT);
     }
 }
 

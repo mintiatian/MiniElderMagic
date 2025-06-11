@@ -112,7 +112,8 @@ export class GameMain {
         this.background = new Background(this.gameArea,this.camera, 60);
         this.CharacterLayer = this.background.characterLayer;
 
-        this.wizard = new Wizard(325, 325,this.CharacterLayer, wizardDataTable.get("Wizard1"));
+        const playerStartPosition = this.background.getPlayerStart();
+        this.wizard = new Wizard(playerStartPosition.x, playerStartPosition.y,this.CharacterLayer, wizardDataTable.get("Wizard1"));
 
 
         //this.stageManager = new Stage(this.CharacterLayer);

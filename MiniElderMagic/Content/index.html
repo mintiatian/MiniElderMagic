@@ -64,6 +64,23 @@
             z-index:5;          /* #game-area より大きければ任意 */
         }
 
+        /* アイテム用の丸い背景 */
+        .item-round {
+            position:absolute;
+            display:flex;
+            justify-content:center;   /* 横中央 */
+            align-items:center;       /* 縦中央：ここで行ボックスを中央に */
+            width:1.2em;              /* 円を少し大きめに */
+            height:1.2em;
+            border-radius:50%;
+            font-size:1em;            /* 絵文字サイズ */
+            line-height:1em;          /* ★ 行ボックス = 絵文字の高さ */
+            pointer-events:none;
+            background: rgba(255,255,255,0.15);  /* 好みで不透明度や色を変えてください */
+
+            
+        }
+
 
         /* ==========================
            4. キャラクター汎用スタイル

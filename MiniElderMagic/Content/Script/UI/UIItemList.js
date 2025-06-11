@@ -17,16 +17,29 @@ export class UIItemList extends UIBase {
 
         /* ───────── 購入コールバック ───────── */
         this.onItemClick = (item) => {
-            const cost = Number(item.shopcost);
-            if (this.wizard.playerstatus.coins >= cost) {
-                this.wizard.playerstatus.coins -= cost;
-                this.wizard.addItem(item);
-                this.wizard.status.shopBuyCount++;
-                gameMain.statusUI.updateDisplay();
-                gameMain.magicUI.updateDisplay();
-                this.updateDisplay();
+
+            if (!this.sellmode) {
+                const cost = Number(item.shopcost);
+                if (this.wizard.playerstatus.coins >= cost) {
+                    this.wizard.playerstatus.coins -= cost;
+                    this.wizard.addItem(item);
+                    this.wizard.status.shopBuyCount++;
+                    gameMain.statusUI.updateDisplay();
+                    gameMain.magicUI.updateDisplay();
+                    this.updateDisplay();
+                }
+            }
+            else{
+                if (this.wizard.getItemCount(item.emoji) > 0) {            // 在庫あり？
+                    const cost = Number(item.shopcost);
+                    this.wizard.changeItemCount(item.emoji, -1);        // アイテム削除
+                    this.wizard.changeItemCount("🪙", cost);         // コイン加算
+                    gameMain.statusUI.updateDisplay();
+                    this.updateDisplay();
+                }
             }
         };
+
 
         /* ───────── type → カラーMAP ───────── */
         this.typeColors = {
@@ -59,7 +72,12 @@ export class UIItemList extends UIBase {
 
         /* タイトル */
         this.heading = document.createElement('div');
+        
         this.heading.textContent = 'Shop';
+
+        if (this.sellmode) {
+            this.heading.textContent = '買取';
+        }
         Object.assign(this.heading.style, {
             fontWeight: 'bold', fontSize: '20px',
             color: '#00bfff', textAlign: 'left'
@@ -108,6 +126,7 @@ export class UIItemList extends UIBase {
         this.hide();
 
         this.filter = "";
+        this.sellmode = false;
     }
 
     /* ───────── フィルターボタン再生成 ───────── */
@@ -164,20 +183,22 @@ export class UIItemList extends UIBase {
         }
 
 
-        items.sort((a, b) => {
-            const costA = (() => {
-                const bp = Number(a.shopcost) || 0;
-                return bp === 0 ? 0 : Math.max(5, bp - disc);
-            })();
-            const costB = (() => {
-                const bp = Number(b.shopcost) || 0;
-                return bp === 0 ? 0 : Math.max(5, bp - disc);
-            })();
-            const affordA = coins >= costA;
-            const affordB = coins >= costB;
-            if (affordA !== affordB) return affordA ? -1 : 1;   /* 買える方を先に */
-            return String(a?.id ?? '').localeCompare(String(b?.id ?? ''));
-        });
+        if (!this.sellmode) {
+            items.sort((a, b) => {
+                const costA = (() => {
+                    const bp = Number(a.shopcost) || 0;
+                    return bp === 0 ? 0 : Math.max(5, bp - disc);
+                })();
+                const costB = (() => {
+                    const bp = Number(b.shopcost) || 0;
+                    return bp === 0 ? 0 : Math.max(5, bp - disc);
+                })();
+                const affordA = coins >= costA;
+                const affordB = coins >= costB;
+                if (affordA !== affordB) return affordA ? -1 : 1;   /* 買える方を先に */
+                return String(a?.id ?? '').localeCompare(String(b?.id ?? ''));
+            });
+        }
 
         this.listWrapper.innerHTML = '';
         if (!items.length) {
@@ -193,7 +214,12 @@ export class UIItemList extends UIBase {
             const basePrice = Number(item.shopcost) || 0;
             const discounted = basePrice - disc;
             const cost = basePrice === 0 ? 0 : Math.max(5, discounted);
-            const affordable = coins >= cost;
+
+
+            let affordable = coins >= cost;
+            if (this.sellmode) {
+                affordable = true;
+            }
 
             /* ───── タイルボタン ───── */
             const btn = document.createElement('button');
@@ -238,8 +264,14 @@ export class UIItemList extends UIBase {
 
             /* コスト */
             const costDiv = document.createElement('div');
-            costDiv.innerHTML = `<span style="color:#ffd700;font-size:12px;">🪙 ${cost}</span>`;
 
+
+            if (!this.sellmode) {
+                costDiv.innerHTML = `<span style="color:#ffd700;font-size:12px;">🪙 ${cost}</span>`;
+            }
+            else{
+                costDiv.innerHTML = `<span style="color:#ffd700;font-size:12px;">買取価格 ${cost}</span>`;
+            }
             btn.append(emojiDiv, infoDiv, costDiv);
             this.listWrapper.appendChild(btn);
         }
@@ -252,43 +284,32 @@ export class UIItemList extends UIBase {
         const event = gameMain.background.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
 
         if (event !== null) {
-            console.log(event);
             if (eventDataTable.table.has(event)) {
                 const eventData = eventDataTable.get(event);
 
-                if(eventData.type === "shop"){
+                if (eventData.type === "shop") {
                     /* -------- ショップ UI を開く -------- */
-                    this.filter        = eventData.mode;  // 例: "potion"
+                    this.filter = eventData.mode;  // 例: "potion"
                     this.currentFilter = "all";                // ボタン側リセット
                     this.updateDisplay();
+                    this.sellmode = false;
+                    super.show();
+                } else if (eventData.type === "shopsell") {
+                    /* -------- ショップ UI を開く -------- */
+                    this.filter = eventData.mode;  // 例: "potion"
+                    this.currentFilter = "all";                // ボタン側リセット
+                    this.updateDisplay();
+                    this.sellmode = true;
                     super.show();
                 }
             }
         }
 
-        /*
-                // プレイヤーがいま踏んでいるタイル絵文字
-        const tileEmoji = gameMain.wizard?.eventTile ?? "";
-        if (!tileEmoji) return;                  // 空文字 → 何もなし
-
-        // eventTileDataTable.table は Map
-        if (!eventTileDataTable.table.has(tileEmoji)) return;
-
-        const evtTile = eventTileDataTable.get(tileEmoji);
-        if (evtTile?.type !== "shop") return;    // shop 以外は無視
-
-        this.filter        = evtTile.event ?? "";  // 例: "potion"
-        this.currentFilter = "all";                // ボタン側リセット
-        this.updateDisplay();
-        super.show();
-        */
     }
 
     /* hide 時に固定フィルターを解除したい場合は任意で */
     hide() {
         super.hide();
         this.filter = "";
-
-        
     }
 }

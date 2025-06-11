@@ -5,7 +5,7 @@
 import {Palette} from "./palette.js";
 import {Layer} from "./layer.js";
 import {Viewport} from "./viewport.js";
-import {DEFAULT_CELL, MIN_ROWS, MIN_COLS, paletteEnemyEmojis, paletteEmojis,paletteExDropEmojis} from "./constants.js";
+import {DEFAULT_CELL, MIN_ROWS, MIN_COLS, paletteEnemyEmojis, paletteEmojis, paletteExDropEmojis} from "./constants.js";
 import {padGrid} from "./utils.js";
 import {cloneGrid, isColor} from "./utils.js";
 
@@ -20,7 +20,7 @@ export class Editor {
     constructor({
                     viewportEl, overlayEl, paletteEl, brushInput, brushInfo,
                     undoBtn, redoBtn, layerPanel, mapSizeEl,
-                    catTiles, catEnemies, catColors, catEventlist,catDroplist          // ★ 追加
+                    catTiles, catEnemies, catColors, catEventlist, catDroplist          // ★ 追加
                 }) {
         /* DOM refs */
         this.viewportEl = viewportEl;
@@ -38,6 +38,10 @@ export class Editor {
         this.catEventlist = catEventlist;
         this.catDroplist = catDroplist;
 
+
+        this.modeCopy = modeCopy;
+        this.modePaste = modePaste;
+
         /* サブ管理クラス */
         this.palette = new Palette(paletteEl);
         this.viewport = new Viewport(viewportEl, overlayEl);
@@ -49,7 +53,7 @@ export class Editor {
         this.mode = "brush";       // brush / rect
         this.painting = false;
         this.dragStart = null;     // {r,c}
-
+        this.copyBuffer = null;   // ← 追加：{grid: string[][], w, h}
         /* 初期イベント */
         this._bindUI();
 
@@ -118,7 +122,6 @@ export class Editor {
         this.catEventlist.checked = cat === "mapEvent";
         this.catDroplist.checked = cat === "exDrop";
 
-        
 
         /* Undo/Redo ボタン更新 */
         this._updateUndoRedoButtons();
@@ -138,6 +141,7 @@ export class Editor {
             }
         }
     }
+
     _getGrid(r, c) {
         const layer = this.activeLayer;
         if (!layer) return;
@@ -205,7 +209,8 @@ export class Editor {
             this.activeLayer?.redo();
             this._updateUndoRedoButtons();
         };
-
+        this.modeCopy.onchange = () => this.mode = "copy";
+        this.modePaste.onchange = () => this.mode = "paste";
         /* マウス操作 */
         this.viewportEl.addEventListener("mousedown", ev => this._onMouseDown(ev));
         window.addEventListener("mousemove", ev => this._onMouseMove(ev));
@@ -278,27 +283,49 @@ export class Editor {
             this.mode = "brush";                // 内部状態を切替
             document.getElementById("modeBrush").checked = true;  // ラジオも更新
         } else if (ev.button === 0) {              // 左クリック
-            if (this.mode === "brush") {
+            if (this.mode === "copy") {          // ★追加
+                this.dragStart = {r, c};
+                this._showRectPreview(r, c, r, c);
+                ev.preventDefault();
+                return;
+            } else if (this.mode === "brush") {
                 this.activeLayer?.pushHistory();
+                this._updateUndoRedoButtons();
                 this.painting = true;
                 this._paintAt(r, c);
                 this._showBrushPreview(r, c);
             } else if (this.mode === "event") {
 
                 this._showBrushPreview(r, c);
-                const eventName =this._getGrid(r, c);
+                const eventName = this._getGrid(r, c);
                 console.log("event:", eventName);
-                
+
                 const eventData = eventDataTable.get(eventName);
                 document.querySelectorAll('.ui-event-dialog').forEach((e) => e.remove());
                 const dlg = new UIEventDialog(document.body, {
                     titleEmoji: eventData.titleEmoji,
-                    getItemCount: () => 99,
+                    getItemCount: () => 0,
                     changeItemCount: () => {
+                        console.log(`[changeItemCount] ${item} ${delta}`);
                     },
                     onExit: () => console.log('dialog closed'),
-                });
+                }, false);
                 dlg.run(eventData.text);
+            } else if (this.mode === "paste") {      // ★追加
+                if (!this.copyBuffer) return;
+                this.activeLayer?.pushHistory();
+                this._updateUndoRedoButtons();
+                for (let dy = 0; dy < this.copyBuffer.h; dy++) {
+                    for (let dx = 0; dx < this.copyBuffer.w; dx++) {
+                        const rr = r + dy;
+                        const cc = c + dx;
+                        if (rr >= this.rows || cc >= this.cols) continue;
+                        this.activeLayer.grid[rr][cc] = this.copyBuffer.grid[dy][dx];
+                        this.activeLayer.drawCell(rr, cc);
+                    }
+                }
+                ev.preventDefault();
+                return;
             } else {
                 this.dragStart = {r, c};
                 this._showRectPreview(r, c, r, c);
@@ -312,6 +339,7 @@ export class Editor {
             this.viewportEl.dataset.sl = this.viewportEl.scrollLeft;
             this.viewportEl.dataset.st = this.viewportEl.scrollTop;
         }
+
     }
 
     _onMouseMove(ev) {
@@ -326,6 +354,8 @@ export class Editor {
             if (this.painting) this._paintAt(r, c);
         } else if (this.dragStart) {
             this._showRectPreview(this.dragStart.r, this.dragStart.c, r, c);
+        } else if (this.mode === "copy" && this.dragStart) {
+            this._showRectPreview(this.dragStart.r, this.dragStart.c, r, c);
         }
     }
 
@@ -339,8 +369,29 @@ export class Editor {
         if (this.mode === "brush") {
             this.painting = false;
             this._clearOverlay();
+        } else if (this.mode === "copy" && this.dragStart) {            // ★追加
+            const rs = Math.min(this.dragStart.r, r),
+                re = Math.max(this.dragStart.r, r);
+            const cs = Math.min(this.dragStart.c, c),
+                ce = Math.max(this.dragStart.c, c);
+
+            // 選択範囲を深いコピー
+            const buf = [];
+            for (let rr = rs; rr <= re; rr++) {
+                buf.push(this.activeLayer.grid[rr].slice(cs, ce + 1));
+            }
+            this.copyBuffer = {grid: buf, w: ce - cs + 1, h: re - rs + 1};
+            this.dragStart = null;
+            this._clearOverlay();
+            console.log(`Copied ${this.copyBuffer.w}×${this.copyBuffer.h}`);
+
+            /* ───────── コピー完了 → そのまま貼り付けモードへ ───────── */
+            this.mode = "paste";                          // 内部状態
+            document.getElementById("modePaste").checked = true; // UI 更新
+
         } else if (this.dragStart) {
             this.activeLayer?.pushHistory();
+            this._updateUndoRedoButtons();
             const rs = Math.min(this.dragStart.r, r), re = Math.max(this.dragStart.r, r);
             const cs = Math.min(this.dragStart.c, c), ce = Math.max(this.dragStart.c, c);
             for (let rr = rs; rr <= re; rr++)
@@ -364,6 +415,16 @@ export class Editor {
         if ((ev.ctrlKey || ev.metaKey) && (k === "y" || (ev.shiftKey && k === "z"))) {
             ev.preventDefault();
             this.redoBtn.click();
+            return;
+        }
+        if ((ev.ctrlKey || ev.metaKey) && k === "c") {
+            this.mode = "copy";
+            document.getElementById("modeCopy").checked = true;
+            return;
+        }
+        if ((ev.ctrlKey || ev.metaKey) && k === "v") {
+            this.mode = "paste";
+            document.getElementById("modePaste").checked = true;
             return;
         }
 

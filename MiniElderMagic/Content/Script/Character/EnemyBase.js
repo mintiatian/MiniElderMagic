@@ -2,7 +2,7 @@ import {Item} from '../Actor/Item.js';
 import {FireBall} from '../FireBall.js';
 import {CharacterBase} from "./CharacterBase.js";
 import {EventEmitterMixin} from "../Base/EventEmitterMixin.js";
-import { DebugMovementLogger } from '../Utils/DebugMovementLogger.js';
+import {DebugMovementLogger} from '../Utils/DebugMovementLogger.js';
 
 export class EnemyBase extends EventEmitterMixin(CharacterBase) {
     constructor(x, y, parentElement, charaData, extraDropID) {
@@ -40,8 +40,8 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
 
     SetAIData(enemyAIData) {
         this.enemyAIData = enemyAIData;
-        this.ORBIT_RADIUS = (this.enemyAIData.attackRange +
-            this.enemyAIData.attacknearRange) * 0.5;
+
+        console.log(this.enemyAIData.attackRange,this.enemyAIData.attacknearRange);
     }
 
     R
@@ -63,171 +63,177 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
     */
 
     update(delta) {
-        super.update(delta);
-        this._time += delta;     // 経過時間を累積
+        /* ===== データテーブル → 定数化 ============================== */
+        // ── EnemyAIData 由来 ───────────────────────────
+        const DETECTION_RADIUS      = this.enemyAIData.detectionRadius;
+        const ATTACK_RANGE          = this.enemyAIData.attackRange;
+        
+        
+        const ATTACK_NEAR_RANGE     = this.enemyAIData.attacknearRange;
+        const ATTACK_COOLDOWN_MS    = this.enemyAIData.attackCooldown;
+        const DROP_COIN_COUNT       = this.enemyAIData.coinDropCount;
 
-        /* バリアの生存時間を監視 ★──────────────── */
-        if (this._hasBarrier) {
-            this._barrierTimer -= delta;
-            if (this._barrierTimer <= 0) {
-                this.RemoveBarrier();
-                this._hasBarrier = false;
+        // ── CharaData 由来（現ロジックでは未使用だが宣言だけしておく） ──
+        const CHAR_MAX_SPEED        = this.charaData.MaxSpeed;
+        const CHAR_HP_MAX           = this.charaData.hp;
+        const CHAR_MP_MAX           = this.charaData.mp;
+        const CHAR_DEFENCE          = this.charaData.deffence;
+        /* ============================================================ */
+
+        /* ===== 既存の AI 固有定数（確率・閾値など） ================== */
+        const BARRIER_HP_THRESHOLD   = this.enemyAIData.BARRIER_HP_THRESHOLD;    // HP が 10% 未満で発動候補
+        const BARRIER_PROBABILITY    = this.enemyAIData.BARRIER_PROBABILITY;    // 1% でバリア貼り
+        const BARRIER_DURATION_MS    = this.enemyAIData.BARRIER_DURATION_MS;    // バリア持続 2 秒
+
+        const MODE_ORBIT_PROB        = this.enemyAIData.MODE_ORBIT_PROB;    // 周回モード選択確率
+        const MODE_TIMER_MIN_MS      = this.enemyAIData.MODE_TIMER_MIN_MS;     // 再抽選 0.5–1.2 秒
+        const MODE_TIMER_MAX_MS      = this.enemyAIData.MODE_TIMER_MAX_MS;
+
+        const APPROACH_ANGLE_JITTER  = this.enemyAIData.APPROACH_ANGLE_JITTER;     // 接近時のブレ（±0.1 rad）
+        const APPROACH_ACCEL         = this.enemyAIData.APPROACH_ACCEL;    // 接近加速
+        const RETREAT_ACCEL          = this.enemyAIData.RETREAT_ACCEL;    // 退却加速
+
+        const ORBIT_RADIUS= this.enemyAIData.ORBIT_RADIUS;
+        const ORBIT_DIFF_THRESHOLD   = this.enemyAIData.ORBIT_DIFF_THRESHOLD;       // 半径補正開始距離
+        const ORBIT_CORRECT_ACCEL    = this.enemyAIData.ORBIT_CORRECT_ACCEL;     // 内外補正用加速
+
+        const EXIT_DISTANCE_LIMIT    = this.enemyAIData.EXIT_DISTANCE_LIMIT;    // 退場判定距離
+        /* ============================================================ */
+
+        super.update(delta);                    // アニメ / クールダウン等
+
+        // ── 毎フレーム共通パラメータ ──────────────────
+        this._time += delta;
+        let accel  = 0;                         // 前後入力 –1…+1
+        let strafe = 0;                         // 左右入力 –1…+1
+        let rad    = this.radian;               // 向き（ラジアン）
+
+        // ── バリア寿命チェック ────────────────────────
+        if (this._hasBarrier && (this._barrierTimer -= delta) <= 0) {
+            this.RemoveBarrier();
+            this._hasBarrier = false;
+        }
+
+        // ────────────────────────────────────────────
+        // ① 生存中 & ターゲットあり
+        // ────────────────────────────────────────────
+        if (this.status.hp > 0 && this.playerTarget) {
+            /* --------- 基本計算 --------- */
+            const dx   = this.playerTarget.x - this.x;
+            const dy   = this.playerTarget.y - this.y;
+            const dist = Math.hypot(dx, dy);
+            const toPlayerRad = Math.atan2(dy, dx);
+
+            /* ★ バリア発動判定 --------------------------------- */
+            if (
+                dist < DETECTION_RADIUS &&
+                !this._hasBarrier &&
+                this.status.hp / this.status.maxHP < BARRIER_HP_THRESHOLD &&
+                Math.random() < BARRIER_PROBABILITY
+            ) {
+                this.AddBarrier();
+                this._hasBarrier   = true;
+                this._barrierTimer = BARRIER_DURATION_MS;
+            }
+
+            /* --------- モード抽選タイマー --------- */
+            if ((this._modeTimer -= delta) <= 0) {
+                this._moveMode  = Math.random() < MODE_ORBIT_PROB ? "orbit" : "approach";
+                this._orbitDir  = Math.random() < 0.5 ? +1 : -1;      // CW / CCW
+                const random = Math.random();
+                this._modeTimer = MODE_TIMER_MIN_MS +
+                    random * (MODE_TIMER_MAX_MS - MODE_TIMER_MIN_MS);
+                
+                //if (this._modeTimer < 0);
+//                console.log("modeChange :  --------------------- ",this._modeTimer);
+            }
+ //           console.log("modeTimer : ",this._modeTimer);
+
+            /* ──────────────── A. approach ──────────────── */
+            if (this._moveMode === "approach") {
+                rad    = toPlayerRad + (Math.random() - 0.5) * APPROACH_ANGLE_JITTER;
+                strafe = 0;
+
+                // 距離に応じた前後アクセル
+                if (dist > ATTACK_RANGE) {
+                    accel = APPROACH_ACCEL;               // 接近
+                } else if (dist < ATTACK_NEAR_RANGE) {
+                    accel = RETREAT_ACCEL;                // 後退
+                } else {
+                    accel = 0;
+                    this.fire();                          // 攻撃
+                }
+            }
+
+            /* ──────────────── B. orbit ──────────────── */
+            else if (this._moveMode === "orbit") {
+                rad    = toPlayerRad;                     // 常に正面
+                strafe = this._orbitDir;                  // ±1 で周回
+
+                // 半径補正（膨らみ過ぎ・詰まり過ぎを前後入力で微修正）
+                const diff = dist - this.ORBIT_RADIUS;
+                if (Math.abs(diff) > ORBIT_DIFF_THRESHOLD) {
+                    accel = diff > 0 ? +ORBIT_CORRECT_ACCEL : -ORBIT_CORRECT_ACCEL;
+                } else {
+                    accel = 0;
+                }
+
+                // 攻撃判定
+                if (dist < ATTACK_RANGE) {
+                    this.fire();
+                }
             }
         }
 
-        /* ──── 行動決定用の変数初期化 ────── */
-        let accel = 0;
-        let strafe = 0;
-        let rad = this.radian;
-
-        /* HP が残っている & ターゲットがいる場合 ───── */
-        if (this.status.hp > 0 && this.playerTarget) {
-
-            /* -------------- update / tick ----------------- */
-            const dx = this.playerTarget.x - this.x;
-            const dy = this.playerTarget.y - this.y;
-            const dist = Math.hypot(dx, dy);
-
-            /* ★ バリア発動判定 ──────────────────── */
-            if (dist < this.enemyAIData.detectionRadius) {
-                // まだ張っていない & 乱数 10 % で AddBarrier
-                if (!this._hasBarrier && Math.random() < 0.01 && this.status.hp / this.status.maxHP < 0.1) {
-                    this.AddBarrier();
-                    this._hasBarrier = true;
-                    this._barrierTimer = 2000;   // 2 秒で自動解除
-                }
-            }
-
-            /* ------- 以下、移動 & 攻撃 AI は前と同じ -------- */
-            /* ----------------- 移動 & 攻撃 AI --------------- */
-            if (dist < this.enemyAIData.detectionRadius) {
-
-                /* === モード抽選 === */
-                this._modeTimer -= delta;
-                if (this._modeTimer <= 0) {
-                    // 40 % で周回、60 % で接近
-                    if (Math.random() < 0.4) {
-                        this._moveMode = 'orbit';
-                        this._orbitDir = Math.random() < 0.5 ? 1 : -1;   // 回転向き
-                    } else {
-                        this._moveMode = 'approach';
-                    }
-                    this._modeTimer = 1.0 + Math.random() * 1.0;          // 次の再抽選まで 1–2 秒
-                }
-
-                /* === 方向決定 === */
-                if (this._moveMode === 'approach') {
-                    // 少しブレを持たせつつ接近
-                    rad = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.2;
-                } else if (this._moveMode === 'orbit') {
-                    const base = Math.atan2(dy, dx);
-
-                    /* --- 周回方向（接線方向に 90° シフト） --- */
-                    rad = base + this._orbitDir * this.ORBIT_OFFSET_RAD;
-                    accel = this.ORBIT_ACCEL;                 // 常に前進させる
-
-                    /* --- 半径補正（ズレが大きいときだけ） --- */
-                    const diff = dist - this.ORBIT_RADIUS;
-                    if (Math.abs(diff) > 6) {
-                        const corrDir = diff > 0 ? base : base + Math.PI;     // 内外補正
-                        const sin = Math.sin(rad) * (1 - this.ORBIT_CORRECT_W) +
-                            Math.sin(corrDir) * this.ORBIT_CORRECT_W;
-                        const cos = Math.cos(rad) * (1 - this.ORBIT_CORRECT_W) +
-                            Math.cos(corrDir) * this.ORBIT_CORRECT_W;
-                        rad = Math.atan2(sin, cos);
-                    }
-
-                    /* --- 攻撃判定は従来どおり --- */
-                    if (dist < this.enemyAIData.attackRange) {
-                        this.fire();
-                    }
-                }
-
-                /* === 加速度決定（従来ロジック流用） === */
-                if (dist > this.enemyAIData.attackRange) {
-                    accel = +0.1;
-                } else if (dist < this.enemyAIData.attacknearRange) {
-                    accel = -0.1;
-                } else {
-                    this.fire();                             // 攻撃実行
-                    /* --- wander (従来どおり) --- */
-                    if (this._wanderTimer <= 0) {
-                        const r = Math.random();
-                        this._wanderAccel = r < 0.33 ? -0.1 : r < 0.66 ? 0 : +0.1;
-                        this._wanderTimer = 0.2 + Math.random() * 0.4;
-                    }
-                    accel = this._wanderAccel;
-                    this._wanderTimer -= delta;
-                }
-            } else {
-
-                /* 感知外：徘徊 */
-                if (!this._wanderTimer || this._wanderTimer <= 0) {
-                    this._wanderTimer = 3;
-                    if (Math.random() < 0.1) {
-                        rad = Math.atan2(dy, dx);   // ← 実際の方向
-                    } else {
-                        rad = Math.random() * Math.PI * 2;
-                    }
-                }
-
-                this._wanderTimer--;
-                accel = +0.6;
-            }
-
-            this._log.push({
-                t:  Math.round(this._time * 1000), // ms
-                m:  this._moveMode,                // 'orbit' or 'approach'
-                x:  this.x,
-                y:  this.y,
-                d:  dist,
-                r:  rad,
-                a:  accel
-            });
-
-        } else if (this.status.hp <= 0) {
-            /* 死亡時は即バリア解除 ★ */
+            // ────────────────────────────────────────────
+            // ② 死亡処理・ドロップなど
+        // ────────────────────────────────────────────
+        else if (this.status.hp <= 0) {
             if (this._hasBarrier) {
                 this.RemoveBarrier();
                 this._hasBarrier = false;
             }
             if (!this.hasDroppedCoins) {
-                this.dropCoins();
+                this.dropCoins();                 // ドロップ数は内部で coinDropCount を参照
                 this.hasDroppedCoins = true;
             } else if (!this.isFadingOut) {
                 this.ExitStart();
             }
         }
 
-        /* MoveBase 用パラメータ反映 */
-        this.radian = rad;
-        this.acceleration = accel;
-        this.strafe = strafe;
-
-        /* ターゲットとの距離が 3000 以上で退場処理 */
+        // ────────────────────────────────────────────
+        // ③ 退場距離チェック
+        // ────────────────────────────────────────────
         if (this.playerTarget) {
-            const {x, y} = this.playerTarget.getPlayerPosition();
-            const dx = x - this.x;
-            const dy = y - this.y;
-            const limit = 3000;
-
-            if (dx * dx + dy * dy >= limit * limit) {
-                // 退場時もバリア解除 ★
+            const { x: px, y: py } = this.playerTarget.getPlayerPosition();
+            const dd = (px - this.x) ** 2 + (py - this.y) ** 2;
+            if (dd >= EXIT_DISTANCE_LIMIT ** 2) {
                 if (this._hasBarrier) {
                     this.RemoveBarrier();
                     this._hasBarrier = false;
                 }
                 this.ExitStart();
             }
-        } else {
+        } else if (!this.isFadingOut) {
             if (this._hasBarrier) {
                 this.RemoveBarrier();
                 this._hasBarrier = false;
             }
             this.ExitStart();
         }
+
+        // ────────────────────────────────────────────
+        // ④ MoveBase へパラメータ反映 → 実際の移動
+        // ────────────────────────────────────────────
+        this.radian       = rad;
+        this.acceleration = accel;
+        this.strafe       = strafe;
+        // this.mover.moveUpdate(delta);  // ★ MoveBase 使用時は有効化
     }
-    
+
+
+
+
     dumpMovementLog() {
         console.log(this._log.toCSV());
         // ↓必要なら Blob でファイル保存も
@@ -311,7 +317,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         this.dumpMovementLog();
         this.emit('destroyed', this);
         super.destroy();
-        
+
         // --- 破棄イベント発火 -------------------------------
         // payload に self を入れておくと購読側で enemy 情報を使える
     }

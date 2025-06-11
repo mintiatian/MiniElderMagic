@@ -4,10 +4,10 @@
 
 import {EventDataTable} from "../Script/Utils/DataTable.js";
 
-const CSV_HEADERS = ['id', 'titleEmoji', 'text', 'mode']; // 必要に応じて列を追加
+const CSV_HEADERS = ['id', 'titleEmoji', 'text', "type", 'mode']; // 必要に応じて列を追加
 
 
-function tidyJson(str){
+function tidyJson(str) {
     try {                // パース成功なら完全ミニファイ
         return JSON.stringify(JSON.parse(str));
     } catch {
@@ -24,7 +24,7 @@ function buildEventCsv() {
     rows.push(CSV_HEADERS);          // ヘッダ行
 
     for (const [id, evt] of EventDataTable.table) {
-        rows.push([id, evt.titleEmoji??'', tidyJson(evt.text??''), evt.mode??'']);
+        rows.push([id, evt.titleEmoji ?? '', tidyJson(evt.text ?? ''), evt.type ?? '', evt.mode ?? '']);
     }
     // Excel 読み取りを考慮し BOM 付き UTF-8
     const csv = rows
@@ -42,7 +42,7 @@ export async function saveEventCsvToFolder() {
     try {
         // ユーザーにフォルダ選択ダイアログを表示
         const dirHandle = await window.showDirectoryPicker({mode: 'readwrite'}); // Chrome86+
-        const fileHandle = await dirHandle.getFileHandle('eventDataTable.csv', { create: true });
+        const fileHandle = await dirHandle.getFileHandle('eventDataTable.csv', {create: true});
 
         // 書き込みストリームを取得
         const writable = await fileHandle.createWritable();              // 書き込み権限確認 :contentReference[oaicite:0]{index=0}

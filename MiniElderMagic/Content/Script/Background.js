@@ -185,7 +185,7 @@ export class Background {
         }
 
         this.popTimer = 0;
-        this.MAXBASE_POP_COUNT = 1;
+        this.MAXBASE_POP_COUNT = 3;
         this.PopTimerMax = 3000;
         this.PopTimerMin = 2000;
         this.popTimer = this.PopTimerMax;
@@ -195,6 +195,41 @@ export class Background {
 
     // プレイヤーから離れたエネミーは消す
     // this.CurrentPopCount カウントをリセット
+
+    getPlayerStart() {
+
+        // ① mapEvent 全体を走査して「プレイヤースタート」セルを探す
+        for (let r = 0; r < this.rows; ++r) {
+            for (let c = 0; c < this.cols; ++c) {
+                const evId = this.mapEvent?.[r]?.[c];
+                if (!evId) continue;
+
+                /* ── チェック方法 ───────────────────────────
+*  a. ID 文字列そのものが "playerStart"（大小無視）
+*  b. EventDataTable に登録があり，mode === 'playerStart'
+*     例: { id:'E001', mode:'playerStart', … }
+*/
+                const isPlayerStartId =
+                    typeof evId === 'string' && evId.toLowerCase() === 'playerstart';
+                const evData = EventDataTable.get(evId);
+                const isPlayerStartMode = evData?.mode === 'playerStart';
+
+                if (isPlayerStartId || isPlayerStartMode) {
+                    return {
+                        x: c * this.tile + this.tile * 0.5,
+                        y: r * this.tile + this.tile * 0.5,
+                    };
+                }
+            }
+        }
+
+        // ② 見つからなかった場合 ― フォールバック（左上 0,0 タイル中央）
+        console.warn('getPlayerStart: playerStart イベントが見つかりませんでした');
+        return {
+            x: this.tile * 0.5,
+            y: this.tile * 0.5,
+        };
+    }
 
     popDoEnemyFromPawn(delta, Pawn) {
 
@@ -325,6 +360,7 @@ export class Background {
         for (const data of enemyDataTable.table.values()) {
             if (data.emoji === emoji) {
                 enemyData = data;
+                enemyId = enemyDataTable.getIdByEmoji(enemyData.emoji);
                 break;
             }
         }
