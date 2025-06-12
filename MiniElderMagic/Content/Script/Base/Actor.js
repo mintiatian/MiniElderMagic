@@ -16,12 +16,18 @@ export class Actor extends Pawn {
         this.IsActive = true;
 
         /* ───────── 本体の見た目 ───────── */
-        this.element.style.fontSize = `${CHAR_SIZE}px`;
+        this.element.style.fontSize = `${this.CHAR_SIZE}px`;
         this.element.textContent = this.emoji;
 
         /* ───────── オーバーレイ管理 ───────── */
         /** @type {Map<string, {el:HTMLElement, offset:{x:number,y:number}, followRot:boolean}>} */
         this._overlays = new Map();
+    }
+    
+    setSize(size) {
+        super.setSize(size);
+        this.element.style.fontSize = `${this.CHAR_SIZE}px`;
+        this.element.textContent = this.emoji;
     }
 
     // ==================================================================
@@ -69,7 +75,7 @@ export class Actor extends Pawn {
         el.style.zIndex = (baseZ + zDelta).toString();
 
         if (size === null) {
-            size = parseFloat(getComputedStyle(this.element).fontSize) || CHAR_SIZE;
+            size = parseFloat(getComputedStyle(this.element).fontSize) || this.CHAR_SIZE;
         }
         el.style.fontSize = `${size}px`;
 

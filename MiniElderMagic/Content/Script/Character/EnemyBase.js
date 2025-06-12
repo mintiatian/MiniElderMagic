@@ -5,8 +5,8 @@ import {EventEmitterMixin} from "../Base/EventEmitterMixin.js";
 import {DebugMovementLogger} from '../Utils/DebugMovementLogger.js';
 
 export class EnemyBase extends EventEmitterMixin(CharacterBase) {
-    constructor(x, y, parentElement, charaData, extraDropID) {
-        super(x, y, parentElement, charaData);
+    constructor(x, y, parentElement, charaData, extraDropID,ratio) {
+        super(x, y, parentElement, charaData,ratio);
 
         this.parentElement = parentElement;
         this.hasDroppedCoins = false;           // コインをドロップしたかのフラグ
@@ -15,6 +15,8 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
 
         this.lastAttackTime = 0;       // 最後に攻撃した時間
 
+        // ここでサイズを変える
+        //
 
         // プレイヤーへの参照
         this.playerTarget = null;
@@ -38,13 +40,15 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         this._time = 0;          // 経過秒
     }
 
+    setRatioSize(ratio) {
+        super.setSize(this.CHAR_SIZE * ratio);
+    }
     SetAIData(enemyAIData) {
         this.enemyAIData = enemyAIData;
 
         console.log(this.enemyAIData.attackRange,this.enemyAIData.attacknearRange);
     }
-
-    R
+    
 
     /**
      * @desc プレイヤーの参照を設定する

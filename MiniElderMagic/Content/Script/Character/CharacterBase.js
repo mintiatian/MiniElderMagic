@@ -13,20 +13,21 @@ export class CharacterBase extends Character {
      * @param {string} emoji - キャラクターの絵文字
      * @param {HTMLElement} parentElement - 親要素
      * @param {CharacterDataTable} charaData - 親要素
+     * @param {float} ratio - 強さ倍率
      */
-    constructor(x, y, parentElement,charaData) {
+    constructor(x, y, parentElement, charaData,ratio = 1) {
         super(x, y, charaData.MaxSpeed, charaData.emoji, parentElement);
 
         // ステータス管理クラスのインスタンス
         this.status = new Status();
-        this.setCharacterData(charaData);
+        this.setCharacterData(charaData,ratio);
 
         this.BarrierId = "";
     }
 
-    
-    Fire(attack1,attack2,staffPos){
-        
+
+    Fire(attack1, attack2, staffPos) {
+
         if (this.status.mp >= this.MagicData.useMP + this.status.UseMP) {
             this.status.useMP(this.MagicData.useMP + this.status.UseMP);
         } else {
@@ -34,22 +35,21 @@ export class CharacterBase extends Character {
         }
 
 
-        
         //console.log("Fire!! 06");
-        for(let i = 0; i < attack1; i++){
+        for (let i = 0; i < attack1; i++) {
 
             //console.log("Fire!! 07");
-            const newMagic = new MagicBase(staffPos.x,staffPos.y,this.MagicData,this.parentElement);
-            
+            const newMagic = new MagicBase(staffPos.x, staffPos.y, this.MagicData, this.parentElement);
+
             newMagic.setDir(this.radian + ((i * 0.1) * this.status.AttackdirRatio));
             newMagic.setAcceleration(1);
             newMagic.setOwner(this);
 
         }
-        for(let i = 1; i < (attack2+1); i++){
+        for (let i = 1; i < (attack2 + 1); i++) {
 
-            const newMagic = new MagicBase(staffPos.x,staffPos.y,this.MagicData,this.parentElement);
-            
+            const newMagic = new MagicBase(staffPos.x, staffPos.y, this.MagicData, this.parentElement);
+
             newMagic.setDir(this.radian - ((i * 0.1) * this.status.AttackdirRatio));
             newMagic.setAcceleration(1);
             newMagic.setOwner(this);
@@ -57,40 +57,39 @@ export class CharacterBase extends Character {
         }
     }
 
-    SettingMagicData(){
+    SettingMagicData() {
         this.SetMagic(this.charaData.attackMagic);
         this.IsActive = true;
     }
 
-    SetMagic(MagicName){
+    SetMagic(MagicName) {
         this.MagicData = magicDataTable.get(MagicName);
     }
-    
-    setCharacterData(charaData){
+
+    setCharacterData(charaData, ratio = 1) {
         this.charaData = charaData;
-        if(charaData){
+        if (charaData) {
 
             this.charaData = charaData;
 
-            this.status.maxHP = this.status.hp = this.charaData.hp;
-            this.status.maxMP = this.status.mp = this.charaData.mp;
-            this.status.mpregene = this.charaData.mpregene;
+            this.status.maxHP = this.status.hp = this.charaData.hp * ratio;
+            this.status.maxMP = this.status.mp = this.charaData.mp * ratio;
+            this.status.mpregene = this.charaData.mpregene * ratio;
 
-            this.status.deffence = this.charaData.deffence;
-            
-            this.status.MaxSpeed = this.charaData.MaxSpeed;
+            this.status.deffence = this.charaData.deffence * ratio;
+
+            this.status.MaxSpeed = this.charaData.MaxSpeed * ratio;
             this.MaxSpeed = this.status.MaxSpeed;
 
-            this.status.attackPierceCount = this.charaData.attackPierceCount;
-            this.status.HomingRadius = this.charaData.HomingRadius;
-            this.status.HomingPower = this.charaData.HomingPower;
-            this.status.AddLifeTime = this.charaData.AddLifeTime;
-            this.status.FireCnt1 = this.charaData.FireCnt1;
-            this.status.FireCnt2 = this.charaData.FireCnt2;
+            this.status.attackPierceCount = this.charaData.attackPierceCount * ratio;
+            this.status.HomingRadius = this.charaData.HomingRadius * ratio;
+            this.status.HomingPower = this.charaData.HomingPower * ratio;
+            this.status.AddLifeTime = this.charaData.AddLifeTime * ratio;
+            this.status.FireCnt1 = this.charaData.FireCnt1 * ratio;
+            this.status.FireCnt2 = this.charaData.FireCnt2 * ratio;
 
             this.status.UseMP = this.charaData.UseMP;
-            this.status.AddMaxSpeed = this.charaData.AddMaxSpeed;
-
+            this.status.AddMaxSpeed = this.charaData.AddMaxSpeed * ratio;
 
 
             this.status.RegistFIREBALL = this.charaData.RegistFIREBALL;
@@ -113,19 +112,20 @@ export class CharacterBase extends Character {
 
         this.SettingMagicData();
     }
-    
-    SetupHPGage(){
-        this.hpGage = new UIGage(this.element,GAUGE_KIND.HP);
+
+    SetupHPGage() {
+        this.hpGage = new UIGage(this.element, GAUGE_KIND.HP);
     }
-    SetupMPGage(){
-        this.mpGage = new UIGage(this.element,GAUGE_KIND.MP);
+
+    SetupMPGage() {
+        this.mpGage = new UIGage(this.element, GAUGE_KIND.MP);
     }
-    
+
     update(delta) {
 
         /* ───────── 1. MP 回復 & MP ゲージ更新 ───────── */
         this.status.regeneMP();
-        
+
         if (this.status.hp > 0) {
             super.update(delta);
         }
@@ -140,15 +140,14 @@ export class CharacterBase extends Character {
         }
 
 
-        if(this.hpGage) {
+        if (this.hpGage) {
             this.hpGage.update(this.status.hp, this.status.maxHP);
         }
 
-        if(this.mpGage){
+        if (this.mpGage) {
             this.mpGage.update(this.status.mp, this.status.maxMP);
         }
     }
-
 
 
     /**
@@ -156,42 +155,74 @@ export class CharacterBase extends Character {
      * @param {MagicDataTable} MagicData - ダメージの元データ
      * @param {Number} addAttack - ダメージの元データ
      */
-    takeDamage(MagicData,addAttack) {
+    takeDamage(MagicData, addAttack) {
 
         let ratio = 1.0;
-        
+
 
         switch (MagicData.id) {
-            case "FIREBALL":     ratio = this.status.RegistFIREBALL;      break;
-            case "ICE":          ratio = this.status.RegistICE;           break;
-            case "LIGHTNING":    ratio = this.status.RegistLIGHTNING;     break;
-            case "TORNADO":      ratio = this.status.RegistTORNADO;       break;
-            case "METEOR":       ratio = this.status.RegistMETEOR;        break;
-            case "EXPLOSION":    ratio = this.status.RegistEXPLOSION;     break;
-            case "GUST":         ratio = this.status.RegistGUST;          break;
-            case "BUBBLE":       ratio = this.status.RegistBUBBLE;        break;
-            case "RAINBOW":      ratio = this.status.RegistRAINBOW;       break;
-            case "WEB":          ratio = this.status.RegistWEB;           break;
-            case "POISONSTING":  ratio = this.status.RegistPOISONSTING;   break;
-            case "SWORDSLASH":   ratio = this.status.RegistSWORDSLASH;    break;
-            case "GREATAxe":     ratio = this.status.RegistGREATAxe;      break;
-            case "HAMMERCRUSH":  ratio = this.status.RegistHAMMERCRUSH;   break;
-            case "TRIDENTTHRUST":ratio = this.status.RegistTRIDENTTHRUST; break;
-            case "SHIELDBASH":   ratio = this.status.RegistSHIELDBASH;    break;
+            case "FIREBALL":
+                ratio = this.status.RegistFIREBALL;
+                break;
+            case "ICE":
+                ratio = this.status.RegistICE;
+                break;
+            case "LIGHTNING":
+                ratio = this.status.RegistLIGHTNING;
+                break;
+            case "TORNADO":
+                ratio = this.status.RegistTORNADO;
+                break;
+            case "METEOR":
+                ratio = this.status.RegistMETEOR;
+                break;
+            case "EXPLOSION":
+                ratio = this.status.RegistEXPLOSION;
+                break;
+            case "GUST":
+                ratio = this.status.RegistGUST;
+                break;
+            case "BUBBLE":
+                ratio = this.status.RegistBUBBLE;
+                break;
+            case "RAINBOW":
+                ratio = this.status.RegistRAINBOW;
+                break;
+            case "WEB":
+                ratio = this.status.RegistWEB;
+                break;
+            case "POISONSTING":
+                ratio = this.status.RegistPOISONSTING;
+                break;
+            case "SWORDSLASH":
+                ratio = this.status.RegistSWORDSLASH;
+                break;
+            case "GREATAxe":
+                ratio = this.status.RegistGREATAxe;
+                break;
+            case "HAMMERCRUSH":
+                ratio = this.status.RegistHAMMERCRUSH;
+                break;
+            case "TRIDENTTHRUST":
+                ratio = this.status.RegistTRIDENTTHRUST;
+                break;
+            case "SHIELDBASH":
+                ratio = this.status.RegistSHIELDBASH;
+                break;
 
             default:
                 ratio = 1; // 既定値（必要に応じて調整）
                 break;
         }
 
-        if(this.BarrierId) {
+        if (this.BarrierId) {
             ratio *= 0.3;
         }
 
 
-        console.log("ratiocheck : ",(MagicData.damage+addAttack) * ratio,"=",(MagicData.damage+addAttack),"x",ratio);
+        console.log("ratiocheck : ", (MagicData.damage + addAttack) * ratio, "=", (MagicData.damage + addAttack), "x", ratio);
         // statusオブジェクトにダメージを適用
-        let damage = (MagicData.damage+addAttack) * ratio;
+        let damage = (MagicData.damage + addAttack) * ratio;
         damage = this.status.takeDamage(damage);
 
         // HPゲージを更新
@@ -199,8 +230,8 @@ export class CharacterBase extends Character {
 
         // ダメージテキストを表示
         if (damage > 0) {
-            this.showFloatingText(`-${damage.toFixed(0)}`, 'red', 3000, Math.floor(Math.random() * 40)-20,-40+Math.floor(Math.random() * 20));
-            this.AnimationPulse("damage",0.25);
+            this.showFloatingText(`-${damage.toFixed(0)}`, 'red', 3000, Math.floor(Math.random() * 40) - 20, -40 + Math.floor(Math.random() * 20));
+            this.AnimationPulse("damage", 0.25);
         }
     }
 
@@ -209,17 +240,18 @@ export class CharacterBase extends Character {
         const hue = 120 - 120 * (clamped / 2);                  // 120→0 に反比例
         return `hsl(${hue}deg 100% 50%)`;                       // 彩度 100%, 輝度 50%
     }
-    
-    AddBarrier(){
+
+    AddBarrier() {
         this.BarrierId = this.addOverlay("🟡");
         this.MaxSpeed = 0;
     }
-    RemoveBarrier(){
+
+    RemoveBarrier() {
         this.removeOverlay(this.BarrierId);
         this.BarrierId = "";
         this.MaxSpeed = this.status.MaxSpeed;
     }
-    
+
     /**
      * @desc HPを回復する
      * @param {number} amount - 回復量

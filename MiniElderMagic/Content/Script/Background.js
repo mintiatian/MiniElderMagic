@@ -231,12 +231,16 @@ export class Background {
         };
     }
 
+    getGameDifficultyLevel() {
+        return (gameMain.wizard.status.shopBuyCount / 30);
+    }
+
     popDoEnemyFromPawn(delta, Pawn) {
 
         this.popTimer -= delta;
         //console.log(this.popTimer);
         if (this.popTimer <= 0) {
-            this.popTimer = this.PopTimerMax - (gameMain.wizard.status.shopBuyCount / 30);
+            this.popTimer = this.PopTimerMax - this.getGameDifficultyLevel();
             this.popTimer = Math.max(this.PopTimerMin, this.PopTimerMax);
             this.popDoEnemy(Pawn.x, Pawn.y);
         }
@@ -249,7 +253,7 @@ export class Background {
      * @param {number} y ワールド Y 座標
      */
     popDoEnemy(x, y) {
-        const MAX_POP_COUNT = this.MAXBASE_POP_COUNT * (1.0 + gameMain.wizard.status.shopBuyCount / 30);                         // 同時出現上限
+        const MAX_POP_COUNT = this.MAXBASE_POP_COUNT * (1.0 + this.getGameDifficultyLevel());                         // 同時出現上限
 
 
         if (this.CurrentPopCount >= MAX_POP_COUNT) return;
@@ -351,9 +355,10 @@ export class Background {
      * @param {number} c タイル列
      * @param {string} emoji Pop マップに書かれていた絵文字
      * @param {string} extraDropID Pop マップに書かれていた追加Drop情報
+     * @param {bool} isBoss popさせるのはボス
      * @returns {boolean} 生成に成功したか
      */
-    CreateEnemy(r, c, emoji, extraDropID) {
+    CreateEnemy(r, c, emoji, extraDropID, isBoss = false) {
         // 絵文字 → CharacterDataTable 行を検索
         let enemyData = null;
         let enemyId = "INVADER";
@@ -373,8 +378,22 @@ export class Background {
         const worldX = c * this.tile + this.tile * 0.5;
         const worldY = r * this.tile + this.tile * 0.5;
 
-        const enemy = new EnemyBase(worldX, worldY, this.characterLayer, enemyData, extraDropID);
+        let level = this.getGameDifficultyLevel();
+        if (level < 1) {
+            level = 1;
+        }
+        if (isBoss) {
+            level *= 2;
+            level += 5;
+        }
 
+
+        const enemy = new EnemyBase(worldX, worldY, this.characterLayer, enemyData, extraDropID, level);
+
+        if (level >= 1.0) {
+            //enemy.setSize(level);
+        }
+        enemy.setRatioSize(3);
         const enemyAIData = enemyAIDataTable.get(enemyId);
         enemy.SetAIData(enemyAIData);
         enemy.setPlayerTarget(gameMain.wizard);
