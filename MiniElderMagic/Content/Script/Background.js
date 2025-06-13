@@ -16,9 +16,9 @@ import {
     EventDataTable,
     MapEventDataTable,
     ItemDropPopDataTable,
-    ItemDataTable        // ★ 色データテーブル
+    ItemDataTable, eventDataTable        // ★ 色データテーブル
 } from './Utils/DataTable.js';
-
+import { TimerManager } from './Utils/TimerManager.js';
 import {EnemyBase} from './Character/EnemyBase.js';
 import {CharacterDataTable} from './Utils/DataTable.js';
 import {gameMain} from './GameMain.js';
@@ -59,7 +59,8 @@ export class Background {
         this.mapEnemyPop = EnemyPopDataTable.getMap();     // なんのエネミーがPopするかの情報
         this.mapEvent = MapEventDataTable.getMap();
         this.mapItemDropPop = ItemDropPopDataTable.getMap();
-
+        this.TimerManager = new TimerManager();
+        
         this.CurrentPopCount = 0;
         this.MinPopRadius = 300;
         this.MaxPopRadius = 800;
@@ -197,6 +198,10 @@ export class Background {
     // this.CurrentPopCount カウントをリセット
 
     getPlayerStart() {
+        return this.getEventChipPosition('playerstart');
+    }
+
+    getEventChipPosition(event_id = 'playerstart') {
 
         // ① mapEvent 全体を走査して「プレイヤースタート」セルを探す
         for (let r = 0; r < this.rows; ++r) {
@@ -204,15 +209,9 @@ export class Background {
                 const evId = this.mapEvent?.[r]?.[c];
                 if (!evId) continue;
 
-                /* ── チェック方法 ───────────────────────────
-*  a. ID 文字列そのものが "playerStart"（大小無視）
-*  b. EventDataTable に登録があり，mode === 'playerStart'
-*     例: { id:'E001', mode:'playerStart', … }
-*/
-                const isPlayerStartId =
-                    typeof evId === 'string' && evId.toLowerCase() === 'playerstart';
+                const isPlayerStartId = typeof evId === 'string' && evId.toLowerCase() === event_id;
                 const evData = EventDataTable.get(evId);
-                const isPlayerStartMode = evData?.mode === 'playerStart';
+                const isPlayerStartMode = evData?.mode === event_id;
 
                 if (isPlayerStartId || isPlayerStartMode) {
                     return {
@@ -271,8 +270,18 @@ export class Background {
             // マップ範囲外・衝突タイル上は NG
             if (this.isSolidAt(spawnX, spawnY)) continue;
 
-            const pos = this.getTilePos(spawnX, spawnY);
+
+            if(this.popMapEnemy(spawnX,spawnY)){
+
+                break;
+            }
+            else{
+                continue;
+            }
+
+            /*
             const enemyEmoji = this.getMapValue('enemyPop', spawnX, spawnY);   // ←★★ここ
+            
             if (!enemyEmoji) continue;
 
 
@@ -287,6 +296,27 @@ export class Background {
                 ++this.CurrentPopCount;
                 break;
             }
+            */
+        }
+    }
+    
+    popMapEnemy(spawnX,spawnY,isBossLevel = 0){
+
+        const pos = this.getTilePos(spawnX, spawnY);
+        const enemyEmoji = this.getMapValue('enemyPop', spawnX, spawnY);   // ←★★ここ
+        if (!enemyEmoji) return false;
+
+
+        const extraItemEmoji = this.getMapValue('itemDropPop', spawnX, spawnY);
+
+        // ItemデータからIDを取得する
+        const extraDropID = ItemDataTable.getIdByEmoji(extraItemEmoji);
+
+
+        // 生成に成功したらカウントを進めて終了
+        if (this.CreateEnemy(pos.row, pos.col, enemyEmoji, extraDropID,isBossLevel)) {
+            ++this.CurrentPopCount;
+            return true;
         }
     }
 
@@ -355,10 +385,10 @@ export class Background {
      * @param {number} c タイル列
      * @param {string} emoji Pop マップに書かれていた絵文字
      * @param {string} extraDropID Pop マップに書かれていた追加Drop情報
-     * @param {bool} isBoss popさせるのはボス
+     * @param {int} isBossLevel popさせるのはボスのLevel 1:miniboss 2:boss
      * @returns {boolean} 生成に成功したか
      */
-    CreateEnemy(r, c, emoji, extraDropID, isBoss = false) {
+    CreateEnemy(r, c, emoji, extraDropID, isBossLevel = 0) {
         // 絵文字 → CharacterDataTable 行を検索
         let enemyData = null;
         let enemyId = "INVADER";
@@ -378,22 +408,43 @@ export class Background {
         const worldX = c * this.tile + this.tile * 0.5;
         const worldY = r * this.tile + this.tile * 0.5;
 
-        let level = this.getGameDifficultyLevel();
-        if (level < 1) {
-            level = 1;
+        // ゲームの難易度　this.getGameDifficultyLevel()　
+        // isBossLevel　ボスのLevel 1:miniboss 2:boss
+        //   大きさ調整 enemy.setRatioSize
+        // enemy.status.AttackdirRatio 攻撃の広がり
+        if (isBossLevel === 0) {
+            if (Math.random() < 0.01) {
+                isBossLevel = 1;
+            }
         }
-        if (isBoss) {
+
+
+        let level = 7 + this.getGameDifficultyLevel();
+
+        if (isBossLevel === 1) {
+            // min 7
             level *= 2;
             level += 5;
+        } else if (isBossLevel === 2) {
+            // min 12
+            level *= 2;
+            level += 10;
+        } else {
         }
 
 
         const enemy = new EnemyBase(worldX, worldY, this.characterLayer, enemyData, extraDropID, level);
 
-        if (level >= 1.0) {
-            //enemy.setSize(level);
+        enemy.status.AttackdirRatio = 8;
+        if (isBossLevel === 1) {
+            enemy.setRatioSize(2);
+            enemy.status.AttackdirRatio = 14;
+        } else if (isBossLevel === 2) {
+            enemy.setRatioSize(8);
+            enemy.status.AttackdirRatio = 8;
+        } else {
+            enemy.setRatioSize(this.calcLevelSize(level));
         }
-        enemy.setRatioSize(3);
         const enemyAIData = enemyAIDataTable.get(enemyId);
         enemy.SetAIData(enemyAIData);
         enemy.setPlayerTarget(gameMain.wizard);
@@ -405,6 +456,21 @@ export class Background {
         return true;
     }
 
+    /**
+     * level を 1-10 ➔ 1.00-1.20 に線形マッピングし、
+     * 11 以上は 12 とするユーティリティ。
+     */
+    calcLevelSize(level) {
+        // 1 未満は 1 に丸める
+        if (level < 1) return 1;
+
+        // 11 以上は固定値
+        if (level > 10) return 12;   // ← もし「1.2」の書き間違いなら 1.2 に変えてください
+
+        // 1～10 を 1.00～1.20 に線形変換
+        // 係数 0.2/9 ≒ 0.022222… で 1 → 1.00, 10 → 1.20
+        return 1 + (level - 1) * (0.2 / 9);
+    }
 
     /**
      * @param {number}  x
@@ -466,5 +532,32 @@ export class Background {
 
         this.popDoEnemyFromPawn(delta, gameMain.wizard);
 
+        // ExEventの処理
+        this.checkExEvent(delta);
+
+        // タイマー処理
+        this.TimerManager.update(delta);
+    }
+    
+    checkExEvent(delta){
+
+        const event = this.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
+        if (event !== null) {
+            //console.log(event);
+            if (eventDataTable.table.has(event)) {
+                const eventData = eventDataTable.get(event);
+                if (eventData.type === "exevent") {
+                    switch (eventData.mode) {
+                        case "boss1":
+                            if(this.TimerManager.start('boss1', eventData.value)){
+                                console.log("boss1");
+                                const pos = this.getEventChipPosition('Boss1_Pop');
+                                this.popMapEnemy(pos.x, pos.y,2);
+                                break;
+                            }
+                    }
+                }
+            }
+        }
     }
 }

@@ -174,8 +174,12 @@ export class UIHud extends UIBase {
             //console.log(event);
             if(eventDataTable.table.has(event)){
                 const eventData = eventDataTable.get(event);
-                
-                this.tabSpan.textContent = "TAB : "+eventData.type+" - "+eventData.mode;
+                if(eventData.type === "exevent"){
+                    
+                }
+                else{
+                    this.tabSpan.textContent = "TAB : "+eventData.type+" - "+eventData.mode;
+                }
             }
         }
         /*

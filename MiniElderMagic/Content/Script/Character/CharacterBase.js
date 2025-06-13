@@ -78,15 +78,15 @@ export class CharacterBase extends Character {
 
             this.status.deffence = this.charaData.deffence * ratio;
 
-            this.status.MaxSpeed = this.charaData.MaxSpeed * ratio;
+            this.status.MaxSpeed = this.charaData.MaxSpeed * this.mapRangeClamped(ratio, 1, 10, 1.0, 1.5);
             this.MaxSpeed = this.status.MaxSpeed;
 
             this.status.attackPierceCount = this.charaData.attackPierceCount * ratio;
             this.status.HomingRadius = this.charaData.HomingRadius * ratio;
             this.status.HomingPower = this.charaData.HomingPower * ratio;
             this.status.AddLifeTime = this.charaData.AddLifeTime * ratio;
-            this.status.FireCnt1 = this.charaData.FireCnt1 * ratio;
-            this.status.FireCnt2 = this.charaData.FireCnt2 * ratio;
+            this.status.FireCnt1 = this.charaData.FireCnt1 * this.mapRangeClamped(ratio, 1, 10, 1.0, 16);
+            this.status.FireCnt2 = this.charaData.FireCnt2 * this.mapRangeClamped(ratio, 1, 10, 1.0, 16);
 
             this.status.UseMP = this.charaData.UseMP;
             this.status.AddMaxSpeed = this.charaData.AddMaxSpeed * ratio;
@@ -111,6 +111,12 @@ export class CharacterBase extends Character {
         }
 
         this.SettingMagicData();
+    }
+
+    mapRangeClamped(value, inMin, inMax, outMin, outMax) {
+        if (value <= inMin) return outMin;        // 下限でクランプ
+        if (value >= inMax) return outMax;        // 上限でクランプ
+        return outMin + (value - inMin) * (outMax - outMin) / (inMax - inMin);
     }
 
     SetupHPGage() {
