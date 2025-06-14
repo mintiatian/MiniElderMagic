@@ -99,7 +99,7 @@ export class UIStatus extends UIBase{
             { name: '🎯誘導範囲',       value: `${this.wizard.status.HomingRadius}`,            color: 'white' },
             { name: '🧲誘導補正',       value: `${this.shosuu(this.wizard.status.HomingPower,1)}`,             color: 'white' },
             { name: '📡射程', value: `${this.wizard.status.AddLifeTime}`, color: 'white' },
-            { name: '📒魔法個数', value: (this.wizard.status.FireCnt1+this.wizard.status.FireCnt2), color: 'white' },
+            { name: '📒魔法個数', value: (this.wizard.status.FireCnt1), color: 'white' },
 
             { name: '🚀魔法速度',       value: `${this.shosuu(this.wizard.status.AddMaxSpeed,1)}`,             color: 'white' },
             { name: '🔋使用魔力',       value: `${this.wizard.status.UseMP}`,                  color: 'white' },

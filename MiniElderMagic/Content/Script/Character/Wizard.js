@@ -781,7 +781,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             // 発射方向を解放
 
 
-            this.Fire(this.status.FireCnt1, this.status.FireCnt2, staffPos);
+            this.Fire(this.status.FireCnt1, staffPos);
 
 
             this.createCastEffect(staffPos);
@@ -801,10 +801,8 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             } else {
                 this.status.AttackdirRatio -= 0.1;
             }
-            this.status.AttackdirRatio = Math.max(0, Math.min(2, this.status.AttackdirRatio));
+            this.status.AttackdirRatio = Math.max(0, Math.min(1, this.status.AttackdirRatio));
         } else {
-
-
             if (evt.deltaY < 0) {
                 // 上スクロール（マジックインデックスを1つ前へ）
                 this.lastPressedMagicIndex--;

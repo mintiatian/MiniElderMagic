@@ -125,7 +125,7 @@ export class CharacterDataTable {
                     deffence,
                     attackMagic,attack,
                     attackPierceCount,HomingRadius,HomingPower,AddLifeTime,
-                    FireCnt1,FireCnt2,UseMP,AddMaxSpeed,
+                    FireCnt1,UseMP,AddMaxSpeed,
                     RegistFIREBALL,
                     RegistICE,
                     RegistLIGHTNING,
@@ -158,7 +158,6 @@ export class CharacterDataTable {
         this.AddLifeTime = Number(AddLifeTime);
 
         this.FireCnt1 = Number(FireCnt1);
-        this.FireCnt2 = Number(FireCnt2);
         this.UseMP = Number(UseMP);
         this.AddMaxSpeed = Number(AddMaxSpeed);
         

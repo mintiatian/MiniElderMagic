@@ -31,7 +31,6 @@ export class Status {
         this.HomingPower = 0;
         this.AddLifeTime = 0;
         this.FireCnt1 = 0;
-        this.FireCnt2 = 0;
         this.UseMP = 0;
         this.AddMaxSpeed = 0;
         
@@ -53,21 +52,14 @@ export class Status {
         this.RegistTRIDENTTHRUST = 0;
         this.RegistSHIELDBASH = 0;
 
-        this.MagicLevelDirFlag = true;
         this.AttackdirRatio = 1;
         
         this.shopBuyCount = 0;
     }    
 
     addMagicLevelUp() {
-        if(this.MagicLevelDirFlag){
-            this.FireCnt1++;
-            this.MagicLevelDirFlag = false;
-        }
-        else{
-            this.FireCnt2 ++;
-            this.MagicLevelDirFlag = true;
-        }
+
+        this.FireCnt1++;
     }
 
     /**

@@ -418,8 +418,7 @@ export class Background {
             }
         }
 
-
-        let level = 7 + this.getGameDifficultyLevel();
+        let level =　1 + this.getGameDifficultyLevel();
 
         if (isBossLevel === 1) {
             // min 7
@@ -434,19 +433,19 @@ export class Background {
 
 
         const enemy = new EnemyBase(worldX, worldY, this.characterLayer, enemyData, extraDropID, level);
-
-        enemy.status.AttackdirRatio = 8;
+        
+        enemy.status.AttackdirRatio = 1;
         if (isBossLevel === 1) {
+            enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
             enemy.setRatioSize(2);
-            enemy.status.AttackdirRatio = 14;
+            //enemy.status.AttackdirRatio = 14;
         } else if (isBossLevel === 2) {
+            enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
             enemy.setRatioSize(8);
-            enemy.status.AttackdirRatio = 8;
+            //enemy.status.AttackdirRatio = 8;
         } else {
             enemy.setRatioSize(this.calcLevelSize(level));
         }
-        const enemyAIData = enemyAIDataTable.get(enemyId);
-        enemy.SetAIData(enemyAIData);
         enemy.setPlayerTarget(gameMain.wizard);
 
         enemy.on('destroyed', enemy => {

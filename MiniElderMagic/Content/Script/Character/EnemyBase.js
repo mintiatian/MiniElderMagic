@@ -3,10 +3,11 @@ import {FireBall} from '../FireBall.js';
 import {CharacterBase} from "./CharacterBase.js";
 import {EventEmitterMixin} from "../Base/EventEmitterMixin.js";
 import {DebugMovementLogger} from '../Utils/DebugMovementLogger.js';
+import {enemyAIDataTable, enemyDataTable} from "../Utils/DataTable.js";
 
 export class EnemyBase extends EventEmitterMixin(CharacterBase) {
-    constructor(x, y, parentElement, charaData, extraDropID,ratio) {
-        super(x, y, parentElement, charaData,ratio);
+    constructor(x, y, parentElement, charaData, extraDropID, ratio) {
+        super(x, y, parentElement, charaData, ratio);
 
         this.parentElement = parentElement;
         this.hasDroppedCoins = false;           // コインをドロップしたかのフラグ
@@ -38,17 +39,30 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         /* ==== 追加 ==== */
         this._log = new DebugMovementLogger();
         this._time = 0;          // 経過秒
+
+        const enemyId = enemyDataTable.getIdByEmoji(charaData.emoji);
+        const enemyAIData = enemyAIDataTable.get(enemyId);
+        this.SetAIData(enemyAIData);
     }
 
     setRatioSize(ratio) {
         super.setSize(this.CHAR_SIZE * ratio);
-    }
-    SetAIData(enemyAIData) {
-        this.enemyAIData = enemyAIData;
 
-        console.log(this.enemyAIData.attackRange,this.enemyAIData.attacknearRange);
+
+        this.status.AddLifeTime *= ratio;
+        this.enemyAIData.detectionRadius *= ratio;
+        this.enemyAIData.attackRange *= ratio;
+        this.enemyAIData.attacknearRange *= ratio;
     }
-    
+
+    SetAIData(enemyAIData) {
+        // スプレッド構文を使って新しいオブジェクトを作成し、プロパティをコピーする
+        this.enemyAIData = {...enemyAIData};
+
+
+        console.log(this.enemyAIData.attackRange, this.enemyAIData.attacknearRange);
+    }
+
 
     /**
      * @desc プレイヤーの参照を設定する
@@ -69,48 +83,46 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
     update(delta) {
         /* ===== データテーブル → 定数化 ============================== */
         // ── EnemyAIData 由来 ───────────────────────────
-        const DETECTION_RADIUS      = this.enemyAIData.detectionRadius;
-        const ATTACK_RANGE          = this.enemyAIData.attackRange;
-        
-        
-        const ATTACK_NEAR_RANGE     = this.enemyAIData.attacknearRange;
-        const ATTACK_COOLDOWN_MS    = this.enemyAIData.attackCooldown;
-        const DROP_COIN_COUNT       = this.enemyAIData.coinDropCount;
+        const DETECTION_RADIUS = this.enemyAIData.detectionRadius;
+        const ATTACK_RANGE = this.enemyAIData.attackRange;
+        const ATTACK_NEAR_RANGE = this.enemyAIData.attacknearRange;
+
+        const ATTACK_COOLDOWN_MS = this.enemyAIData.attackCooldown;
+        const DROP_COIN_COUNT = this.enemyAIData.coinDropCount;
 
         // ── CharaData 由来（現ロジックでは未使用だが宣言だけしておく） ──
-        const CHAR_MAX_SPEED        = this.charaData.MaxSpeed;
-        const CHAR_HP_MAX           = this.charaData.hp;
-        const CHAR_MP_MAX           = this.charaData.mp;
-        const CHAR_DEFENCE          = this.charaData.deffence;
+        const CHAR_MAX_SPEED = this.charaData.MaxSpeed;
+        const CHAR_HP_MAX = this.charaData.hp;
+        const CHAR_MP_MAX = this.charaData.mp;
+        const CHAR_DEFENCE = this.charaData.deffence;
         /* ============================================================ */
 
         /* ===== 既存の AI 固有定数（確率・閾値など） ================== */
-        const BARRIER_HP_THRESHOLD   = this.enemyAIData.BARRIER_HP_THRESHOLD;    // HP が 10% 未満で発動候補
-        const BARRIER_PROBABILITY    = this.enemyAIData.BARRIER_PROBABILITY;    // 1% でバリア貼り
-        const BARRIER_DURATION_MS    = this.enemyAIData.BARRIER_DURATION_MS;    // バリア持続 2 秒
+        const BARRIER_HP_THRESHOLD = this.enemyAIData.BARRIER_HP_THRESHOLD;    // HP が 10% 未満で発動候補
+        const BARRIER_PROBABILITY = this.enemyAIData.BARRIER_PROBABILITY;    // 1% でバリア貼り
+        const BARRIER_DURATION_MS = this.enemyAIData.BARRIER_DURATION_MS;    // バリア持続 2 秒
 
-        const MODE_ORBIT_PROB        = this.enemyAIData.MODE_ORBIT_PROB;    // 周回モード選択確率
-        const MODE_TIMER_MIN_MS      = this.enemyAIData.MODE_TIMER_MIN_MS;     // 再抽選 0.5–1.2 秒
-        const MODE_TIMER_MAX_MS      = this.enemyAIData.MODE_TIMER_MAX_MS;
+        const MODE_ORBIT_PROB = this.enemyAIData.MODE_ORBIT_PROB;    // 周回モード選択確率
+        const MODE_TIMER_MIN_MS = this.enemyAIData.MODE_TIMER_MIN_MS;     // 再抽選 0.5–1.2 秒
+        const MODE_TIMER_MAX_MS = this.enemyAIData.MODE_TIMER_MAX_MS;
 
-        const APPROACH_ANGLE_JITTER  = this.enemyAIData.APPROACH_ANGLE_JITTER;     // 接近時のブレ（±0.1 rad）
-        const APPROACH_ACCEL         = this.enemyAIData.APPROACH_ACCEL;    // 接近加速
-        const RETREAT_ACCEL          = this.enemyAIData.RETREAT_ACCEL;    // 退却加速
+        const APPROACH_ANGLE_JITTER = this.enemyAIData.APPROACH_ANGLE_JITTER;     // 接近時のブレ（±0.1 rad）
+        const APPROACH_ACCEL = this.enemyAIData.APPROACH_ACCEL;    // 接近加速
+        const RETREAT_ACCEL = this.enemyAIData.RETREAT_ACCEL;    // 退却加速
 
-        const ORBIT_RADIUS= this.enemyAIData.ORBIT_RADIUS;
-        const ORBIT_DIFF_THRESHOLD   = this.enemyAIData.ORBIT_DIFF_THRESHOLD;       // 半径補正開始距離
-        const ORBIT_CORRECT_ACCEL    = this.enemyAIData.ORBIT_CORRECT_ACCEL;     // 内外補正用加速
-
-        const EXIT_DISTANCE_LIMIT    = this.enemyAIData.EXIT_DISTANCE_LIMIT;    // 退場判定距離
+        const ORBIT_RADIUS = this.enemyAIData.ORBIT_RADIUS;
+        const ORBIT_DIFF_THRESHOLD = this.enemyAIData.ORBIT_DIFF_THRESHOLD;       // 半径補正開始距離
+        const ORBIT_CORRECT_ACCEL = this.enemyAIData.ORBIT_CORRECT_ACCEL;     // 内外補正用加速
+        const EXIT_DISTANCE_LIMIT = this.enemyAIData.EXIT_DISTANCE_LIMIT;    // 退場判定距離
         /* ============================================================ */
 
         super.update(delta);                    // アニメ / クールダウン等
 
         // ── 毎フレーム共通パラメータ ──────────────────
         this._time += delta;
-        let accel  = 0;                         // 前後入力 –1…+1
+        let accel = 0;                         // 前後入力 –1…+1
         let strafe = 0;                         // 左右入力 –1…+1
-        let rad    = this.radian;               // 向き（ラジアン）
+        let rad = this.radian;               // 向き（ラジアン）
 
         // ── バリア寿命チェック ────────────────────────
         if (this._hasBarrier && (this._barrierTimer -= delta) <= 0) {
@@ -123,8 +135,8 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         // ────────────────────────────────────────────
         if (this.status.hp > 0 && this.playerTarget) {
             /* --------- 基本計算 --------- */
-            const dx   = this.playerTarget.x - this.x;
-            const dy   = this.playerTarget.y - this.y;
+            const dx = this.playerTarget.x - this.x;
+            const dy = this.playerTarget.y - this.y;
             const dist = Math.hypot(dx, dy);
             const toPlayerRad = Math.atan2(dy, dx);
 
@@ -136,26 +148,26 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
                 Math.random() < BARRIER_PROBABILITY
             ) {
                 this.AddBarrier();
-                this._hasBarrier   = true;
+                this._hasBarrier = true;
                 this._barrierTimer = BARRIER_DURATION_MS;
             }
 
             /* --------- モード抽選タイマー --------- */
             if ((this._modeTimer -= delta) <= 0) {
-                this._moveMode  = Math.random() < MODE_ORBIT_PROB ? "orbit" : "approach";
-                this._orbitDir  = Math.random() < 0.5 ? +1 : -1;      // CW / CCW
+                this._moveMode = Math.random() < MODE_ORBIT_PROB ? "orbit" : "approach";
+                this._orbitDir = Math.random() < 0.5 ? +1 : -1;      // CW / CCW
                 const random = Math.random();
                 this._modeTimer = MODE_TIMER_MIN_MS +
                     random * (MODE_TIMER_MAX_MS - MODE_TIMER_MIN_MS);
-                
+
                 //if (this._modeTimer < 0);
 //                console.log("modeChange :  --------------------- ",this._modeTimer);
             }
- //           console.log("modeTimer : ",this._modeTimer);
+            //           console.log("modeTimer : ",this._modeTimer);
 
             /* ──────────────── A. approach ──────────────── */
             if (this._moveMode === "approach") {
-                rad    = toPlayerRad + (Math.random() - 0.5) * APPROACH_ANGLE_JITTER;
+                rad = toPlayerRad + (Math.random() - 0.5) * APPROACH_ANGLE_JITTER;
                 strafe = 0;
 
                 // 距離に応じた前後アクセル
@@ -171,7 +183,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
 
             /* ──────────────── B. orbit ──────────────── */
             else if (this._moveMode === "orbit") {
-                rad    = toPlayerRad;                     // 常に正面
+                rad = toPlayerRad;                     // 常に正面
                 strafe = this._orbitDir;                  // ±1 で周回
 
                 // 半径補正（膨らみ過ぎ・詰まり過ぎを前後入力で微修正）
@@ -209,7 +221,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         // ③ 退場距離チェック
         // ────────────────────────────────────────────
         if (this.playerTarget) {
-            const { x: px, y: py } = this.playerTarget.getPlayerPosition();
+            const {x: px, y: py} = this.playerTarget.getPlayerPosition();
             const dd = (px - this.x) ** 2 + (py - this.y) ** 2;
             if (dd >= EXIT_DISTANCE_LIMIT ** 2) {
                 if (this._hasBarrier) {
@@ -229,13 +241,11 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         // ────────────────────────────────────────────
         // ④ MoveBase へパラメータ反映 → 実際の移動
         // ────────────────────────────────────────────
-        this.radian       = rad;
+        this.radian = rad;
         this.acceleration = accel;
-        this.strafe       = strafe;
+        this.strafe = strafe;
         // this.mover.moveUpdate(delta);  // ★ MoveBase 使用時は有効化
     }
-
-
 
 
     dumpMovementLog() {
@@ -284,6 +294,10 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         if (!this.playerTarget || this.status.hp <= 0) {
             return false;
         }
+        
+        const attackRatios = [0.25, 0.5, 0.75, 1];  // 候補となる値を配列にまとめる
+        const randomIndex = Math.floor(Math.random() * attackRatios.length);    // 配列のインデックスをランダムに生成する (0, 1, 2, 3のいずれか)
+        this.status.AttackdirRatio = attackRatios[randomIndex];         // ランダムに選ばれた値を設定する
 
         // 現在の時間を取得
         const currentTime = Date.now();
@@ -308,7 +322,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
             const normalizedDy = dy / distance;
 
             this.radian = Math.atan2(normalizedDy, normalizedDx);
-            this.Fire(this.status.FireCnt1, this.status.FireCnt2, this.getPosition());
+            this.Fire(this.status.FireCnt1, this.getPosition());
 
             return true;
         }

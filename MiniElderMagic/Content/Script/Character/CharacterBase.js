@@ -26,34 +26,56 @@ export class CharacterBase extends Character {
     }
 
 
-    Fire(attack1, attack2, staffPos) {
-
+    /**
+     * 魔法を発射する。
+     * 最大攻撃範囲(MAX_SPREAD_ANGLE)内で、指定された数の弾が均等かつ対称に発射される。
+     * @param {number} totalBullets - 発射する弾の総数。
+     * @param {object} staffPos - 発射する初期位置 {x, y}。
+     */
+    Fire(totalBullets, staffPos) {
         if (this.status.mp >= this.MagicData.useMP + this.status.UseMP) {
             this.status.useMP(this.MagicData.useMP + this.status.UseMP);
         } else {
             return;
         }
+        this.Fire2(totalBullets, staffPos);
+    }
 
 
-        //console.log("Fire!! 06");
-        for (let i = 0; i < attack1; i++) {
+    /**
+     * 魔法を発射する。
+     * 弾数が1の場合は必ず正面に、複数発の場合は対称に発射されるよう修正済み。
+     * @param {number} totalBullets - 発射する弾の総数。
+     * @param {object} staffPos - 発射する初期位置 {x, y}。
+     */
+    Fire2(totalBullets, staffPos) {
 
-            //console.log("Fire!! 07");
+        const MAX_SPREAD_ANGLE = Math.PI * 2; // 例: 90度
+        const ratio = Math.max(0, Math.min(1, this.status.AttackdirRatio));
+
+        // 1つのループで全ての弾を生成・発射
+        for (let i = 0; i < totalBullets; i++) {
+            let bulletDir;
+
+            // ▼▼▼ ここからが修正部分です ▼▼▼
+
+            if (totalBullets === 1) {
+                // 【修正点】弾が1つしかない場合は、計算を行わず必ず正面を向ける
+                bulletDir = this.radian;
+            } else {
+                // 弾が2つ以上の場合にのみ、対称配置の計算を行う
+                const currentSpreadAngle = MAX_SPREAD_ANGLE * ratio;
+                const angleIncrement = currentSpreadAngle / (totalBullets - 1);
+                const startAngle = this.radian - (currentSpreadAngle / 2);
+                bulletDir = startAngle + (i * angleIncrement);
+            }
+
+            // ▲▲▲ ここまでが修正部分です ▲▲▲
+
             const newMagic = new MagicBase(staffPos.x, staffPos.y, this.MagicData, this.parentElement);
-
-            newMagic.setDir(this.radian + ((i * 0.1) * this.status.AttackdirRatio));
+            newMagic.setDir(bulletDir);
             newMagic.setAcceleration(1);
             newMagic.setOwner(this);
-
-        }
-        for (let i = 1; i < (attack2 + 1); i++) {
-
-            const newMagic = new MagicBase(staffPos.x, staffPos.y, this.MagicData, this.parentElement);
-
-            newMagic.setDir(this.radian - ((i * 0.1) * this.status.AttackdirRatio));
-            newMagic.setAcceleration(1);
-            newMagic.setOwner(this);
-
         }
     }
 
@@ -85,8 +107,7 @@ export class CharacterBase extends Character {
             this.status.HomingRadius = this.charaData.HomingRadius * ratio;
             this.status.HomingPower = this.charaData.HomingPower * ratio;
             this.status.AddLifeTime = this.charaData.AddLifeTime * ratio;
-            this.status.FireCnt1 = this.charaData.FireCnt1 * this.mapRangeClamped(ratio, 1, 10, 1.0, 16);
-            this.status.FireCnt2 = this.charaData.FireCnt2 * this.mapRangeClamped(ratio, 1, 10, 1.0, 16);
+            this.status.FireCnt1 = this.charaData.FireCnt1 * ratio;
 
             this.status.UseMP = this.charaData.UseMP;
             this.status.AddMaxSpeed = this.charaData.AddMaxSpeed * ratio;
