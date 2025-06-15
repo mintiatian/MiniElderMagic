@@ -1,8 +1,10 @@
 ﻿export class BaseScene {
     /** DOM 参照などをコンストラクタで受け取る */
-    constructor(gameArea, uiLayer) {
-        this.gameArea  = gameArea;
-        this.uiLayer   = uiLayer;
+    constructor(gameArea, gameUiLayer) {
+        this.gameArea = gameArea;
+        this.gameUiLayer = gameUiLayer;
+
+
     }
     /** 非同期リソース読み込み等が必要ならここで */
     async init() {}

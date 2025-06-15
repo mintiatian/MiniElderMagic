@@ -24,10 +24,11 @@ import {
     EventTileDataTable, EventDataTable, MapEventDataTable, ItemDropPopDataTable,
 } from "../Utils/DataTable.js";
 import {UIItemList} from "../UI/UIItemList.js";
+import {BaseScene} from './BaseScene.js';
 
 export let gameMainScene = null;
 
-export class GameMainScene {
+export class GameMainScene extends BaseScene {
 
     gameArea;
     background;
@@ -46,21 +47,23 @@ export class GameMainScene {
     FPS;
     FRAME_TIME; // 1000ms ÷ 60fps ≈ 16.6667ms
 
-    initCount() {
-        ++this._loadedCount;
-        console.log("MasterLoad : ", this._loadedCount, " / ", this._totalToLoad)
-        if (this._loadedCount === this._totalToLoad) {
-            this.init();                      // ← ここで後続処理
-        }
-    }
+    
 
     constructor(gameArea, gameUiLayer) {
         /* ───── 基本セットアップ ───── */
 
+        super(gameArea, gameUiLayer);
         this.gameUiLayer = gameUiLayer;
         this.gameArea = gameArea;
         /* === カメラ初期化 (#game-area を渡す) === */
         this.camera = new Camera(this.gameArea);
+
+
+    }
+
+    async _loadTables() {
+
+
         /* ───── 非同期テーブル読込 ───── */
         const urls = {
             magic: 'https://docs.google.com/spreadsheets/d/14KPqmm0KQ-wlcgV-WMGqlqIwCCoz94hI8InyBMPmJdA/export?format=csv',
@@ -82,23 +85,31 @@ export class GameMainScene {
         this._loadedCount = 0;            // 進捗カウンター
         this._totalToLoad = Object.keys(urls).length;            // 期待ロード数
 
-        MagicDataTable.init(urls.magic).then(() => this.initCount());
-        ItemDataTable.init(urls.item).then(() => this.initCount());
-        EnemyDataTable.init(urls.enemy).then(() => this.initCount());
-        WizardDataTable.init(urls.wizard).then(() => this.initCount());
-        EnemyAIDataTable.init(urls.enemyai).then(() => this.initCount());
-        MapDataTable.init(urls.mapChip).then(() => this.initCount());
+        const jobs = [
+            MagicDataTable.init(urls.magic),
+            ItemDataTable.init(urls.item),
+            EnemyDataTable.init(urls.enemy),
+            WizardDataTable.init(urls.wizard),
+            EnemyAIDataTable.init(urls.enemyai),
+            MapDataTable.init(urls.mapChip),
+            MapColorDataTable.init(urls.mapColor),
+            EnemyPopDataTable.init(urls.mapEnemyPop),
+            MapEventDataTable.init(urls.mapEvent),
+            ItemDropPopDataTable.init(urls.mapDropPopItem),
+            EventTileDataTable.init(urls.eventTile),
+            EventDataTable.init(urls.event),
+        ];
 
-        MapColorDataTable.init(urls.mapColor).then(() => this.initCount());
-        EnemyPopDataTable.init(urls.mapEnemyPop).then(() => this.initCount());
-        MapEventDataTable.init(urls.mapEvent).then(() => this.initCount());
-        ItemDropPopDataTable.init(urls.mapDropPopItem).then(() => this.initCount());
-
-        EventTileDataTable.init(urls.eventTile).then(() => this.initCount());
-        EventDataTable.init(urls.event).then(() => this.initCount());
+        // すべて終わるまで待つ (失敗があれば catch で拾う)
+        await Promise.all(jobs);
     }
 
-    init() {
+    async init() {         // SceneManager が await
+        await this._loadTables();
+        this._setupGame(); // 旧 init() 本体
+    }
+
+    _setupGame() {
 
         gameMainScene = this;
 
@@ -110,7 +121,6 @@ export class GameMainScene {
 
         const playerStartPosition = this.background.getPlayerStart();
         this.wizard = new Wizard(playerStartPosition.x, playerStartPosition.y, this.CharacterLayer, wizardDataTable.get("Wizard1"));
-
 
 
         // HUDの生成
@@ -125,7 +135,6 @@ export class GameMainScene {
         this.magicUI = new UIMagic(this.gameUiLayer, this.wizard);
         const itemList = new UIItemList(this.gameUiLayer, this.wizard);
         //magicUI.update();
-
 
 
         this.EventDialog = new UIEventDialog(this.gameUiLayer);
@@ -310,6 +319,10 @@ export class GameMainScene {
     getPawnsByClass(BaseClass) {
         return this.pawns.filter(pawn => pawn instanceof BaseClass);
     }
-    
 
+    onEnter() {
+    }
+
+    onExit() {
+    }
 }

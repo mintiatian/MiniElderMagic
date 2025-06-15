@@ -1,10 +1,15 @@
-﻿export class SceneManager {
+﻿
+export let SceneManagerInstance = null;
+
+export class SceneManager {
     constructor(gameArea, uiLayer) {
         this.gameArea = gameArea;
         this.uiLayer  = uiLayer;
         this.current  = null;
         this._last = performance.now();
         requestAnimationFrame(this._loop.bind(this));
+
+        SceneManagerInstance = this;
     }
 
     async change(newScene) {
