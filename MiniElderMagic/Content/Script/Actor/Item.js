@@ -1,7 +1,7 @@
 import {Actor} from '../Base/Actor.js';
 import {CollisionType} from "../Base/Pawn.js";
 import {itemDataTable} from "../Utils/DataTable.js";
-import {gameMain} from '../GameMain.js';
+import {gameMainScene} from "../Scene/GameMainScene.js";
 
 export class Item extends Actor {
     /**
@@ -71,7 +71,7 @@ export class Item extends Actor {
 
     TriggerBegin(other) {
         super.TriggerBegin(other);
-        if (other.emoji === gameMain.wizard.emoji) {
+        if (other.emoji === gameMainScene.wizard.emoji) {
 
             other.addItem(this.DropItemData);
 

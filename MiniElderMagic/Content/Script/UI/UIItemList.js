@@ -1,7 +1,7 @@
 ﻿/* UIItemList.js ----------------------------------------------------------- */
 import {UIBase} from './UIBase.js';
 import {eventDataTable, eventTileDataTable, itemDataTable} from '../Utils/DataTable.js';
-import {gameMain} from '../GameMain.js';
+import {gameMainScene} from "../Scene/GameMainScene.js";
 
 /**
  * ショップ UI  ― タイトル／コイン表示／フィルターバー／アイテムグリッド
@@ -24,8 +24,8 @@ export class UIItemList extends UIBase {
                     this.wizard.playerstatus.coins -= cost;
                     this.wizard.addItem(item);
                     this.wizard.status.shopBuyCount++;
-                    gameMain.statusUI.updateDisplay();
-                    gameMain.magicUI.updateDisplay();
+                    gameMainScene.statusUI.updateDisplay();
+                    gameMainScene.magicUI.updateDisplay();
                     this.updateDisplay();
                 }
             }
@@ -34,7 +34,7 @@ export class UIItemList extends UIBase {
                     const cost = Number(item.shopcost);
                     this.wizard.changeItemCount(item.emoji, -1);        // アイテム削除
                     this.wizard.changeItemCount("🪙", cost);         // コイン加算
-                    gameMain.statusUI.updateDisplay();
+                    gameMainScene.statusUI.updateDisplay();
                     this.updateDisplay();
                 }
             }
@@ -281,7 +281,7 @@ export class UIItemList extends UIBase {
     show() {
 
 
-        const event = gameMain.background.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
+        const event = gameMainScene.background.getMapValue("event", gameMainScene.wizard.x, gameMainScene.wizard.y);
 
         if (event !== null) {
             if (eventDataTable.table.has(event)) {

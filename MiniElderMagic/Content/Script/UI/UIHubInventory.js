@@ -11,7 +11,7 @@
  * ------------------------------------------------------------------------- */
 
 import { UIBase } from './UIBase.js';
-import {gameMain} from "../GameMain.js";
+import {gameMainScene} from "../Scene/GameMainScene.js";
 
 export class UIHubInventory extends UIBase {
     /**
@@ -188,38 +188,38 @@ export class UIHubInventory extends UIBase {
     useItem(index, emoji) {
         switch (emoji) {
             case "🍄":
-                gameMain.wizard.status.heal(30);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(30);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🍞":
-                gameMain.wizard.status.heal(80);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(80);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🍗":
-                gameMain.wizard.status.heal(150);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(150);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🍎":
-                gameMain.wizard.status.heal(20);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(20);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🧀":
-                gameMain.wizard.status.heal(120);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(120);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🥛":
-                gameMain.wizard.status.heal(80);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(80);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🥘":
-                gameMain.wizard.status.heal(300);
-                gameMain.statusUI.updateDisplay();
+                gameMainScene.wizard.status.heal(300);
+                gameMainScene.statusUI.updateDisplay();
                 this.consume(index);
                 break;
             case "🧿":

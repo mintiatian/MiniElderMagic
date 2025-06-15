@@ -2,7 +2,9 @@ import {PlayerStatus} from "./playerStatus.js";
 import {STAFF_SIZE} from '../GameData.js';
 import {CharacterBase} from "./CharacterBase.js";
 import {RangeCircleMixin} from "../Base/RangeCircleMixin.js";
-import {gameMain} from "../GameMain.js";
+import {gameMainScene} from "../Scene/GameMainScene.js";
+
+import {UIHubInventory} from '../UI/UIHubInventory.js';
 
 export class Wizard extends RangeCircleMixin(CharacterBase) {
     constructor(x, y, parentElement, charaData) {
@@ -88,7 +90,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
         document.addEventListener('mousedown', this.mouseDownHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
-
+        this.teamId = 'player';         // ★追加
         this.clientX = 0;
         this.clientY = 0;
         /* ===== ビューポート → ワールド座標へ変換 ===== */
@@ -108,9 +110,25 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.IsActive = false;
         this.SettingMagicData();
 
-        this.CircleCreate(gameMain.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
-        this.CircleCreate(gameMain.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
+        this.CircleCreate(gameMainScene.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
+        this.CircleCreate(gameMainScene.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
 
+
+        this.Inventory = new UIHubInventory(gameMainScene.gameUiLayer);
+        this.Inventory.show();
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍄");
+        this.Inventory.addItem("🍞");
+
+        this.Inventory.addItem("⛵");
+//        this.Inventory.addItem("🦅");
+//        this.Inventory.addItem("🛷");
+//        this.Inventory.addItem("🐫");
+//        this.Inventory.addItem("🐦");
         //this.changeShip();
     }
 
@@ -277,41 +295,47 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
     changeShip() {
 
-        const ch = gameMain.background.getMapValue("tile", this.x, this.y);
+        const ch = gameMainScene.background.getMapValue("tile", this.x, this.y);
 
-        if (gameMain.background.DECOR_TILES_VOLCANO.has(ch)) {
-            if(gameMain.Inventory.hasItem("🐦",1)) {
+        if (gameMainScene.background.DECOR_TILES_VOLCANO.has(ch)) {
+            if(this.Inventory.hasItem("🐦",1)) {
                 this.emoji = '🐦';
-                this.element.textContent = this.emoji;
+                //this.element.textContent = this.emoji;
+                this.face.textContent = this.emoji;
             }
         }
-        else if (gameMain.background.DECOR_TILES_DESERT.has(ch)) {
-            if(gameMain.Inventory.hasItem("🐫",1)) {
+        else if (gameMainScene.background.DECOR_TILES_DESERT.has(ch)) {
+            if(this.Inventory.hasItem("🐫",1)) {
                 this.emoji = '🐫';
-                this.element.textContent = this.emoji;
+                //this.element.textContent = this.emoji;
+                this.face.textContent = this.emoji;
             }
         }
-        else if (gameMain.background.DECOR_TILES_ICE.has(ch)) {
-            if(gameMain.Inventory.hasItem("🛷",1)) {
+        else if (gameMainScene.background.DECOR_TILES_ICE.has(ch)) {
+            if(this.Inventory.hasItem("🛷",1)) {
                 this.emoji = '🛷';
-                this.element.textContent = this.emoji;
+                //this.element.textContent = this.emoji;
+                this.face.textContent = this.emoji;
             }
         }
-        else if (gameMain.background.DECOR_TILES_SEA.has(ch)) {
-            if(gameMain.Inventory.hasItem("⛵",1)) {
+        else if (gameMainScene.background.DECOR_TILES_SEA.has(ch)) {
+            if(this.Inventory.hasItem("⛵",1)) {
                 this.emoji = '⛵';
-                this.element.textContent = this.emoji;
+                //this.element.textContent = this.emoji;
+                this.face.textContent = this.emoji;
             }
         }
-        else if (gameMain.background.DECOR_TILES_SKY.has(ch)) {
-            if(gameMain.Inventory.hasItem("🦅",1)) {
+        else if (gameMainScene.background.DECOR_TILES_SKY.has(ch)) {
+            if(this.Inventory.hasItem("🦅",1)) {
                 this.emoji = '🦅';
-                this.element.textContent = this.emoji;
+                //this.element.textContent = this.emoji;
+                this.face.textContent = this.emoji;
             }
         }
         else{
             this.emoji = this.charaData.emoji;
-            this.element.textContent = this.emoji;
+            //this.element.textContent = this.emoji;
+            this.face.textContent = this.emoji;
         }
     }
 
@@ -598,7 +622,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
     addItem(DropItemData) {
         switch (DropItemData.type) {
             case "item":
-                gameMain.Inventory.addItem(DropItemData.emoji);
+                this.Inventory.addItem(DropItemData.emoji);
                 break;
             case "coin":
                 this.playerstatus.coins += parseInt(DropItemData.value);
@@ -840,14 +864,14 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
     }
 
     getItemCount(emoji) {
-        return gameMain.Inventory.getItemCount(emoji);
+        return this.Inventory.getItemCount(emoji);
     }
 
     changeItemCount(emoji, delta) {
         if (emoji === "🪙") {
             this.playerstatus.addCoins(delta);
         } else {
-            gameMain.Inventory.changeItemCount(emoji, delta);
+            this.Inventory.changeItemCount(emoji, delta);
         }
     }
 }

@@ -9,7 +9,7 @@ import { MagicDataTable } from '../Utils/DataTable.js';
 
 export class MagicBase extends Character {
     
-    constructor(x, y, MagicData, parent) {
+    constructor(x, y, MagicData, parent,caster ) {
         
         super(x, y, 0.5, MagicData.emoji, parent);
 
@@ -22,6 +22,7 @@ export class MagicBase extends Character {
         
         this.moveBase = new MoveBase(this);
 
+        this.teamId  = caster?.teamId ?? 'neutral';   // ★追加
         
         this.owner = null;
         this.HomingTarget = []; // ← constructorで初期化しておく

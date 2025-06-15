@@ -1,17 +1,14 @@
-﻿import {Wizard} from './Character/Wizard.js';
-import {Background} from './Background.js';
-import {Stair} from './Actor/Stair.js'; // デバッグ画面クラスをインポート
-import {Stage} from './Stage.js';
+﻿import {Wizard} from '../Character/Wizard.js';
+import {Background} from '../Background.js';
 
-import {UIHud} from './UI/UIHud.js';
-import {UIHubInventory} from './UI/UIHubInventory.js';
-import {UIStatus} from './UI/UIStatus.js'; // ステータス画面クラスをインポート
-import {UIDebug} from './UI/UIDebug.js'; // デバッグ画面クラスをインポート
-import {UIMagic} from './UI/UIMagic.js';
+import {UIHud} from '../UI/UIHud.js';
+import {UIStatus} from '../UI/UIStatus.js'; // ステータス画面クラスをインポート
+import {UIDebug} from '../UI/UIDebug.js'; // デバッグ画面クラスをインポート
+import {UIMagic} from '../UI/UIMagic.js';
 
-import {UIEventDialog} from './UI/UIEventDialog.js';
-import {Camera}  from './Camera.js';
-import {GameConfig} from './Config.js';
+import {UIEventDialog} from '../UI/UIEventDialog.js';
+import {Camera} from '../Camera.js';
+import {GameConfig} from '../Config.js';
 
 import {
     EnemyDataTable,
@@ -25,12 +22,12 @@ import {
     MapColorDataTable,
     EnemyPopDataTable,
     EventTileDataTable, EventDataTable, MapEventDataTable, ItemDropPopDataTable,
-} from "./Utils/DataTable.js";
-import {UIItemList} from "./UI/UIItemList.js";
+} from "../Utils/DataTable.js";
+import {UIItemList} from "../UI/UIItemList.js";
 
-export let gameMain = null;
+export let gameMainScene = null;
 
-export class GameMain {
+export class GameMainScene {
 
     gameArea;
     background;
@@ -38,7 +35,6 @@ export class GameMain {
     pawns = [];
 
     ExitPawns = [];
-    stageManager;
 
     pressedKeys = {};
 
@@ -52,13 +48,13 @@ export class GameMain {
 
     initCount() {
         ++this._loadedCount;
-        console.log("MasterLoad : ",this._loadedCount ," / ", this._totalToLoad)
+        console.log("MasterLoad : ", this._loadedCount, " / ", this._totalToLoad)
         if (this._loadedCount === this._totalToLoad) {
             this.init();                      // ← ここで後続処理
         }
     }
 
-    constructor(gameArea,gameUiLayer) {
+    constructor(gameArea, gameUiLayer) {
         /* ───── 基本セットアップ ───── */
 
         this.gameUiLayer = gameUiLayer;
@@ -85,7 +81,7 @@ export class GameMain {
 
         this._loadedCount = 0;            // 進捗カウンター
         this._totalToLoad = Object.keys(urls).length;            // 期待ロード数
-        
+
         MagicDataTable.init(urls.magic).then(() => this.initCount());
         ItemDataTable.init(urls.item).then(() => this.initCount());
         EnemyDataTable.init(urls.enemy).then(() => this.initCount());
@@ -104,20 +100,17 @@ export class GameMain {
 
     init() {
 
-        gameMain = this;
+        gameMainScene = this;
 
         this.FPS = 60;
         this.FRAME_TIME = 1000 / this.FPS; // 1000ms ÷ 60fps ≈ 16.6667ms
 
-        this.background = new Background(this.gameArea,this.camera, 60);
+        this.background = new Background(this.gameArea, this.camera, 60);
         this.CharacterLayer = this.background.characterLayer;
 
         const playerStartPosition = this.background.getPlayerStart();
-        this.wizard = new Wizard(playerStartPosition.x, playerStartPosition.y,this.CharacterLayer, wizardDataTable.get("Wizard1"));
+        this.wizard = new Wizard(playerStartPosition.x, playerStartPosition.y, this.CharacterLayer, wizardDataTable.get("Wizard1"));
 
-
-        //this.stageManager = new Stage(this.CharacterLayer);
-        //this.stageManager.createEnemiesForStage(1, this.wizard);
 
 
         // HUDの生成
@@ -132,22 +125,7 @@ export class GameMain {
         this.magicUI = new UIMagic(this.gameUiLayer, this.wizard);
         const itemList = new UIItemList(this.gameUiLayer, this.wizard);
         //magicUI.update();
-        
-        this.Inventory = new UIHubInventory(this.gameUiLayer);
-        this.Inventory.show();
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍞");
 
-        this.Inventory.addItem("⛵");
-//        this.Inventory.addItem("🦅");
-//        this.Inventory.addItem("🛷");
-//        this.Inventory.addItem("🐫");
-//        this.Inventory.addItem("🐦");
 
 
         this.EventDialog = new UIEventDialog(this.gameUiLayer);
@@ -247,13 +225,11 @@ export class GameMain {
         this.accumulatedTime = 0; // 経過時間をためるための変数
 
 
-
         this.gameLoop = this.gameLoop.bind(this);
         requestAnimationFrame(this.gameLoop);
         console.log(`[GameMain] constructor end`);
 
 
-        
     }
 
 
@@ -289,15 +265,15 @@ export class GameMain {
     updateGame(delta) {
         /* 既存のキャラ更新ループの後ろ（最終行近く）に追加 */
         /* プレイヤーを追ってカメラ位置を更新 */
-        if(this.wizard) this.camera.update(this.wizard);
+        if (this.wizard) this.camera.update(this.wizard);
 
         this.background.update(delta);                // ← 必ず先に
-        
+
         // 登録したpawnsがある時
         while (this.AddNewPawns.length > 0) {
             const ch = this.AddNewPawns.shift();   // 先頭を取り出してキューから削除
             ch.BeginStart();                       // 初期化
-            if(ch.UseUpdate){
+            if (ch.UseUpdate) {
                 this.pawns.push(ch);                   // 本隊に登録
             }
         }
@@ -325,95 +301,15 @@ export class GameMain {
         this.hud.updateDisplay();
     }
 
-
-    // ステージが変わったときに呼ばれる関数
-    onStageChange() {
-        // 新しいステージ番号でステージを生成
-        const currentStage = wizard.playerstatus.stage;
-        const enemies = stageManager.createEnemiesForStage(currentStage);
-
-        // 階段の位置をランダムに変更
-        const maxX = gameArea.clientWidth - 100;
-        const maxY = gameArea.clientHeight - 100;
-        const newX = Math.random() * maxX + 50;
-        const newY = Math.random() * maxY + 50;
-
-        wizard.changeStage();
-        stair.x = newX;
-        stair.y = newY;
-        stair.draw();
-
-        // 階段のタッチフラグをリセット
-        stair.touched = false;
-
-        // ステージ変更エフェクト
-        const stageElement = document.createElement('div');
-        stageElement.textContent = `ステージ ${currentStage}`;
-        stageElement.style.position = 'absolute';
-        stageElement.style.top = '50%';
-        stageElement.style.left = '50%';
-        stageElement.style.transform = 'translate(-50%, -50%)';
-        stageElement.style.fontSize = '48px';
-        stageElement.style.fontWeight = 'bold';
-        stageElement.style.color = 'white';
-        stageElement.style.textShadow = '3px 3px 5px rgba(0, 0, 0, 0.8)';
-        stageElement.style.zIndex = '1000';
-        stageElement.style.opacity = '0';
-        stageElement.style.transition = 'opacity 0.5s ease-in, transform 0.5s ease-in';
-
-        gameArea.appendChild(stageElement);
-
-        // アニメーション
-        setTimeout(() => {
-            stageElement.style.opacity = '1';
-            stageElement.style.transform = 'translate(-50%, -50%) scale(1.2)';
-
-            setTimeout(() => {
-                stageElement.style.opacity = '0';
-                stageElement.style.transform = 'translate(-50%, -50%) scale(0.8)';
-
-                setTimeout(() => {
-                    if (stageElement.parentNode) {
-                        stageElement.parentNode.removeChild(stageElement);
-                    }
-                }, 500);
-            }, 1500);
-        }, 10);
+    /**
+     * 指定したクラス (constructor) を基準に pawns を抽出する
+     * @template {Function} C
+     * @param {C} BaseClass  例: EnemyBase, BossBase, PlayerBase …
+     * @returns {InstanceType<C>[]}  抽出された Pawn の配列
+     */
+    getPawnsByClass(BaseClass) {
+        return this.pawns.filter(pawn => pawn instanceof BaseClass);
     }
-
-
-    // ゲームオーバー表示関数
-    displayGameOver() {
-        // すでにゲームオーバー画面があれば何もしない
-        if (document.getElementById('game-over')) return;
-
-        // ゲームオーバー要素を作成
-        const gameOverElement = document.createElement('div');
-        gameOverElement.id = 'game-over';
-        gameOverElement.style.position = 'absolute';
-        gameOverElement.style.top = '50%';
-        gameOverElement.style.left = '50%';
-        gameOverElement.style.transform = 'translate(-50%, -50%)';
-        gameOverElement.style.fontSize = '60px';
-        gameOverElement.style.fontWeight = 'bold';
-        gameOverElement.style.color = 'red';
-        gameOverElement.style.textShadow = '3px 3px 5px rgba(0, 0, 0, 0.8)';
-        gameOverElement.style.zIndex = '1000';
-        gameOverElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        gameOverElement.style.padding = '30px';
-        gameOverElement.style.borderRadius = '15px';
-        gameOverElement.style.textAlign = 'center';
-        gameOverElement.innerHTML = `
-      <div>ゲームオーバー</div>
-      <div style="font-size: 30px; margin-top: 20px;">ステージ: ${wizard.playerstatus.stage}</div>
-      <div style="font-size: 30px;">コイン: ${wizard.playerstatus.coins}</div>
-      <div style="font-size: 24px; margin-top: 40px;">リスタートするにはF5キーを押してください</div>
-    `;
-
-        gameArea.appendChild(gameOverElement);
-
-        // ゲームを一時停止する効果（すべての敵を止める）
-        stageManager.clearEnemies();
-    }
+    
 
 }

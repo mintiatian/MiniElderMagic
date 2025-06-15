@@ -108,9 +108,10 @@
        5. モジュール読み込み
        ========================== */
     import { CHAR_SIZE } from './Script/GameData.js';
-    import { GameMain   } from './Script/GameMain.js';
+    import { SceneManager } from './Script/Scene/SceneManager.js';
+    import { TitleScene   } from './Script/Scene/TitleScene.js';
+    import { GameMainScene   } from './Script/Scene/GameMainScene.js';
     import { GameConfig, setRenderScale } from './Script/Config.js';
-    import { Camera }                     from './Script/Camera.js';
 
     /* ========== #game-area をワールド全体とし、サイズを倍率で決定 ========== */
 
@@ -194,7 +195,9 @@
 
     gameTopArea.style.position = 'relative';   // もしくは 'relative' でも OK
     
-    const gameMain = new GameMain(gameTopArea,gameUiLayer);
+    export const SceneManagerInstance = new SceneManager(gameTopArea, gameUiLayer);
+    SceneManagerInstance.change(new TitleScene(gameTopArea, gameUiLayer));
+    
 </script>
 </body>
 </html>

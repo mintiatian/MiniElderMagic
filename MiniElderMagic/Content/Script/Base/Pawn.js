@@ -1,4 +1,4 @@
-﻿import {gameMain} from '../GameMain.js';
+﻿import {gameMainScene} from "../Scene/GameMainScene.js";
 import {BaseAnime} from "./BaseAnime.js";
 
 export const CollisionType = Object.freeze({
@@ -36,7 +36,6 @@ export class Pawn extends BaseAnime {
             this.debugCircle = document.createElement('div');
         }
 
-        this.setSize(CHAR_SIZE);
 
         this.touches = [];
 
@@ -46,7 +45,7 @@ export class Pawn extends BaseAnime {
         this.radian = 0;
         this.acceleration = 0;
         this.strafe = 0;
-
+        this.teamId = 'neutral';
 
         // キャラクターが既に消えているかどうかを管理するフラグ
         this.isFadingOut = false;
@@ -82,18 +81,18 @@ export class Pawn extends BaseAnime {
         }
 
         this.UseUpdate = true;
-        gameMain.AddNewPawns.push(this);
+        gameMainScene.AddNewPawns.push(this);
     }
 
     // --- 背景タイル衝突判定 ---------------------------------
-    hitsWall(px, py,forEnemy=false) {
-        if (!gameMain.background) return false;
+    hitsWall(px, py, forEnemy = false) {
+        if (!gameMainScene.background) return false;
         const r = this.r - 1;
         return (
-            gameMain.background.isSolidAt(px - r, py,forEnemy) ||
-            gameMain.background.isSolidAt(px + r, py,forEnemy) ||
-            gameMain.background.isSolidAt(px, py - r,forEnemy) ||
-            gameMain.background.isSolidAt(px, py + r,forEnemy)
+            gameMainScene.background.isSolidAt(px - r, py, forEnemy) ||
+            gameMainScene.background.isSolidAt(px + r, py, forEnemy) ||
+            gameMainScene.background.isSolidAt(px, py - r, forEnemy) ||
+            gameMainScene.background.isSolidAt(px, py + r, forEnemy)
         );
     }
 
@@ -150,7 +149,7 @@ export class Pawn extends BaseAnime {
         this.x = x;
         this.y = y;
 
-        if(!this.x) {
+        if (!this.x) {
             console.trace("kokoayasi 3");
         }
     }
@@ -199,6 +198,10 @@ export class Pawn extends BaseAnime {
     ================================================================= */
     isColliding(other) {
         // ---- 自分自身なら判定しない ----
+        /* === どちらも teamId を持ち、かつ同一なら「味方」扱い === */
+        if (this.teamId && other.teamId && this.teamId === other.teamId) {
+            return false;   // 衝突（ダメージ＆Trigger）処理へ進まない
+        }
 
         if (this.collisionType === CollisionType.NO_COLLISION) {
             return;
@@ -239,8 +242,8 @@ export class Pawn extends BaseAnime {
 
         this.preX = this.x;
         this.preY = this.y;
-        
-        if(!this.x){
+
+        if (!this.x) {
             console.trace("kokoayasi");
         }
 
@@ -253,7 +256,7 @@ export class Pawn extends BaseAnime {
         /* ----- Y 軸 ----- */
         if (this.moveY !== 0) {
             const ny = this.y + this.moveY;
-            
+
             if (!this.hitsWall(this.x, ny)) this.y = ny;
             else this.moveY = 0;
         }
@@ -271,7 +274,7 @@ export class Pawn extends BaseAnime {
             this.x = this.preX;
             this.y = this.preY;
 
-            if(!this.x) {
+            if (!this.x) {
                 console.trace("kokoayasi 2");
             }
             this.moveX = 0;
@@ -308,10 +311,10 @@ export class Pawn extends BaseAnime {
 
         this.AnimationFade("Exit");
 
-        const idx = gameMain.pawns.indexOf(this); // 見つからなければ -1
+        const idx = gameMainScene.pawns.indexOf(this); // 見つからなければ -1
         if (idx !== -1) {
             // loopから処理を外す
-            gameMain.pawns.splice(idx, 1);
+            gameMainScene.pawns.splice(idx, 1);
         }
 
     }
@@ -320,7 +323,7 @@ export class Pawn extends BaseAnime {
         super.OnExitAnime(Tag, Type);
         switch (Tag) {
             case "Exit":
-                gameMain.ExitPawns.push(this);
+                gameMainScene.ExitPawns.push(this);
                 break;
         }
     }

@@ -21,7 +21,7 @@ import {
 import { TimerManager } from './Utils/TimerManager.js';
 import {EnemyBase} from './Character/EnemyBase.js';
 import {CharacterDataTable} from './Utils/DataTable.js';
-import {gameMain} from './GameMain.js';
+import {gameMainScene} from "./Scene/GameMainScene.js";
 
 // 下層レイヤにだけ描き、当たり判定も無視する “床” タイル
 const DECOR_TILES = new Set(['🟫', '👣', '🌉', '🏠', '🏡', '🏕️']);               // キャラの下 / 踏める
@@ -231,7 +231,7 @@ export class Background {
     }
 
     getGameDifficultyLevel() {
-        return (gameMain.wizard.status.shopBuyCount / 30);
+        return (gameMainScene.wizard.status.shopBuyCount / 30);
     }
 
     popDoEnemyFromPawn(delta, Pawn) {
@@ -438,15 +438,17 @@ export class Background {
         if (isBossLevel === 1) {
             enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
             enemy.setRatioSize(2);
+            enemy.enemyAIData.coinDropCount += 5;
             //enemy.status.AttackdirRatio = 14;
         } else if (isBossLevel === 2) {
             enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
             enemy.setRatioSize(8);
+            enemy.enemyAIData.coinDropCount += 10;
             //enemy.status.AttackdirRatio = 8;
         } else {
             enemy.setRatioSize(this.calcLevelSize(level));
         }
-        enemy.setPlayerTarget(gameMain.wizard);
+        enemy.setPlayerTarget(gameMainScene.wizard);
 
         enemy.on('destroyed', enemy => {
             this.CurrentPopCount--;
@@ -494,19 +496,19 @@ export class Background {
         }
 
 
-        if (gameMain.Inventory.hasItem("🐦", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+        if (gameMainScene.wizard.Inventory.hasItem("🐦", 1) || gameMainScene.wizard.Inventory.hasItem("🦉", 1)) {
             if (this.DECOR_TILES_VOLCANO.has(ch)) return false;
         }
-        if (gameMain.Inventory.hasItem("🐫", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+        if (gameMainScene.wizard.Inventory.hasItem("🐫", 1) || gameMainScene.wizard.Inventory.hasItem("🦉", 1)) {
             if (this.DECOR_TILES_DESERT.has(ch)) return false;
         }
-        if (gameMain.Inventory.hasItem("🛷", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+        if (gameMainScene.wizard.Inventory.hasItem("🛷", 1) || gameMainScene.wizard.Inventory.hasItem("🦉", 1)) {
             if (this.DECOR_TILES_ICE.has(ch)) return false;
         }
-        if (gameMain.Inventory.hasItem("🦅", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+        if (gameMainScene.wizard.Inventory.hasItem("🦅", 1) || gameMainScene.wizard.Inventory.hasItem("🦉", 1)) {
             if (this.DECOR_TILES_SKY.has(ch)) return false;
         }
-        if (gameMain.Inventory.hasItem("⛵", 1) || gameMain.Inventory.hasItem("🦉", 1)) {
+        if (gameMainScene.wizard.Inventory.hasItem("⛵", 1) || gameMainScene.wizard.Inventory.hasItem("🦉", 1)) {
             if (this.DECOR_TILES_SEA.has(ch)) return false;
         }
         if (DECOR_TILES.has(ch)) return false;
@@ -529,7 +531,7 @@ export class Background {
             layer.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
         }
 
-        this.popDoEnemyFromPawn(delta, gameMain.wizard);
+        this.popDoEnemyFromPawn(delta, gameMainScene.wizard);
 
         // ExEventの処理
         this.checkExEvent(delta);
@@ -540,7 +542,7 @@ export class Background {
     
     checkExEvent(delta){
 
-        const event = this.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
+        const event = this.getMapValue("event", gameMainScene.wizard.x, gameMainScene.wizard.y);
         if (event !== null) {
             //console.log(event);
             if (eventDataTable.table.has(event)) {
@@ -549,6 +551,14 @@ export class Background {
                     switch (eventData.mode) {
                         case "boss1":
                             if(this.TimerManager.start('boss1', eventData.value)){
+
+                                const enemies = gameMainScene.getPawnsByClass(EnemyBase);
+
+                                for (const enemy of enemies) {
+                                    enemy.ExitStart();
+                                }
+
+
                                 console.log("boss1");
                                 const pos = this.getEventChipPosition('Boss1_Pop');
                                 this.popMapEnemy(pos.x, pos.y,2);

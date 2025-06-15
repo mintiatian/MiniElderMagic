@@ -1,5 +1,5 @@
 ﻿import {UIBase} from './UIBase.js';
-import {gameMain} from '../GameMain.js';
+import {gameMainScene} from "../Scene/GameMainScene.js";
 import {eventDataTable, eventTileDataTable} from '../Utils/DataTable.js';
 
 export class UIEventDialog extends UIBase {
@@ -290,7 +290,7 @@ export class UIEventDialog extends UIBase {
     show() {
 
 
-        const event = gameMain.background.getMapValue("event", gameMain.wizard.x, gameMain.wizard.y);
+        const event = gameMainScene.background.getMapValue("event", gameMainScene.wizard.x, gameMainScene.wizard.y);
 
         if (event !== null) {
             if (eventDataTable.table.has(event)) {
@@ -300,8 +300,8 @@ export class UIEventDialog extends UIBase {
 
                     this.runFromUrl(eventData.text, {
                         titleEmoji: eventData.titleEmoji,
-                        getItemCount: (id) => gameMain.wizard.getItemCount(id),
-                        changeItemCount: (id, delta) => gameMain.wizard.changeItemCount(id, delta)
+                        getItemCount: (id) => gameMainScene.wizard.getItemCount(id),
+                        changeItemCount: (id, delta) => gameMainScene.wizard.changeItemCount(id, delta)
                     });
                     super.show();
                 }

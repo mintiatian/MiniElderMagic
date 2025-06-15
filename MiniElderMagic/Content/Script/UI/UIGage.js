@@ -54,6 +54,8 @@ export class UIGage {
         this.container.appendChild(this.gage);
         parentElement.appendChild(this.container);
     }
+    
+    
 
     update(currentHP, maxHP) {
         const ratio = Math.max(0, Math.min(1, currentHP / maxHP));

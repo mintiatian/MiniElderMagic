@@ -15,12 +15,12 @@ export class CharacterBase extends Character {
      * @param {CharacterDataTable} charaData - 親要素
      * @param {float} ratio - 強さ倍率
      */
-    constructor(x, y, parentElement, charaData,ratio = 1) {
+    constructor(x, y, parentElement, charaData, ratio = 1) {
         super(x, y, charaData.MaxSpeed, charaData.emoji, parentElement);
 
         // ステータス管理クラスのインスタンス
         this.status = new Status();
-        this.setCharacterData(charaData,ratio);
+        this.setCharacterData(charaData, ratio);
 
         this.BarrierId = "";
     }
@@ -72,7 +72,7 @@ export class CharacterBase extends Character {
 
             // ▲▲▲ ここまでが修正部分です ▲▲▲
 
-            const newMagic = new MagicBase(staffPos.x, staffPos.y, this.MagicData, this.parentElement);
+            const newMagic = new MagicBase(staffPos.x, staffPos.y, this.MagicData, this.parentElement, this);
             newMagic.setDir(bulletDir);
             newMagic.setAcceleration(1);
             newMagic.setOwner(this);
@@ -99,6 +99,7 @@ export class CharacterBase extends Character {
             this.status.mpregene = this.charaData.mpregene * ratio;
 
             this.status.deffence = this.charaData.deffence * ratio;
+            this.status.attack  = this.charaData.attack * ratio;
 
             this.status.MaxSpeed = this.charaData.MaxSpeed * this.mapRangeClamped(ratio, 1, 10, 1.0, 1.5);
             this.MaxSpeed = this.status.MaxSpeed;

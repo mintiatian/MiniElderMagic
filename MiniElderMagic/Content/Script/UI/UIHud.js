@@ -1,7 +1,7 @@
 /* UIHud.js --------------------------------------------------------------- */
 import {UIBase} from './UIBase.js';
 import {eventDataTable, eventTileDataTable} from "../Utils/DataTable.js";
-import {gameMain} from "../GameMain.js";        // ★ 追加
+import {gameMainScene} from "../Scene/GameMainScene.js";        // ★ 追加
 /**
  * 画面左上にコイン枚数を表示する HUD
  */
@@ -168,7 +168,7 @@ export class UIHud extends UIBase {
         const coins = this.wizard?.playerstatus?.coins ?? 0;
         this.textSpan.textContent = ": " + String(coins);
 
-        const event = gameMain.background.getMapValue("event",this.wizard.x,this.wizard.y);
+        const event = gameMainScene.background.getMapValue("event",this.wizard.x,this.wizard.y);
         this.tabSpan.textContent = "TAB : Status";
         if(event !== null) {
             //console.log(event);
@@ -199,7 +199,7 @@ export class UIHud extends UIBase {
         
         
         /* 敵出現数 (Background.CurrentPopCount) */
-        const enemyCnt = gameMain?.background?.CurrentPopCount ?? 0;
+        const enemyCnt = gameMainScene?.background?.CurrentPopCount ?? 0;
         this.enemySpan.textContent = ": " + String(enemyCnt);
 
         /* 購入数 (shopBuyCount) */

@@ -34,7 +34,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
 
         this.SetupMPGage()
         this.SetupHPGage();
-
+        this.teamId = 'enemy';          // ★追加
 
         /* ==== 追加 ==== */
         this._log = new DebugMovementLogger();
@@ -285,6 +285,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
     }
 
 
+
     /**
      * @desc 火球を発射する
      * @returns {boolean} 発射に成功したかどうか
@@ -294,7 +295,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         if (!this.playerTarget || this.status.hp <= 0) {
             return false;
         }
-        
+
         const attackRatios = [0.25, 0.5, 0.75, 1];  // 候補となる値を配列にまとめる
         const randomIndex = Math.floor(Math.random() * attackRatios.length);    // 配列のインデックスをランダムに生成する (0, 1, 2, 3のいずれか)
         this.status.AttackdirRatio = attackRatios[randomIndex];         // ランダムに選ばれた値を設定する
