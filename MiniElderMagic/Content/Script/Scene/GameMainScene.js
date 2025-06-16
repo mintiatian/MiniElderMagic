@@ -3,9 +3,8 @@ import {Background} from '../Background.js';
 
 import {UIHud} from '../UI/UIHud.js';
 import {UIStatus} from '../UI/UIStatus.js'; // ステータス画面クラスをインポート
-import {UIDebug} from '../UI/UIDebug.js'; // デバッグ画面クラスをインポート
 import {UIMagic} from '../UI/UIMagic.js';
-
+import { TitleScene } from './TitleScene.js';
 import {UIEventDialog} from '../UI/UIEventDialog.js';
 import {Camera} from '../Camera.js';
 import {GameConfig} from '../Config.js';
@@ -24,6 +23,8 @@ import {
     EventTileDataTable, EventDataTable, MapEventDataTable, ItemDropPopDataTable,
 } from "../Utils/DataTable.js";
 import {UIItemList} from "../UI/UIItemList.js";
+
+import { SceneManagerInstance } from './SceneManager.js';
 import {BaseScene} from './BaseScene.js';
 
 export let gameMainScene = null;
@@ -109,166 +110,71 @@ export class GameMainScene extends BaseScene {
         this._setupGame(); // 旧 init() 本体
     }
 
-    _setupGame() {
+    /* ====================================================================
+     *  GameMainScene._setupGame
+     *  ────────────────────────────────────────────────────────────────── */
+    /* ====================================================================
+     *  GameMainScene._setupGame  –  ゲーム世界だけを初期化
+     * ==================================================================== */
+    /* ====================================================================
+     *  GameMainScene._setupGame  –  ゲーム世界＋HUD を初期化
+     * ==================================================================== */
+    _setupGame () {
 
+        /* 0. まずはグローバル参照を立てて  Pawn / Background から使えるように */
         gameMainScene = this;
 
-        this.FPS = 60;
-        this.FRAME_TIME = 1000 / this.FPS; // 1000ms ÷ 60fps ≈ 16.6667ms
+        /* 1. タイムステップ初期化（固定 60 FPS） */
+        this.FPS           = 60;
+        this.FRAME_TIME    = 1000 / this.FPS;   // ms
+        this.accumulatedMs = 0;
+        this.lastTime      = performance.now();
 
-        this.background = new Background(this.gameArea, this.camera, 60);
+        /* 2. 背景レイヤとカメラ紐付け */
+        this.background     = new Background(this.gameArea, this.camera, 60);
         this.CharacterLayer = this.background.characterLayer;
 
-        const playerStartPosition = this.background.getPlayerStart();
-        this.wizard = new Wizard(playerStartPosition.x, playerStartPosition.y, this.CharacterLayer, wizardDataTable.get("Wizard1"));
+        /* 3. プレイヤー生成 → 登録キューへ */
+        const { x, y } = this.background.getPlayerStart();
+        this.wizard     = new Wizard(
+            x, y,
+            this.CharacterLayer,
+            wizardDataTable.get('Wizard1')
+        );
+        this.AddNewPawns.push(this.wizard);   // ★必須：更新ループに載せる
 
+        /* 4. ゲーム内管理配列と入力状態リセット */
+        this.pawns       = [];
+        this.ExitPawns   = [];
+        this.pressedKeys = {};
 
-        // HUDの生成
-        this.hud = new UIHud(this.gameUiLayer, this.wizard);
-        this.hud.updateDisplay();
-        this.hud.show();
-        // ステータス画面の生成
-        this.statusUI = new UIStatus(this.gameUiLayer, this.wizard);
-        // デバッグ画面の生成
-        const debugUI = new UIDebug(this.gameUiLayer, this.wizard);
+        /* 5. 必須 UI（HUD / Status / Magic）はここで生成
+          　　→ updateGame() がすぐ使える                         */
+        this.hud       = new UIHud(this.gameUiLayer, this.wizard);
+        this.statusUI  = new UIStatus(this.gameUiLayer, this.wizard);
+        this.magicUI   = new UIMagic(this.gameUiLayer, this.wizard);
+        this.debugUI   = null;   // debugUI は onEnter() で toggle 用に生成
 
-        this.magicUI = new UIMagic(this.gameUiLayer, this.wizard);
-        const itemList = new UIItemList(this.gameUiLayer, this.wizard);
-        //magicUI.update();
+        /* 6. 任意：初期敵ポップやイベント設置
+           - EnemyPopDataTable.populateStage(...)
+           - MapEventDataTable.setupEvents(...)
+         */
 
-
-        this.EventDialog = new UIEventDialog(this.gameUiLayer);
-
-
-        // ショップ完了イベントのリスナー（一度だけ登録）
-        document.addEventListener('shopCompleted', () => {
-            // ステージを1上げる
-            wizard.playerstatus.nextStage();
-
-            // 新しいステージのセットアップ
-            onStageChange();
-        });
-
-        // キーの押下状態を監視
-        document.addEventListener('keydown', (event) => {
-            const key = event.key.toLowerCase();
-
-            // Tabキーはデフォルトのブラウザの動作を防止する（ステータス画面UIで処理するため）
-            if (key === 'tab') {
-                event.preventDefault();
-            }
-            // 'o'キーでデバッグモードを切り替え
-            else if (key === 'o') {
-                debugUI.toggle();
-            } else if (key === 'p') {
-                //shop.show();
-            } else {
-                this.pressedKeys[key] = true;
-
-                // 方向キーもWASDにマッピング
-                if (key === 'arrowup') this.pressedKeys['w'] = true;
-                if (key === 'arrowdown') this.pressedKeys['s'] = true;
-                if (key === 'arrowleft') this.pressedKeys['a'] = true;
-                if (key === 'arrowright') this.pressedKeys['d'] = true;
-
-                if (key === 'shift') this.pressedKeys['run'] = true;
-
-                //   例) アビリティスロットを明示的に区別したい場合
-                if (key === 'q') this.pressedKeys['ability1'] = true;
-                if (key === 'e') this.pressedKeys['ability2'] = true;
-                if (key === 'r') this.pressedKeys['ability3'] = true;
-                if (key === 'f') this.pressedKeys['ability4'] = true;
-
-                if (key === '1') this.pressedKeys['magic1'] = true;
-                if (key === '2') this.pressedKeys['magic2'] = true;
-                if (key === '3') this.pressedKeys['magic3'] = true;
-                if (key === '4') this.pressedKeys['magic4'] = true;
-                if (key === '5') this.pressedKeys['magic5'] = true;
-                if (key === '6') this.pressedKeys['magic6'] = true;
-                if (key === '7') this.pressedKeys['magic7'] = true;
-                if (key === '8') this.pressedKeys['magic8'] = true;
-                if (key === '9') this.pressedKeys['magic9'] = true;
-                if (key === '0') this.pressedKeys['magic0'] = true;
-            }
-        });
-
-
-        document.addEventListener('keyup', (event) => {
-            const key = event.key.toLowerCase();
-            this.pressedKeys[key] = false;
-
-            // 方向キーもWASDにマッピング解除
-            if (key === 'arrowup') this.pressedKeys['w'] = false;
-            if (key === 'arrowdown') this.pressedKeys['s'] = false;
-            if (key === 'arrowleft') this.pressedKeys['a'] = false;
-            if (key === 'arrowright') this.pressedKeys['d'] = false;
-
-            if (key === 'shift') this.pressedKeys['run'] = false;
-
-            //   例) アビリティスロットを明示的に区別したい場合
-            if (key === 'q') this.pressedKeys['ability1'] = false;
-            if (key === 'e') this.pressedKeys['ability2'] = false;
-            if (key === 'r') this.pressedKeys['ability3'] = false;
-            if (key === 'f') this.pressedKeys['ability4'] = false;
-
-            if (key === '1') this.pressedKeys['magic1'] = false;
-            if (key === '2') this.pressedKeys['magic2'] = false;
-            if (key === '3') this.pressedKeys['magic3'] = false;
-            if (key === '4') this.pressedKeys['magic4'] = false;
-            if (key === '5') this.pressedKeys['magic5'] = false;
-            if (key === '6') this.pressedKeys['magic6'] = false;
-            if (key === '7') this.pressedKeys['magic7'] = false;
-            if (key === '8') this.pressedKeys['magic8'] = false;
-            if (key === '9') this.pressedKeys['magic9'] = false;
-            if (key === '0') this.pressedKeys['magic0'] = false;
-        });
-
-
-        // 前のフレームで生きていた敵を記録するための配列
-        //this.previousLivingEnemies = [...this.stageManager.enemies];
-        // 敵の要素を追跡するためのMap（要素ID -> 要素）
-        //this.enemyElementMap = new Map();
-
-
-        this.lastTime = performance.now();
-        this.accumulatedTime = 0; // 経過時間をためるための変数
-
-
-        this.gameLoop = this.gameLoop.bind(this);
-        requestAnimationFrame(this.gameLoop);
-        console.log(`[GameMain] constructor end`);
-
-
+        console.log('[GameMainScene] world setup complete');
     }
 
 
-    fpsSum = 0;
-    fpsCount = 0;
-    fpsAve = 0;
+    /* ==================================================================== */
 
-    // フレームごとのループ
-    gameLoop(timestamp) {
-        //console.log(`[GameMain] gameLoop`);
-        const delta = timestamp - this.lastTime;
-        this.lastTime = timestamp;
-        this.accumulatedTime += delta;
+    
 
-        while (this.accumulatedTime >= this.FRAME_TIME) {
-            this.updateGame(this.FRAME_TIME);
-            this.accumulatedTime -= this.FRAME_TIME;
+
+    update(dtSec){    // 固定 60fps シミュレーション用にミリ秒へ変換
+        this.accumulatedMs += dtSec * 1000;
+        while(this.accumulatedMs >= this.FRAME_TIME){   // FRAME_TIME = 16.666…
+            this.updateGame(this.FRAME_TIME);           // ←既存ロジック
+            this.accumulatedMs -= this.FRAME_TIME;
         }
-
-        this.fpsSum += 1000 / delta;
-        this.fpsCount += 1;
-
-        // 0.5 秒ごとに平均 fps を表示
-        if (this.fpsSum >= 0 && this.fpsCount > 60) {     // 60fps なら約 0.5 秒
-            this.fpsAve = this.fpsSum / this.fpsCount;
-            //console.log(`FPS: ${this.fpsAve.toFixed(1)} `+this.fpsCount+" pawns = "+this.pawns.length);
-            this.fpsSum = 0;
-            this.fpsCount = 0;
-        }
-        requestAnimationFrame(this.gameLoop);
     }
 
     updateGame(delta) {
@@ -308,6 +214,17 @@ export class GameMainScene extends BaseScene {
             ch.destroy();                       // 削除処理
         }
         this.hud.updateDisplay();
+
+
+        /* ── FPS 計測 ────────────────────────────── */
+        this._fpsSum   += 1000 / delta;   // deltaMs は 16.67ms 固定
+        this._fpsCount += 1;
+
+        if (this._fpsCount >= 30){          // 0.5 秒おき (60fps想定)
+            const ave = (this._fpsSum / this._fpsCount).toFixed(1);
+            this.fpsLabel.textContent = `FPS: ${ave}`;
+            this._fpsSum = this._fpsCount = 0;
+        }
     }
 
     /**
@@ -320,9 +237,103 @@ export class GameMainScene extends BaseScene {
         return this.pawns.filter(pawn => pawn instanceof BaseClass);
     }
 
-    onEnter() {
+    onEnter(){
+        // デバッグ UI は onEnter で生成しておく（toggle 用参照）
+        this.itemList = new UIItemList(this.gameUiLayer, this.wizard);
+        this.eventDialog = new UIEventDialog(this.gameUiLayer);   // ← lower-camel に統一
+        this.eventDialog.hide();    // 既定は非表示に
+        /* 共通ハンドラ */
+        this._handleKey = (e,isDown)=>{
+            const k = e.key.toLowerCase();
+            if (k === 'escape' && isDown) { SceneManagerInstance.change(new TitleScene(this.gameArea, this.gameUiLayer)); return; }
+
+            /* ── 特殊キー ───────────────── */
+            if(k==='tab'){              // Tab はブラウザのフォーカス移動を止める
+                e.preventDefault();
+            }
+            if(k==='o' && isDown){      // デバッグ UI 切替は押下時だけ
+                this.debugUI.toggle();
+                return;                 // pressedKeys には入れない
+            }
+            if(k==='p' && isDown){
+                // shop.show();          // 将来使うならここ
+                return;
+            }
+
+            /* ── 汎用入力フラグ更新 ───────── */
+            this.pressedKeys[k] = isDown;
+
+            /* Arrow ↔ WASD */
+            const dirMap = {arrowup:'w', arrowdown:'s', arrowleft:'a', arrowright:'d'};
+            if(dirMap[k]) this.pressedKeys[dirMap[k]] = isDown;
+
+            /* Shift → run */
+            if(k==='shift') this.pressedKeys.run = isDown;
+
+            /* Ability */
+            const abMap = {q:'ability1', e:'ability2', r:'ability3', f:'ability4'};
+            if(abMap[k]) this.pressedKeys[abMap[k]] = isDown;
+
+            /* Magic (0-9) */
+            if('1234567890'.includes(k)) this.pressedKeys['magic'+k] = isDown;
+        };
+
+        /* イベント登録 */
+        this._down = e => this._handleKey(e,true);
+        this._up   = e => this._handleKey(e,false);
+        document.addEventListener('keydown', this._down);
+        document.addEventListener('keyup',   this._up);
+
+
+        /* ── FPS ラベルを作成 ────────────────────────── */
+        this.fpsLabel = document.createElement('div');
+        Object.assign(this.fpsLabel.style, {
+            position: 'absolute',
+            top: '4px',
+            left: '8px',
+            color: '#0f0',
+            font: 'bold 14px monospace',
+            pointerEvents: 'none',
+            textShadow: '0 0 4px #000',
+            zIndex: 9999,
+        });
+        this.fpsLabel.textContent = 'FPS: 0';
+        this.gameUiLayer.appendChild(this.fpsLabel);
+
+        /* 平均 FPS 用カウンタ初期化 */
+        this._fpsSum   = 0;
+        this._fpsCount = 0;
     }
 
-    onExit() {
+    /* ---------- onExit() ---------- */
+
+    onExit(){
+        /* ── リスナー解除 ─────────────────────── */
+        document.removeEventListener('keydown', this._down);
+        document.removeEventListener('keyup',   this._up);
+
+        /* ── UI / DOM を完全クリーンアップ ───── */
+        this.fpsLabel?.remove();
+        this.itemList?.remove?.();        // hide() でも可
+        this.eventDialog?.remove?.();
+        this.debugUI?.remove?.();
+
+        this.gameUiLayer.innerHTML = '';
+        this.gameArea.innerHTML    = '';
+
+        /* ── 配列・状態をリセット ─────────────── */
+        this.pawns.length =
+            this.AddNewPawns.length =
+                this.ExitPawns.length = 0;
+        this.pressedKeys = {};
+
+        this.background = null;
+        this.wizard     = null;
+
+        /* ── 次シーンの dt スパイク防止 (任意) ─ */
+        SceneManagerInstance._last = performance.now();
+
+        gameMainScene = null;
     }
+
 }

@@ -1,6 +1,6 @@
 ﻿import { BaseScene } from './BaseScene.js';
 import { GameMainScene } from './GameMainScene.js';
-import { SceneManagerInstance,SceneManager } from './SceneManager.js';   // import して current にアクセス
+import { SceneManagerInstance } from './SceneManager.js';   // import して current にアクセス
 
 export class TitleScene extends BaseScene {
     onEnter() {
@@ -25,5 +25,7 @@ export class TitleScene extends BaseScene {
 
     onExit() {
         this.titleDiv.remove();
+        this.gameArea.innerHTML = '';   // ゲーム用 DOM を全部リセット
+        this.gameUiLayer.innerHTML = '';   // ゲーム用 DOM を全部リセット
     }
 }

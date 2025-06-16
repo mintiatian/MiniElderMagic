@@ -13,12 +13,10 @@ export class SceneManager {
     }
 
     async change(newScene) {
-        if (this.current) {
-            await this.current.onExit();
-        }
+        this.current?.onExit();   // ← 先に古いシーンを完全に終わらせる
         this.current = newScene;
-        await this.current.init();   // 必要ならロード
-        await this.current.onEnter();
+        this.current.init?.();    // ⬅ 非同期なら await
+        this.current.onEnter();
     }
 
     _loop(now) {

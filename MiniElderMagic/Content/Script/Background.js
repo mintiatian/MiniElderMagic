@@ -49,6 +49,17 @@ export class Background {
      * @param {Camera}      camera   カメラ（ワールド→ビューポート座標変換用）
      */
     constructor(gameArea, camera) {
+
+        /* すでに同じ id のレイヤがあれば丸ごと削除 */
+        ['Background_ColorLayer',
+            'Background_FloorLayer',
+            'Background_CharacterLayer',
+            'Background_FrontLayer'
+        ].forEach(id=>{
+            document.getElementById(id)?.remove();
+        });
+        
+        
         this.gameArea = gameArea;
         this.camera = camera;
 
