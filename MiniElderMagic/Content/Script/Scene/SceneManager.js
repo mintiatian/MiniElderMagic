@@ -19,6 +19,22 @@ export class SceneManager {
         this.current.onEnter();
     }
 
+    async changeLoadData(newScene, {saveData=null, loadingEl=null} = {}) {
+        await this.current?.onExit?.();
+
+        this.current = newScene;
+        loadingEl?.classList.remove('hidden');   // ローディング表示
+
+        await this.current.init?.();
+
+        if (saveData && this.current.importState) {
+            this.current.importState(saveData);
+        }
+
+        loadingEl?.classList.add('hidden');      // ローディング非表示
+        await this.current.onEnter?.();
+    }
+
     _loop(now) {
         const dt = (now - this._last) / 1000;
         this._last = now;
