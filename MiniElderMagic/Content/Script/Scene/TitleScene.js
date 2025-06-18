@@ -34,7 +34,7 @@ export class TitleScene extends BaseScene {
         this.titleDiv.id = 'title-screen';
         this.titleDiv.className = 'ts-wrap';
         this.titleDiv.innerHTML = `
-            <h1 class="ts-logo">🧙 Elder&nbsp;Magic&nbsp;Squad</h1>
+            <h1 class="ts-logo">🧙 Mini Elder&nbsp;Magic</h1>
             <button id="btn-new"  class="ts-btn ts-btn--primary">New&nbsp;Game</button>
             <button id="btn-load" class="ts-btn">Load&nbsp;Game</button>
         `;

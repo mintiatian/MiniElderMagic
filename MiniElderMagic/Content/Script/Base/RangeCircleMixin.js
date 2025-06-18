@@ -48,6 +48,7 @@ export const RangeCircleMixin = (Base) => class extends Base {
      * （Wizard.update 等の毎フレーム処理内で呼ぶ）
      */
     CircleUpdate() {
+        /*
         if (!this._rangeCircles.length) return;
 
         const { x, y } =
@@ -59,6 +60,7 @@ export const RangeCircleMixin = (Base) => class extends Base {
             c.el.style.left = `${x}px`;
             c.el.style.top  = `${y}px`;
         }
+        */
     }
 
     /**

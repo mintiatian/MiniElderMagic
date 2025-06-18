@@ -110,8 +110,8 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.IsActive = false;
         this.SettingMagicData();
 
-        this.CircleCreate(gameMainScene.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
-        this.CircleCreate(gameMainScene.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
+        //this.CircleCreate(gameMainScene.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
+        //this.CircleCreate(gameMainScene.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
 
 
         this.Inventory = new UIHubInventory(gameMainScene.gameUiLayer);
