@@ -289,6 +289,11 @@ export class UIItemList extends UIBase {
 
                 if (eventData.type === "shop") {
                     /* -------- ショップ UI を開く -------- */
+                    
+                    if(eventData.mode === "tent" || eventData.mode === "inn"){
+                        gameMainScene.wizard.setInnPosition();
+                    }
+                    
                     this.filter = eventData.mode;  // 例: "potion"
                     this.currentFilter = "all";                // ボタン側リセット
                     this.updateDisplay();

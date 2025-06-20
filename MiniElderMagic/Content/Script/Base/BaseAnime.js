@@ -16,8 +16,16 @@
     AnimationFade(Tag, Time) {
         this.element.style.transition = 'opacity ' + Time + 's ease, transform ' + Time + 's ease';
         this.element.style.opacity = '0';
-        this.element.style.transform = 'scale(0)';
         setTimeout(() => this.OnExitAnime(Tag, 'Fade'), Time * 1000);
+    }
+
+
+    AnimationFadeIn(Tag, Time) {
+        void this.element.offsetWidth;
+        this.element.style.transition = 'opacity ' + Time + 's ease, transform ' + Time + 's ease';
+        this.element.style.opacity = '1';
+ //       this.element.style.transform = 'scale(1)';
+        setTimeout(() => this.OnExitAnime(Tag, 'FadeIn'), Time * 1000);
     }
 
     AnimationJelly(Tag, Time) {

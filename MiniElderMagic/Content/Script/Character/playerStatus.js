@@ -14,6 +14,7 @@ export class PlayerStatus {
         
         this.shopcost = 0;
 
+        this.lastInnPos = {x:0, y:0};   // 現在位置を初期値にしておく
     }
 
 

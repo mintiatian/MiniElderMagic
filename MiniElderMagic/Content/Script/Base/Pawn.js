@@ -80,6 +80,7 @@ export class Pawn extends BaseAnime {
             return;
         }
 
+        this.CanRespown = false;
         this.UseUpdate = true;
         gameMainScene.AddNewPawns.push(this);
     }
@@ -309,12 +310,18 @@ export class Pawn extends BaseAnime {
         // 削除するのでコリジョンを無効にする
         this.setCollisionType(CollisionType.NO_COLLISION);
 
-        this.AnimationFade("Exit");
-
-        const idx = gameMainScene.pawns.indexOf(this); // 見つからなければ -1
-        if (idx !== -1) {
-            // loopから処理を外す
-            gameMainScene.pawns.splice(idx, 1);
+        if(this.CanRespown === false){
+            
+            this.AnimationFade("Exit");
+    
+            const idx = gameMainScene.pawns.indexOf(this); // 見つからなければ -1
+            if (idx !== -1) {
+                // loopから処理を外す
+                gameMainScene.pawns.splice(idx, 1);
+            }
+        }
+        else{
+            this.AnimationFade("Respawn");
         }
 
     }

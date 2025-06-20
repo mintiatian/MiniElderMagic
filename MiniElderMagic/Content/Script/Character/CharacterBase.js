@@ -23,6 +23,7 @@ export class CharacterBase extends Character {
         this.setCharacterData(charaData, ratio);
 
         this.BarrierId = "";
+        
     }
 
 
@@ -160,11 +161,14 @@ export class CharacterBase extends Character {
         // HPが0以下になったら、フェードアウト処理
         else if (this.status.hp <= 0 && !this.isFadingOut) {
 
-            if (this.hpGage) {
-                this.hpGage.hide();
+
+            if(this.CanRespown === false) {
+                if (this.hpGage) {
+                    this.hpGage.hide();
+                }
+                this.ExitStart();
             }
 
-            this.ExitStart();
         }
 
 

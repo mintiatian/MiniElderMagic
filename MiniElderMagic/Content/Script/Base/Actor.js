@@ -152,7 +152,9 @@ export class Actor extends Pawn {
 
     /** シーン離脱時の後始末 */
     ExitStart() {
-        this._cleanupAllOverlays(); // 残骸を残さない
+        if(this.CanRespown === false){
+            this._cleanupAllOverlays(); // 残骸を残さない
+        }
         super.ExitStart?.();
     }
 }

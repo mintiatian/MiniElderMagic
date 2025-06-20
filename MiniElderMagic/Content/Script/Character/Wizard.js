@@ -5,6 +5,8 @@ import {RangeCircleMixin} from "../Base/RangeCircleMixin.js";
 import {gameMainScene} from "../Scene/GameMainScene.js";
 
 import {UIHubInventory} from '../UI/UIHubInventory.js';
+import {TimerManager} from "../Utils/TimerManager.js";
+import {CollisionType} from "../Base/Pawn.js";
 
 export class Wizard extends RangeCircleMixin(CharacterBase) {
     constructor(x, y, parentElement, charaData) {
@@ -18,7 +20,11 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
         if (!this.playerstatus) {
             this.playerstatus = new PlayerStatus(0, 0);
+            this.playerstatus.lastInnPos = {x: x, y: y};
         }
+
+        this._isDead = false;
+        this._timers = new TimerManager();
 
 
         // 杖の要素を作成する関数
@@ -125,13 +131,16 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.Inventory.addItem("🍞");
 
         this.Inventory.addItem("⛵");
-        
-        
+
+        this.CanRespown = true;
+
 //        this.Inventory.addItem("🦅");
 //        this.Inventory.addItem("🛷");
 //        this.Inventory.addItem("🐫");
 //        this.Inventory.addItem("🐦");
         //this.changeShip();
+
+        this.setInnPosition();
     }
 
     UpdateMove() {
@@ -190,16 +199,94 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.status.recoverMP(30);
     }
 
+    /*──────────────────────────────
+     *  宿屋到着時に呼び出すヘルパ
+     *──────────────────────────────*/
+    setInnPosition() {
+        this.playerstatus.lastInnPos = {x: this.x, y: this.y};
+    }
+
+    _respawn() {
+        //       this.x = this.lastInnPos.x;
+        //       this.y = this.lastInnPos.y;
+
+        this.status.hp = this.status.maxHP;        // 全回復
+
+        /* UI・操作を再開 */
+        this.IsActive = true;
+        this._isDead = false;
+//        gameMainScene?.statusUI?.updateDisplay();
+
+        this.setCollisionType(CollisionType.COLLISION);
+        this.isFadingOut = false;
+        this.AnimationFadeIn("Respown", 1000);
+    }
+
 // PlayerBase.js   ── 完全版 update メソッド ──
     update(delta) {
 
+
+        this._timers.update(delta);
+        if (this._isDead) {
+            const remainMs = this._timers.getRemaining("death"); // ← ms で返る想定
+            if (remainMs != null && remainMs >= 0) {
+                const sec = Math.ceil(remainMs / 1000);          // 10.0→10, 9.2→10, 0.1→1
+                if (sec !== this._lastCountdownSec) {            // 変わった秒だけ表示
+                    this._lastCountdownSec = sec;
+
+                    /* 例: 赤っぽい文字を頭上に 0.9 秒間表示 */
+                    this.showFloatingText(
+                        `Respawn in ${sec} sec`,   // 表示文
+                        "#ffffff",        // 色
+                        900,              // 表示時間(ms)
+                        0,                // xOffset
+                        -60               // yOffset（高めに浮かせたい場合）
+                    );
+                }
+            }
+        }
+
+        //this._isDead = true;
+        if (!this._isDead && this.status.hp <= 0) {
+            this._isDead = true;
+            //this.IsActive = true;                 // 入力をブロック
+
+
+            this._timers.start(
+                'death',
+                15_000,
+                () => {
+                    this._respawn();
+                }
+            );
+            
+            const lostCoins = Math.floor(this.playerstatus.coins /2);
+            this.playerstatus.coins = lostCoins;
+
+            /* 例: 赤っぽい文字を頭上に 0.9 秒間表示 */
+            this.showFloatingText(
+                `-${lostCoins} Coins`,   // 表示文
+                "#cc0000",        // 色
+                13000,              // 表示時間(ms)
+                0,                // xOffset
+                -120               // yOffset（高めに浮かせたい場合）
+            );
+
+            this.acceleration = 0;
+            this.strafe = 0;
+            this.setAcceleration(this.acceleration);
+            this.moveBase.moveUpdate(delta);
+        }
+
+
+        /* 死亡中は移動・攻撃などをスキップ */
         if (!this.IsActive) {
             super.update(delta);
             return;
         }
 
 
-        {
+        if (!this._isDead) {
             /* ───────── 2. 入力ベクトル作成 ───────── */
             let dx = (this.pressedKeys['d'] ? 1 : 0) - (this.pressedKeys['a'] ? 1 : 0);
             let dy = (this.pressedKeys['s'] ? 1 : 0) - (this.pressedKeys['w'] ? 1 : 0);
@@ -281,10 +368,13 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                 this.RemoveBarrier();
             }
         }
-        
+
         this.changeShip();
 
-        this.UpdateMove();
+        if (!this._isDead) {
+            this.UpdateMove();
+        }
+
         /* ───────── 8. 描画など親クラス処理 ───────── */
         super.update(delta);
 
@@ -300,41 +390,39 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         const ch = gameMainScene.background.getMapValue("tile", this.x, this.y);
 
         if (gameMainScene.background.DECOR_TILES_VOLCANO.has(ch)) {
-            if(this.Inventory.hasItem("🐦",1)) {
+            if (this.Inventory.hasItem("🐦", 1)) {
                 this.emoji = '🐦';
                 //this.element.textContent = this.emoji;
                 this.face.textContent = this.emoji;
             }
-        }
-        else if (gameMainScene.background.DECOR_TILES_DESERT.has(ch)) {
-            if(this.Inventory.hasItem("🐫",1)) {
+        } else if (gameMainScene.background.DECOR_TILES_DESERT.has(ch)) {
+            if (this.Inventory.hasItem("🐫", 1)) {
                 this.emoji = '🐫';
                 //this.element.textContent = this.emoji;
                 this.face.textContent = this.emoji;
             }
-        }
-        else if (gameMainScene.background.DECOR_TILES_ICE.has(ch)) {
-            if(this.Inventory.hasItem("🛷",1)) {
+        } else if (gameMainScene.background.DECOR_TILES_ICE.has(ch)) {
+            if (this.Inventory.hasItem("🛷", 1)) {
                 this.emoji = '🛷';
                 //this.element.textContent = this.emoji;
                 this.face.textContent = this.emoji;
             }
-        }
-        else if (gameMainScene.background.DECOR_TILES_SEA.has(ch)) {
-            if(this.Inventory.hasItem("⛵",1)) {
+        } else if (gameMainScene.background.DECOR_TILES_SEA.has(ch)) {
+            if (this.Inventory.hasItem("⛵", 1)) {
                 this.emoji = '⛵';
                 //this.element.textContent = this.emoji;
                 this.face.textContent = this.emoji;
             }
-        }
-        else if (gameMainScene.background.DECOR_TILES_SKY.has(ch)) {
-            if(this.Inventory.hasItem("🦅",1)) {
+        } else if (gameMainScene.background.DECOR_TILES_SKY.has(ch)) {
+            if (this.Inventory.hasItem("🦅", 1)) {
                 this.emoji = '🦅';
                 //this.element.textContent = this.emoji;
                 this.face.textContent = this.emoji;
             }
-        }
-        else{
+        } else if (this._isDead) {
+            this.emoji = '🪦';
+            this.face.textContent = this.emoji;
+        } else {
             this.emoji = this.charaData.emoji;
             //this.element.textContent = this.emoji;
             this.face.textContent = this.emoji;

@@ -28,6 +28,7 @@ export class Character extends Actor{
    */
   update(delta) {
     super.update(delta);
+    
     this.moveBase.moveUpdate(delta);
   }
 
