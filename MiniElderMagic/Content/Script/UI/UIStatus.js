@@ -1,4 +1,5 @@
 ﻿import {UIBase} from "./UIBase.js";
+import {textDataTable} from "../Utils/DataTable.js";
 
 export class UIStatus extends UIBase{
     /**
@@ -31,7 +32,7 @@ export class UIStatus extends UIBase{
         
         // タイトル
         const title = document.createElement('h2');
-        title.textContent = 'プレイヤーステータス';
+        title.textContent = 'Player Status';
         title.style.color = 'cornflowerblue';
         title.style.marginBottom = '20px';
         title.style.fontFamily = 'Arial, sans-serif';
@@ -81,45 +82,43 @@ export class UIStatus extends UIBase{
         
         // プレイヤーのステータスデータを取得
         const statusData = [
-            { name: '🗺️ステージ',       value: this.wizard.playerstatus.stage,                   color: 'white' },
-           // { name: '🪙所持金', value: this.wizard.playerstatus.coins, color: 'gold' },
-           // { name: '💲ショップ割引', value: this.wizard.playerstatus.shopcost, color: 'gold' },
+            { name: '⚔️'+textDataTable.get("stage").text,       value: this.wizard.status.shopBuyCount,                   color: 'white' },
             
-            { name: '❤️HP', value: `${this.wizard.status.hp} / ${this.wizard.status.maxHP}`, color: 'white' },
-            { name: '💠MP', value: `${Math.floor(this.wizard.status.mp)} / ${this.wizard.status.maxMP}`, color: 'white' },
-            { name: '🍷MP自動回復', value: `${this.shosuu(this.wizard.status.mpregene,1)}`, color: 'white' },
-            { name: '🗡️攻撃力', value: this.wizard.status.attack, color: 'white' },
-            { name: '🛡️防御力', value: `${this.shosuu(this.wizard.status.deffence,1)}`, color: 'white' },
-            { name: '🌀移動速度', value: this.shosuu(this.wizard.status.MaxSpeed,1), color: 'white' },
+            { name: '❤️'+textDataTable.get("HP").text, value: `${this.wizard.status.hp} / ${this.wizard.status.maxHP}`, color: 'white' },
+            { name: '💠'+textDataTable.get("MP").text, value: `${Math.floor(this.wizard.status.mp)} / ${this.wizard.status.maxMP}`, color: 'white' },
+            { name: '🍷'+textDataTable.get("MPAutoRecovery").text, value: `${this.shosuu(this.wizard.status.mpregene,1)}`, color: 'white' },
+            { name: '🗡️'+textDataTable.get("AttackPower").text, value: this.wizard.status.attack, color: 'white' },
+            { name: '🛡️'+textDataTable.get("Defensepower").text, value: `${this.shosuu(this.wizard.status.deffence,1)}`, color: 'white' },
+            { name: '🌀'+textDataTable.get("movementspeed").text, value: this.shosuu(this.wizard.status.MaxSpeed,1), color: 'white' },
 
 
 
 
-            { name: '🏹魔法貫通',       value: `${this.shosuu(this.wizard.status.attackPierceCount,1)}`,       color: 'white' },
-            { name: '🎯誘導範囲',       value: `${this.wizard.status.HomingRadius}`,            color: 'white' },
-            { name: '🧲誘導補正',       value: `${this.shosuu(this.wizard.status.HomingPower,1)}`,             color: 'white' },
-            { name: '📡射程', value: `${this.wizard.status.AddLifeTime}`, color: 'white' },
-            { name: '📒魔法個数', value: (this.wizard.status.FireCnt1), color: 'white' },
+            { name: '🏹'+textDataTable.get("MagicPierce").text,       value: `${this.shosuu(this.wizard.status.attackPierceCount,1)}`,       color: 'white' },
+            { name: '🎯'+textDataTable.get("Inductionrange").text,       value: `${this.wizard.status.HomingRadius}`,            color: 'white' },
+            { name: '🧲'+textDataTable.get("Inductioncorrection").text,       value: `${this.shosuu(this.wizard.status.HomingPower,1)}`,             color: 'white' },
+            { name: '📡'+textDataTable.get("Range").text, value: `${this.wizard.status.AddLifeTime}`, color: 'white' },
+            { name: '📒'+textDataTable.get("MagicCount").text, value: (this.wizard.status.FireCnt1), color: 'white' },
 
-            { name: '🚀魔法速度',       value: `${this.shosuu(this.wizard.status.AddMaxSpeed,1)}`,             color: 'white' },
-            { name: '🔋使用魔力',       value: `${this.wizard.status.UseMP}`,                  color: 'white' },
+            { name: '🚀'+textDataTable.get("magicspeed").text,       value: `${this.shosuu(this.wizard.status.AddMaxSpeed,1)}`,             color: 'white' },
+            { name: '🔋'+textDataTable.get("Magicpowerused").text,       value: `${this.wizard.status.UseMP}`,                  color: 'white' },
             
-            { name: '🔥耐性', value: `${this.shosuu(this.wizard.status.RegistFIREBALL,2)}`, color: 'white' },
-            { name: '❄️耐性', value: `${this.shosuu(this.wizard.status.RegistICE,2)}`, color: 'white' },
-            { name: '⚡耐性', value: `${this.shosuu(this.wizard.status.RegistLIGHTNING,2)}`, color: 'white' },
-            { name: '🌪️耐性', value: `${this.shosuu(this.wizard.status.RegistLIGHTNING,2)}`, color: 'white' },
-            { name: '☄️耐性', value: `${this.shosuu(this.wizard.status.RegistMETEOR,2)}`, color: 'white' },
-            { name: '💥耐性', value: `${this.shosuu(this.wizard.status.RegistEXPLOSION,2)}`, color: 'white' },
-            { name: '💨耐性', value: `${this.shosuu(this.wizard.status.RegistGUST,2)}`, color: 'white' },
-            { name: '🫧耐性', value: `${this.shosuu(this.wizard.status.RegistBUBBLE,2)}`, color: 'white' },
-            { name: '🌈耐性', value: `${this.shosuu(this.wizard.status.RegistRAINBOW,2)}`, color: 'white' },
-            { name: '🕸️耐性', value: `${this.shosuu(this.wizard.status.RegistWEB,2)}`, color: 'white' },
-            { name: '🦂耐性', value: `${this.shosuu(this.wizard.status.RegistPOISONSTING,2)}`, color: 'white' },
-            { name: '🗡️耐性', value: `${this.shosuu(this.wizard.status.RegistSWORDSLASH,2)}`, color: 'white' },
-            { name: '🪓耐性', value: `${this.shosuu(this.wizard.status.RegistGREATAxe,2)}`, color: 'white' },
-            { name: '🔨耐性', value: `${this.shosuu(this.wizard.status.RegistHAMMERCRUSH,2)}`, color: 'white' },
-            { name: '🔱耐性', value: `${this.shosuu(this.wizard.status.RegistTRIDENTTHRUST,2)}`, color: 'white' },
-            { name: '🛡️耐性', value: `${this.shosuu(this.wizard.status.RegistSHIELDBASH,2)}`, color: 'white' },
+            { name: '🔥'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistFIREBALL,2)}`, color: 'white' },
+            { name: '❄️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistICE,2)}`, color: 'white' },
+            { name: '⚡'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistLIGHTNING,2)}`, color: 'white' },
+            { name: '🌪️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistLIGHTNING,2)}`, color: 'white' },
+            { name: '☄️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistMETEOR,2)}`, color: 'white' },
+            { name: '💥'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistEXPLOSION,2)}`, color: 'white' },
+            { name: '💨'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistGUST,2)}`, color: 'white' },
+            { name: '🫧'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistBUBBLE,2)}`, color: 'white' },
+            { name: '🌈'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistRAINBOW,2)}`, color: 'white' },
+            { name: '🕸️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistWEB,2)}`, color: 'white' },
+            { name: '🦂'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistPOISONSTING,2)}`, color: 'white' },
+            { name: '🗡️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistSWORDSLASH,2)}`, color: 'white' },
+            { name: '🪓'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistGREATAxe,2)}`, color: 'white' },
+            { name: '🔨'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistHAMMERCRUSH,2)}`, color: 'white' },
+            { name: '🔱'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistTRIDENTTHRUST,2)}`, color: 'white' },
+            { name: '🛡️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistSHIELDBASH,2)}`, color: 'white' },
 
         ];
 

@@ -121,7 +121,7 @@ export class SaveManagerUI extends UIBase {
         this._ce('h2','',header,'Save Game');
 
         /* ----- タイトルに戻る ボタン ------------------------------------ */
-        var btnBack = this._ce('button','sm-btn sm-btn--accent',header,'タイトルに戻る');
+        var btnBack = this._ce('button','sm-btn sm-btn--accent',header,'Return to Title');
         btnBack.onclick = () => {
             // gameArea / gameUiLayer が未指定なら DOM から推測
             const area    = this.gameArea    || document.getElementById('game-area');

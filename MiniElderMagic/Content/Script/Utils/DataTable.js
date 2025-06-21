@@ -1,6 +1,35 @@
 ﻿// data/MagicDataManager.js
 import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
+
+
+export let languageList = ['en', 'zh-Hans', 'es', 'fr', 'de', 'pt-BR', 'ko', 'ja', 'ru'];
+export let language = "en";
+
+export function setLanguage(lang) {
+    language = lang;
+}
+
+/**
+ * ❷ 行（オブジェクト）から “その言語用の列” を取り出す汎用関数
+ *     - ja 専用カラムがある場合 → baseKey (例: 'InfoText')
+ *     - それ以外の言語       → langCode と同じ列名（例: 'fr', 'ko', …）
+ *     - フォールバック        → 'en' → baseKey → ''
+ *
+ *    使い方:  pickLang(row, 'InfoText')
+ */
+export function pickLang(row, baseKey) {
+    /* 1) 完全一致があればそれ */
+    if (language === 'ja' && row[baseKey]) return row[baseKey];
+    if (row[language])                    return row[language];
+
+    /* 2) 英語にフォールバック */
+    if (row.en) return row.en;
+
+    /* 3) さらに最後の保険 */
+    return row[baseKey] ?? '';
+}
+
 /**
  * CSV ファイルを読み込んで配列（1 行 = 1 オブジェクト）を返す
  *   - header: true なので 1 行目の見出しがキーになる
@@ -55,6 +84,7 @@ export class DataTable {
 
 export let magicDataTable = null;
 
+
 export class MagicDataTable {
     static table = new Map();
 
@@ -71,15 +101,16 @@ export class MagicDataTable {
     }
 
 
-    constructor({ id, emoji, useMP, lifeTime, maxSpeed,damage,InfoText }) {
+    constructor({ id, emoji, useMP, lifeTime, maxSpeed,damage,InfoText
+                    ,en,'zh-Hans': zhHans, es, fr, de, 'pt-BR': ptBR, ko, ru}) {
         this.id        = id;       // SpellID など
         this.emoji     = emoji;
         this.useMP     = +useMP;   // 数値にキャスト
         this.lifeTime  = +lifeTime;
         this.maxSpeed  = +maxSpeed;
         this.damage = +damage;
-        this.InfoText = +InfoText;
         
+        this.InfoText = pickLang(arguments[0], 'InfoText');
     }
 }
 
@@ -102,7 +133,8 @@ export class ItemDataTable{
         }
         itemDataTable = this;
     }
-    constructor({ id ,emoji ,type,value,shopcost,drop,shop,filtertype,infotext}){
+    constructor({ id ,emoji ,type,value,shopcost,drop,shop,filtertype,infotext
+        ,en,'zh-Hans': zhHans, es, fr, de, 'pt-BR': ptBR, ko, ru}){
         this.emoji = emoji;
         this.type = type;
         this.value = value;
@@ -110,7 +142,9 @@ export class ItemDataTable{
         this.drop = drop;
         this.shop = Number(shop);
         this.filtertype = filtertype;
-        this.infotext = infotext;
+
+
+        this.infotext = pickLang(arguments[0], 'infotext');
     }
 }
 
@@ -393,11 +427,44 @@ export class EventDataTable{
         }
         eventDataTable = this;
     }
-    constructor({ id ,titleEmoji ,text,type,mode,value}){
+    constructor({ id ,titleEmoji ,text,type,mode,value
+        ,en,'zh-Hans': zhHans, es, fr, de, 'pt-BR': ptBR, ko, ru}){
         this.titleEmoji = titleEmoji;
         this.text = text;
         this.type = type;
         this.mode = mode;
         this.value = parseFloat(value);
+
+
+    this.text = pickLang(arguments[0], 'text');
+    }
+}
+
+
+
+export let textDataTable = null;
+
+export class TextDataTable {
+    static table = new Map();
+
+    static get(id) { return this.table.get(id); }
+
+    static async init(csvUrl = '/assets/magic.csv') {
+        const rows = await loadCSV(csvUrl);          // [{id,emoji,useMP,…}, …]
+        for (const row of rows) {
+            this.table.set(row.id, new TextDataTable(row));
+
+            //console.log(row.id,row);
+        }
+        textDataTable = this;
+    }
+
+
+    constructor({ id, text
+                    ,en,'zh-Hans': zhHans, es, fr, de, 'pt-BR': ptBR, ko, ru}){
+        this.id        = id;       // SpellID など
+
+
+        this.text = pickLang(arguments[0], 'text');
     }
 }

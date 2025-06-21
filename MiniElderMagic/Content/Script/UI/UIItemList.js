@@ -3,6 +3,8 @@ import {UIBase} from './UIBase.js';
 import {eventDataTable, eventTileDataTable, itemDataTable} from '../Utils/DataTable.js';
 import {gameMainScene} from "../Scene/GameMainScene.js";
 
+import {textDataTable} from "../Utils/DataTable.js";
+
 /**
  * ショップ UI  ― タイトル／コイン表示／フィルターバー／アイテムグリッド
  */
@@ -76,7 +78,7 @@ export class UIItemList extends UIBase {
         this.heading.textContent = 'Shop';
 
         if (this.sellmode) {
-            this.heading.textContent = '買取';
+            this.heading.textContent = textDataTable.get("PurchasePrice").text;
         }
         Object.assign(this.heading.style, {
             fontWeight: 'bold', fontSize: '20px',
@@ -270,7 +272,7 @@ export class UIItemList extends UIBase {
                 costDiv.innerHTML = `<span style="color:#ffd700;font-size:12px;">🪙 ${cost}</span>`;
             }
             else{
-                costDiv.innerHTML = `<span style="color:#ffd700;font-size:12px;">買取価格 ${cost}</span>`;
+                costDiv.innerHTML = '<span style="color:#ffd700;font-size:12px;">'+textDataTable.get("PurchasePrice").text+` ${cost}</span>`;
             }
             btn.append(emojiDiv, infoDiv, costDiv);
             this.listWrapper.appendChild(btn);

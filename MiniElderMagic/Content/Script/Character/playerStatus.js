@@ -5,7 +5,6 @@ export class PlayerStatus {
      */
     constructor(coins = 0, stage = 1) {
         this.coins = coins;
-        this.stage = stage;
 
         this.MagicName = "FIREBALL";    // 初期
         this.HasMagics = [];
@@ -25,21 +24,6 @@ export class PlayerStatus {
      */
     addCoins(amount = 1) {
         this.coins += amount;
-    }
-
-    /**
-     * @desc ステージを進める
-     */
-    nextStage() {
-        this.stage++;
-    }
-
-    /**
-     * @desc ステージを指定の番号に設定
-     * @param {number} stageNumber - 設定するステージ番号
-     */
-    setStage(stageNumber) {
-        this.stage = stageNumber;
     }
 
 }

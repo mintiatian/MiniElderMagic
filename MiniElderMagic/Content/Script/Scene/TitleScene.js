@@ -7,7 +7,8 @@ import {GameMainScene} from './GameMainScene.js';
 import {SceneManagerInstance} from './SceneManager.js';
 import {SaveManager} from '../Save/SaveManager.js';
 import {LoadManagerUI} from '../Save/LoadManagerUI.js';
-
+import { UILanguageSelector } from '../UI/UILanguageSelector.js';
+import {language, setLanguage} from '../Utils/DataTable.js';
 export class TitleScene extends BaseScene {
 
     /* -------------------------------------------------------------- */
@@ -28,6 +29,16 @@ export class TitleScene extends BaseScene {
     /* ==================== Scene Life-Cycle ========================= */
     onEnter() {
         if (!this.saveGui.element.isConnected){ this.gameUiLayer.appendChild(this.saveGui.element); }
+        
+        /* === 言語選択 UI を追加 === */
+        this.langUI = new UILanguageSelector(this.gameUiLayer, newLang => {
+            setLanguage(newLang);
+            //language = newLang;
+            // 翻訳反映処理（未実装ならここに translatePage() など）
+            console.log(`言語を切り替えました: ${language}`);
+        });
+        
+        
         
         /* ----- タイトル DOM -------------------------------------- */
         this.titleDiv = document.createElement('div');
@@ -66,6 +77,7 @@ export class TitleScene extends BaseScene {
         this.titleDiv.remove();
         this.gameArea.innerHTML = '';
         this.gameUiLayer.innerHTML = '';
+        //this.langUI?.remove();  // 言語UIも削除
     }
 
     /* ===================== Helpers ================================ */

@@ -1,6 +1,6 @@
 ﻿import {UIBase} from './UIBase.js';
 import {gameMainScene} from "../Scene/GameMainScene.js";
-import {eventDataTable, eventTileDataTable} from '../Utils/DataTable.js';
+import {eventDataTable, eventTileDataTable, textDataTable} from '../Utils/DataTable.js';
 
 export class UIEventDialog extends UIBase {
     constructor(parentElement, opts = {},thisHideStart=true) {
@@ -214,10 +214,10 @@ export class UIEventDialog extends UIBase {
             this._btnArea.appendChild(b);
         };
         if (mode === 'yesno') {
-            makeBtn('はい', 'yes');
-            makeBtn('いいえ', 'no');
+            makeBtn(textDataTable.get("YES").text, 'yes');
+            makeBtn(textDataTable.get("NO").text, 'no');
         } else {
-            makeBtn('OK', 'ok');
+            makeBtn(textDataTable.get("OK").text, 'ok');
         }
         await this._wait();
         this._btnArea.innerHTML = '';

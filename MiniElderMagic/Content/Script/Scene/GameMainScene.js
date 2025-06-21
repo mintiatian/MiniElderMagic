@@ -21,7 +21,7 @@ import {
     MapDataTable,
     MapColorDataTable,
     EnemyPopDataTable,
-    EventTileDataTable, EventDataTable, MapEventDataTable, ItemDropPopDataTable,
+    EventTileDataTable, EventDataTable, MapEventDataTable, ItemDropPopDataTable, TextDataTable,
 } from "../Utils/DataTable.js";
 import {UIItemList} from "../UI/UIItemList.js";
 
@@ -129,6 +129,7 @@ export class GameMainScene extends BaseScene {
             mapDropPopItem: 'https://docs.google.com/spreadsheets/d/1vrdjApsk2xD-IaNrskusJPwARl7x0KazGLBTy7LTV3o/export?format=csv',
             eventTile: 'https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv',
             event: 'https://docs.google.com/spreadsheets/d/1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc/export?format=csv',
+            text: 'https://docs.google.com/spreadsheets/d/1GzKK2-oFpGMc3kr1TYE6U-7_DeLjDN81zdQUGumimxo/export?format=csv',
 
         };
 
@@ -149,6 +150,7 @@ export class GameMainScene extends BaseScene {
             ItemDropPopDataTable.init(urls.mapDropPopItem),
             EventTileDataTable.init(urls.eventTile),
             EventDataTable.init(urls.event),
+            TextDataTable.init(urls.text),
         ];
 
         // すべて終わるまで待つ (失敗があれば catch で拾う)

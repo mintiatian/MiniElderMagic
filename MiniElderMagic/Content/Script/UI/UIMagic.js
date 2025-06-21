@@ -104,7 +104,7 @@ export class UIMagic extends UIBase {
 
         if (!list || list.length === 0) {
             const empty = document.createElement('div');
-            empty.textContent = 'まだ魔法を習得していません';
+            empty.textContent = 'Has not yet learnt magic.';
             this.element.appendChild(empty);
             return;
         }
@@ -163,7 +163,7 @@ export class UIMagic extends UIBase {
             btnSet.dataset.action = 'set';
             btnSet.style.cursor   = 'pointer';
             btnSet.style.padding  = '0 4px';
-            btnSet.title          = 'この魔法をセット';
+            btnSet.title          = 'Set this magic.';
 
             row.append(spanIndex, spanEmoji, spanId, spanMp, btnSet, btnUp, btnDown);
             this.element.appendChild(row);
