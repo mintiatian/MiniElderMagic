@@ -14,9 +14,9 @@ export class UIStatus extends UIBase{
         
         // ── 位置指定 ──────────────────────────────
         this.element.style.position  = 'absolute';  // 画面 or 親要素基準
-        this.element.style.left      = '20%';       // 横 1/4（25 %）ライン
+        this.element.style.left      = '1%';       // 横 1/4（25 %）ライン
         this.element.style.top       = '50%';       // 縦 1/2（50 %）ライン
-        this.element.style.transform = 'translate(-50%, -50%)';  // 要素自身の中心を基準点に合わせる
+        this.element.style.transform = 'translate(0%, -50%)';  // 要素自身の中心を基準点に合わせる
         
         this.element.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
         this.element.style.padding = '20px';

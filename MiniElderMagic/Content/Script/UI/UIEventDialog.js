@@ -3,7 +3,7 @@ import {gameMainScene} from "../Scene/GameMainScene.js";
 import {eventDataTable, eventTileDataTable, textDataTable} from '../Utils/DataTable.js';
 
 export class UIEventDialog extends UIBase {
-    constructor(parentElement, opts = {},thisHideStart=true) {
+    constructor(parentElement, opts = {}, thisHideStart = true) {
         super(parentElement);
         this._applyOpts(opts);
         this._script = null;
@@ -11,8 +11,8 @@ export class UIEventDialog extends UIBase {
         this._waiting = null;
         this._lastAnswer = null;
         this._buildDom();
-        
-        if(thisHideStart){
+
+        if (thisHideStart) {
             this.hide();
         }
     }
@@ -142,16 +142,22 @@ export class UIEventDialog extends UIBase {
         Object.assign(this.element.style, {
             position: 'absolute',
             inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             pointerEvents: 'none',
             zIndex: 1000
         });
         const win = document.createElement('div');
+        this._winEl = win;
         Object.assign(win.style, {
-            minWidth: '240px',
-            maxWidth: '60%',
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',   // 初期は画面中央
+            /* 横幅は 600 px を上限に、画面幅が狭ければ 90 % に縮む */
+            width: 'min(600px, 90%)',
+            /* 高さは内容で自動拡張。画面の 80 % を超えたら中だけスクロール */
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            transition : 'left .25s ease, top .25s ease, transform .25s ease',
             padding: '20px',
             borderRadius: '12px',
             background: 'rgba(0,0,0,.70)',
@@ -165,7 +171,15 @@ export class UIEventDialog extends UIBase {
         this._titleEl.style.fontSize = '2.5rem';
         win.appendChild(this._titleEl);
         this._textEl = document.createElement('p');
-        Object.assign(this._textEl.style, {margin: '12px 0 24px', minHeight: '2em', whiteSpace: 'pre-wrap'});
+        Object.assign(this._textEl.style, {
+
+            margin: '12px 0 24px',
+            minHeight: '2em',
+            /* 改行文字は尊重しつつ、自動折り返し */
+            whiteSpace: 'pre-wrap',
+            /* VeryLongWordWithoutSpaces がはみ出さないように */
+            wordBreak: 'break-word'
+        });
         win.appendChild(this._textEl);
         this._btnArea = document.createElement('div');
         Object.assign(this._btnArea.style, {display: 'flex', justifyContent: 'center', gap: '24px'});
@@ -175,7 +189,7 @@ export class UIEventDialog extends UIBase {
     async _opPage(cmd) {
         this._titleEl.textContent = this.titleEmoji;
         await this._typeWriter(cmd.text ?? '');
-        
+        await this._repositionIfOverlap();   // ← ここを追加
         this.element.style.pointerEvents = 'auto';
         await new Promise(resolve => {
             const clickHandler = () => {
@@ -190,6 +204,7 @@ export class UIEventDialog extends UIBase {
     async _opDialog(cmd) {
         const mode = cmd.dialogMode ?? 'ok';
         this._btnArea.innerHTML = '';
+        await this._repositionIfOverlap();
         this.element.style.pointerEvents = 'auto';
         const makeBtn = (label, value) => {
             const b = document.createElement('button');
@@ -309,4 +324,43 @@ export class UIEventDialog extends UIBase {
         }
 
     }
+
+
+    /** UIStatus と被ったときだけ win を右へずらす */
+    _repositionIfOverlap() {
+        return new Promise(res => {
+            //requestAnimationFrame(() => {
+                requestAnimationFrame(() => {   // 2フレーム待機でレイアウト確定
+                    const statusEl = document.querySelector('.status-element');
+                    if (!statusEl) { res(); return; }
+
+                    const STATUS_GAP = 16;
+                    void this._winEl.offsetWidth;    // ★ reflow 強制
+                    const rStatus = statusEl.getBoundingClientRect();
+                    const rWin    = this._winEl.getBoundingClientRect();
+
+                    /* x, y 方向どちらも 1px でも接触していれば overlap と判定 */
+                    const isOverlap =
+                        !(rWin.right  < rStatus.left  ||
+                            rWin.left   > rStatus.right ||
+                            rWin.bottom < rStatus.top   ||
+                            rWin.top    > rStatus.bottom);
+
+                    if (isOverlap) {
+                        /* UIStatus の右端＋余白に合わせて再配置 */
+                        this._winEl.style.left      = `${rStatus.right + STATUS_GAP + window.scrollX}px`;
+                        this._winEl.style.top       = '50%';
+                        this._winEl.style.transform = 'translate(0, -50%)';
+                    } else {
+                        /* 重なっていなければ中央へ戻す */
+                        //this._winEl.style.left      = '50%';
+                        //this._winEl.style.top       = '50%';
+                        //this._winEl.style.transform = 'translate(-50%, -50%)';
+                    }
+                    res();
+                });
+            //});
+        });
+    }
+
 }

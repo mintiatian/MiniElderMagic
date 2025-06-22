@@ -196,8 +196,6 @@ export class GameMainScene extends BaseScene {
         );
         this.AddNewPawns.push(this.wizard);   // ★必須：更新ループに載せる
 
-        // デバッグ UI は onEnter で生成しておく（toggle 用参照）
-        this.itemList = new UIItemList(this.gameUiLayer, this.wizard);
         
         /* 4. ゲーム内管理配列と入力状態リセット */
         this.pawns = [];
@@ -208,6 +206,8 @@ export class GameMainScene extends BaseScene {
           　　→ updateGame() がすぐ使える                         */
         this.hud = new UIHud(this.gameUiLayer, this.wizard);
         this.statusUI = new UIStatus(this.gameUiLayer, this.wizard);
+        // デバッグ UI は onEnter で生成しておく（toggle 用参照）
+        this.itemList = new UIItemList(this.gameUiLayer, this.wizard);
         this.magicUI = new UIMagic(this.gameUiLayer, this.wizard);
 
 

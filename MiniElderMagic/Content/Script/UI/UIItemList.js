@@ -30,8 +30,7 @@ export class UIItemList extends UIBase {
                     gameMainScene.magicUI.updateDisplay();
                     this.updateDisplay();
                 }
-            }
-            else{
+            } else {
                 if (this.wizard.getItemCount(item.emoji) > 0) {            // 在庫あり？
                     const cost = Number(item.shopcost);
                     this.wizard.changeItemCount(item.emoji, -1);        // アイテム削除
@@ -59,8 +58,8 @@ export class UIItemList extends UIBase {
         /* ───────── フレーム ───────── */
         this.element.classList.add('ui-shop');
         Object.assign(this.element.style, {
-            position: 'absolute', top: '20%', left: '40%',
-            transform: 'translate(-50%,-50%)',
+            //position: 'absolute', top: '20%', left: '40%',
+            //transform: 'translate(-50%,-50%)',
             minWidth: '600px', maxWidth: '620px',
             padding: '12px 18px 18px',
             background: 'rgba(0,0,0,0.92)',
@@ -74,7 +73,7 @@ export class UIItemList extends UIBase {
 
         /* タイトル */
         this.heading = document.createElement('div');
-        
+
         this.heading.textContent = 'Shop';
 
         if (this.sellmode) {
@@ -120,6 +119,7 @@ export class UIItemList extends UIBase {
 
 
         //document.body.appendChild(this.element);
+        // ここで全体の位置を再調整。
         this.element.style.position = 'absolute';  // 画面 or 親要素基準
         this.element.style.left = '50%';       // 横 1/4（25 %）ライン
         this.element.style.top = '50%';       // 縦 1/2（50 %）ライン
@@ -270,9 +270,8 @@ export class UIItemList extends UIBase {
 
             if (!this.sellmode) {
                 costDiv.innerHTML = `<span style="color:#ffd700;font-size:12px;">🪙 ${cost}</span>`;
-            }
-            else{
-                costDiv.innerHTML = '<span style="color:#ffd700;font-size:12px;">'+textDataTable.get("PurchasePrice").text+` ${cost}</span>`;
+            } else {
+                costDiv.innerHTML = '<span style="color:#ffd700;font-size:12px;">' + textDataTable.get("PurchasePrice").text + ` ${cost}</span>`;
             }
             btn.append(emojiDiv, infoDiv, costDiv);
             this.listWrapper.appendChild(btn);
@@ -281,7 +280,34 @@ export class UIItemList extends UIBase {
 
     /* ───────── 表示 / 非表示 ───────── */
     show() {
+        requestAnimationFrame(() => {          // 1フレーム目: レイアウト確定
+            requestAnimationFrame(() => {      // 2フレーム目: 安心して測る
+                const statusEl = document.querySelector('.status-element');
+                const rStatus = statusEl.getBoundingClientRect();
+                const rSelf = this.element.getBoundingClientRect();
 
+                /* 3) x, y 方向に 1px でも重なっていたら「被っている」とみなす ------ */
+                const isOverlap =
+                    !(rSelf.right < rStatus.left ||  // 自分が完全に左側
+                        rSelf.left > rStatus.right ||  // 自分が完全に右側
+                        rSelf.bottom < rStatus.top ||  // 自分が完全に上
+                        rSelf.top > rStatus.bottom);  // 自分が完全に下
+
+                if (isOverlap) {
+                    // ――― UIStatus の終端座標を取得して自分の位置を決める ―――
+                    if (statusEl) {
+                        const STATUS_GAP = 16;
+                        const r = statusEl.getBoundingClientRect();
+                        // UIStatus の右端 ＋ 余白 → UIItemList の left
+                        this.element.style.left = `${r.right + STATUS_GAP + window.scrollX}px`;
+                        // 縦位置は UIStatus と中央をそろえる
+                        //this.element.style.top = `${r.top + r.height / 2 + window.scrollY}px`;
+                        // X 方向は左寄せにするので translateX は 0 に
+                        this.element.style.transform = 'translate(0, -50%)';
+                    }
+                }
+            });
+        });
 
         const event = gameMainScene.background.getMapValue("event", gameMainScene.wizard.x, gameMainScene.wizard.y);
 
@@ -291,11 +317,11 @@ export class UIItemList extends UIBase {
 
                 if (eventData.type === "shop") {
                     /* -------- ショップ UI を開く -------- */
-                    
-                    if(eventData.mode === "tent" || eventData.mode === "inn"){
+
+                    if (eventData.mode === "tent" || eventData.mode === "inn") {
                         gameMainScene.wizard.setInnPosition();
                     }
-                    
+
                     this.filter = eventData.mode;  // 例: "potion"
                     this.currentFilter = "all";                // ボタン側リセット
                     this.updateDisplay();

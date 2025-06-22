@@ -23,7 +23,7 @@ export class UIHud extends UIBase {
 
             /* ★ ここでサイズを固定 ★ */
             width: '220px',          // ← パネル横幅を固定
-            height: '220px',           // ← 必要なら高さも固定
+            height: '260px',           // ← 必要なら高さも固定
             boxSizing: 'border-box',     // padding を含めて計算させる
 
             padding: '8px 12px',

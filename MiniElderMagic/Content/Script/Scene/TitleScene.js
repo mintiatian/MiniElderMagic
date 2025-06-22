@@ -57,7 +57,7 @@ export class TitleScene extends BaseScene {
 
         /* ----- Esc で LoadGUI を閉じる --------------------------- */
         this._esc = e => {
-            if (e.key === 'Escape' && this.saveGui.isVisible()) {
+            if (e.key === 'Escape' && this.saveGui && this.saveGui?.isVisible) {
                 this.saveGui.hide();
             }
         };

@@ -1,5 +1,5 @@
-﻿import { UIBase } from './UIBase.js';
-import { magicDataTable } from '../Utils/DataTable.js';
+﻿import {UIBase} from './UIBase.js';
+import {magicDataTable} from '../Utils/DataTable.js';
 
 /**
  * UIMagic ― 習得済み魔法一覧 UI
@@ -13,7 +13,7 @@ export class UIMagic extends UIBase {
      * @param {PlayerBase} player
      * @param {HTMLElement} [parent=document.body] 追加先の DOM ノード
      */
-    constructor(parentElement,player ) {
+    constructor(parentElement, player) {
         super(parentElement);
         this.wizard = player;
 
@@ -32,9 +32,9 @@ export class UIMagic extends UIBase {
             userSelect: 'none',
             borderRadius: '4px',
             zIndex: 90,
-            display:  'flex',        // UIBase が flex を強制するので合わせる
+            display: 'flex',        // UIBase が flex を強制するので合わせる
             flexDirection: 'column', // 子を縦方向に並べる
-            alignItems:   'flex-start',
+            alignItems: 'flex-start',
             gap: '2px',              // 行間
         });
 
@@ -55,17 +55,22 @@ export class UIMagic extends UIBase {
                 this._setMagic(index);
             }
         });
-        
+
 
         this.parentElement.appendChild(this.element);
-        this.element.style.position  = 'absolute';  // 画面 or 親要素基準
-        this.element.style.left      = '80%';       // 横 1/4（25 %）ライン
-        this.element.style.top       = '20%';       // 縦 1/2（50 %）ライン
-        this.element.style.transform = 'translate(-50%, 0%)';  // 要素自身の中心を基準点に合わせる
-        this.element.style.zIndex  = 1000;         // ゲーム画より前面
+        this.element.style.position = 'absolute';  // 画面 or 親要素基準
+        //this.element.style.left = '80%';       // 横 1/4（25 %）ライン
+        this.element.style.top = '20%';       // 縦 1/2（50 %）ライン
+        //this.element.style.transform = 'translate(-50%, 0%)';  // 要素自身の中心を基準点に合わせる
+        this.element.style.zIndex = 1000;         // ゲーム画より前面
         
+        // 新: 右端固定（上下は中央にそろえる）
+        this.element.style.right = '24px';      // 余白はお好みで
+        //this.element.style.top = '50%';
+        this.element.style.transform = 'translateY(-50%)';  // 横方向の -50% は不要
         this.hide();
     }
+
     _setMagic(index) {
         const list = this.wizard?.playerstatus?.HasMagics;
         if (!Array.isArray(list) || !list[index]) return;
@@ -74,7 +79,7 @@ export class UIMagic extends UIBase {
         // wizard(player) 側のメソッドを呼ぶ
         this.wizard?.SetMagic?.(magicId);
     }
-    
+
     /**
      * 指定インデックスの要素を 1 つずらす
      * @private
@@ -91,6 +96,7 @@ export class UIMagic extends UIBase {
         list.splice(newIndex, 0, item);
         this.updateDisplay(); // 再描画
     }
+
     updateDisplay() {
         const list = this.wizard?.playerstatus?.HasMagics;
 
@@ -124,11 +130,11 @@ export class UIMagic extends UIBase {
             });
             const indexTexts = [
                 '1⃣', '2⃣', '3⃣', '4⃣', '5⃣',
-                '6⃣', '7⃣', '8⃣', '9⃣', '0⃣','⬜️','⬜️','⬜️','⬜️','⬜️','⬜️','⬜️','⬜️'
+                '6⃣', '7⃣', '8⃣', '9⃣', '0⃣', '⬜️', '⬜️', '⬜️', '⬜️', '⬜️', '⬜️', '⬜️', '⬜️'
             ];
             const spanIndex = document.createElement('span');
             spanIndex.textContent = indexTexts[i];
-            
+
             const spanEmoji = document.createElement('span');
             spanEmoji.textContent = emoji;
 
@@ -139,9 +145,8 @@ export class UIMagic extends UIBase {
             const spanMp = document.createElement('span');
             spanMp.textContent = mpCost;
             spanMp.style.minWidth = '48px';
-            
-            
-            
+
+
             const btnUp = document.createElement('button');
             btnUp.textContent = '▲';
             btnUp.dataset.index = i;
@@ -159,11 +164,11 @@ export class UIMagic extends UIBase {
             // 🪄 セットボタン
             const btnSet = document.createElement('button');
             btnSet.textContent = '🪄';        // いい感じの絵文字
-            btnSet.dataset.index  = i;
+            btnSet.dataset.index = i;
             btnSet.dataset.action = 'set';
-            btnSet.style.cursor   = 'pointer';
-            btnSet.style.padding  = '0 4px';
-            btnSet.title          = 'Set this magic.';
+            btnSet.style.cursor = 'pointer';
+            btnSet.style.padding = '0 4px';
+            btnSet.title = 'Set this magic.';
 
             row.append(spanIndex, spanEmoji, spanId, spanMp, btnSet, btnUp, btnDown);
             this.element.appendChild(row);
