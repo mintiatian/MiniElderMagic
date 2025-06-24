@@ -38,7 +38,8 @@ export class Palette {
                 onExit: () => console.log("dialog closed")
             },
             /* thisHideStart=false で即表示 */
-            false
+            false,
+            true
         );
         dlg.run(data.text);
     }

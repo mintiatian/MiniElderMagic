@@ -6,7 +6,7 @@
 import { Editor } from "./editor.js";
 import { FileIO } from "./io.js";
 import { parseCSV } from "./utils.js";
-import {eventDataTable, EventDataTable} from "../../Script/Utils/DataTable.js";
+import {eventDataTable, EventDataTable, TextDataTable} from "../../Script/Utils/DataTable.js";
 
 /* -------------------------------------------------
  *  MapEditorMain
@@ -16,13 +16,14 @@ export class MapEditorMain {
 
         const urls = {
             event: 'https://docs.google.com/spreadsheets/d/1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc/export?format=csv',
+            text: 'https://docs.google.com/spreadsheets/d/1GzKK2-oFpGMc3kr1TYE6U-7_DeLjDN81zdQUGumimxo/export?format=csv',
         };
 
         this._loadedCount = 0;            // 進捗カウンター
         this._totalToLoad = Object.keys(urls).length;            // 期待ロード数
 
         EventDataTable.init(urls.event).then(() => this.initCount());
-
+        TextDataTable.init(urls.text).then(() => this.initCount());
     }
 
     initCount() {

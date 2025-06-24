@@ -1,6 +1,6 @@
 ﻿import {$, FIELD_DEFS, createSelect, ITEM_OPTIONS, HUMAN_EMOJIS} from './ScriptBuilderUtils.js';
 import {ScriptBuilderModel} from './ScriptBuilderModel.js';
-import {EventDataTable} from "../Script/Utils/DataTable.js";
+import {EventDataTable, TextDataTable} from "../Script/Utils/DataTable.js";
 import {saveEventCsvToFolder} from './ImportExportService.js';
 
 (() => {
@@ -9,12 +9,14 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
 
             const urls = {
                 event: 'https://docs.google.com/spreadsheets/d/1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc/export?format=csv',
+                text: 'https://docs.google.com/spreadsheets/d/1GzKK2-oFpGMc3kr1TYE6U-7_DeLjDN81zdQUGumimxo/export?format=csv',
             };
 
             this._loadedCount = 0;            // 進捗カウンター
             this._totalToLoad = Object.keys(urls).length;            // 期待ロード数
 
             EventDataTable.init(urls.event).then(() => this.initCount());
+            TextDataTable.init(urls.text).then(() => this.initCount());
 
         }
 
@@ -55,7 +57,7 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
                     // パース失敗時はそのまま表示
                     this.outputEl.value = data.text ?? '';
                 }
-                this.titleEmojiInput.value = data.titleEmoji ?? '';
+                //this.titleEmojiInput.value = data.titleEmoji ?? '';
                 this._setupEmojiAutocomplete();   // ★ 追加
 
                 this.applyJsonBtn.disabled = false;       // 選んだので押せる
@@ -89,7 +91,7 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             this.importBtn = $('#importBtn');
             this.runAllBtn = $('#runAllBtn');   // ★追加
             this.exportBtn = $('#exportBtn');
-            this.titleEmojiSel   = $('#titleEmojiSelect');
+            this.titleEmojiSel = $('#titleEmojiSelect');
             this._populateEmojiSelect();     // ★ 追加
 
             // Model -> View
@@ -630,7 +632,7 @@ import {saveEventCsvToFolder} from './ImportExportService.js';
             changeItemCount: () => {
             },
             onExit: () => console.log('dialog closed'),
-        },false);
+        }, false,true);
         dlg.run(json);
     });
 })();

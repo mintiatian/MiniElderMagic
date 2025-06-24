@@ -4,7 +4,7 @@ import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
 
 export let languageList = ['en', 'zh-Hans', 'es', 'fr', 'de', 'pt-BR', 'ko', 'ja', 'ru'];
-export let language = "en";
+export let language = "ja";
 
 export function setLanguage(lang) {
     language = lang;

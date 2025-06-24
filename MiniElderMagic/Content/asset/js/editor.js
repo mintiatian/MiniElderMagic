@@ -309,7 +309,7 @@ export class Editor {
                         console.log(`[changeItemCount] ${item} ${delta}`);
                     },
                     onExit: () => console.log('dialog closed'),
-                }, false);
+                }, false,true);
                 dlg.run(eventData.text);
             } else if (this.mode === "paste") {      // ★追加
                 if (!this.copyBuffer) return;

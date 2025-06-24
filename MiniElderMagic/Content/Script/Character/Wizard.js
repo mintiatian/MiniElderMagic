@@ -122,15 +122,16 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
         this.Inventory = new UIHubInventory(gameMainScene.gameUiLayer);
         this.Inventory.show();
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍄");
-        this.Inventory.addItem("🍞");
+        //this.Inventory.addItem("🍄");
+        //this.Inventory.addItem("🍄");
+        //this.Inventory.addItem("🍄");
+        //this.Inventory.addItem("🍄");
+        //this.Inventory.addItem("🍄");
+        //this.Inventory.addItem("🍄");
+        //this.Inventory.addItem("🍞");
 
         this.Inventory.addItem("⛵");
+        
 
         this.CanRespown = true;
 

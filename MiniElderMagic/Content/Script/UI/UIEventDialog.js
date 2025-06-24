@@ -3,16 +3,19 @@ import {gameMainScene} from "../Scene/GameMainScene.js";
 import {eventDataTable, eventTileDataTable, textDataTable} from '../Utils/DataTable.js';
 
 export class UIEventDialog extends UIBase {
-    constructor(parentElement, opts = {}, thisHideStart = true) {
+    constructor(parentElement, opts = {}, thisHideStart = true, useExit = false) {
         super(parentElement);
         this._applyOpts(opts);
+        this._writerTimer = null;        // ← 追加：typewriter 用
         this._script = null;
         this._pc = 0;
         this._waiting = null;
         this._lastAnswer = null;
         this._buildDom();
 
-        if (thisHideStart) {
+        this.thisHideStart = thisHideStart;
+        this.useExit = useExit;
+        if (this.thisHideStart) {
             this.hide();
         }
     }
@@ -30,7 +33,30 @@ export class UIEventDialog extends UIBase {
         });
     }
 
+    /* ========= 追加：実行中スクリプトを安全に中断 ========= */
+    _cancelCurrentRun() {
+        console.log('UIEventDialog: _cancelCurrentRun');
+        // typewriter が動いていたら止める
+        if (this._writerTimer !== null) {
+            console.log('UIEventDialog: cancel typewriter');
+            clearInterval(this._writerTimer);
+            this._writerTimer = null;
+            // --- ここで Promise を完了させる ------------------
+            if (this._writerResolver) {
+                this._writerResolver();   // resolve して await を解除
+                this._writerResolver = null;
+            }
+        }
+        // _wait() で止まっていれば解除
+        this._resolveWait();
+        // ループを強制終了 (次 run 時の衝突防止) 
+        if (this._script) this._pc = this._script.commands.length;
+    }
+
     run(script, opts = {}) {
+
+        this._cancelCurrentRun();
+
         if (opts && Object.keys(opts).length) this._applyOpts({...opts});
         const s = typeof script === 'string' ? JSON.parse(script) : script;
         if (!s.labelTable) {
@@ -121,13 +147,18 @@ export class UIEventDialog extends UIBase {
                     if (!(tgt in this._script.labelTable)) {
                         console.warn(`jump: "${tgt}" は labelTable に存在しません`);
                         // 存在しない場合は強制終了でも良いし、次に進めても良い
-                        return this._exit();    // ← 任意の安全策
+                        return this._onExit();    // ← 任意の安全策
                     }
                     this._pc = this._script.labelTable[tgt];
                     continue;                  // または return this._step();
                 }
                 case 'exit':
-                    this._onExit();
+                    //if(!this.thisHideStart){
+                    if (this.useExit) {
+                        this._onExit();
+                    }
+                    //}
+                    //
                     return;
                 default:
                     console.warn('UIEventDialog: unknown op', cmd.operation);
@@ -157,7 +188,7 @@ export class UIEventDialog extends UIBase {
             /* 高さは内容で自動拡張。画面の 80 % を超えたら中だけスクロール */
             maxHeight: '80vh',
             overflowY: 'auto',
-            transition : 'left .25s ease, top .25s ease, transform .25s ease',
+            transition: 'left .25s ease, top .25s ease, transform .25s ease',
             padding: '20px',
             borderRadius: '12px',
             background: 'rgba(0,0,0,.70)',
@@ -262,26 +293,38 @@ export class UIEventDialog extends UIBase {
     }
 
     _onExit() {
+        console.log('UIEventDialog: _onExit');
         this.onExit();
+        this._dispEnd();
+    }
 
+    _dispEnd() {
+        console.log('UIEventDialog: _dispEnd');
         this.element.style.opacity = '0';
-        //this.element.remove();
     }
 
     _typeWriter(text) {
         return new Promise(res => {
+            this._writerResolver = res;
             this._textEl.textContent = '';
             let idx = 0;
-            const timer = setInterval(() => {
+            if(this._writerTimer !== null){
+                clearInterval(this._writerTimer);   
+            }
+            
+            this._writerTimer = setInterval(() => {
+                console.log('UIEventDialog: typewriter', idx);
                 this._textEl.textContent += text[idx++];
                 if (idx >= text.length) {
-                    clearInterval(timer);
+                    clearInterval(this._writerTimer);
+                    this._writerTimer = null;
                     this._textEl.onclick = null;
                     res();
                 }
             }, this.speed);
             this._textEl.onclick = () => {
-                clearInterval(timer);
+                clearInterval(this._writerTimer);
+                this._writerTimer = null;
                 this._textEl.textContent = text;
                 this._textEl.onclick = null;
                 res();
@@ -330,37 +373,46 @@ export class UIEventDialog extends UIBase {
     _repositionIfOverlap() {
         return new Promise(res => {
             //requestAnimationFrame(() => {
-                requestAnimationFrame(() => {   // 2フレーム待機でレイアウト確定
-                    const statusEl = document.querySelector('.status-element');
-                    if (!statusEl) { res(); return; }
-
-                    const STATUS_GAP = 16;
-                    void this._winEl.offsetWidth;    // ★ reflow 強制
-                    const rStatus = statusEl.getBoundingClientRect();
-                    const rWin    = this._winEl.getBoundingClientRect();
-
-                    /* x, y 方向どちらも 1px でも接触していれば overlap と判定 */
-                    const isOverlap =
-                        !(rWin.right  < rStatus.left  ||
-                            rWin.left   > rStatus.right ||
-                            rWin.bottom < rStatus.top   ||
-                            rWin.top    > rStatus.bottom);
-
-                    if (isOverlap) {
-                        /* UIStatus の右端＋余白に合わせて再配置 */
-                        this._winEl.style.left      = `${rStatus.right + STATUS_GAP + window.scrollX}px`;
-                        this._winEl.style.top       = '50%';
-                        this._winEl.style.transform = 'translate(0, -50%)';
-                    } else {
-                        /* 重なっていなければ中央へ戻す */
-                        //this._winEl.style.left      = '50%';
-                        //this._winEl.style.top       = '50%';
-                        //this._winEl.style.transform = 'translate(-50%, -50%)';
-                    }
+            requestAnimationFrame(() => {   // 2フレーム待機でレイアウト確定
+                const statusEl = document.querySelector('.status-element');
+                if (!statusEl) {
                     res();
-                });
+                    return;
+                }
+
+                const STATUS_GAP = 16;
+                void this._winEl.offsetWidth;    // ★ reflow 強制
+                const rStatus = statusEl.getBoundingClientRect();
+                const rWin = this._winEl.getBoundingClientRect();
+
+                /* x, y 方向どちらも 1px でも接触していれば overlap と判定 */
+                const isOverlap =
+                    !(rWin.right < rStatus.left ||
+                        rWin.left > rStatus.right ||
+                        rWin.bottom < rStatus.top ||
+                        rWin.top > rStatus.bottom);
+
+                if (isOverlap) {
+                    /* UIStatus の右端＋余白に合わせて再配置 */
+                    this._winEl.style.left = `${rStatus.right + STATUS_GAP + window.scrollX}px`;
+                    this._winEl.style.top = '50%';
+                    this._winEl.style.transform = 'translate(0, -50%)';
+                } else {
+                    /* 重なっていなければ中央へ戻す */
+                    //this._winEl.style.left      = '50%';
+                    //this._winEl.style.top       = '50%';
+                    //this._winEl.style.transform = 'translate(-50%, -50%)';
+                }
+                res();
+            });
             //});
         });
     }
 
+    /* ======== UIBase.hide() を上書きしてキャンセルも行う ======== */
+    hide() {
+        console.log('UIEventDialog: hide');
+        this._cancelCurrentRun();
+        super.hide();
+    }
 }
