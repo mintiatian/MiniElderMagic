@@ -1,5 +1,7 @@
 import {PlayerStatus} from "./playerStatus.js";
 import {STAFF_SIZE} from '../GameData.js';
+
+import {GameConfig} from '../Config.js';
 import {CharacterBase} from "./CharacterBase.js";
 import {RangeCircleMixin} from "../Base/RangeCircleMixin.js";
 import {gameMainScene} from "../Scene/GameMainScene.js";
@@ -131,7 +133,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         //this.Inventory.addItem("🍞");
 
         this.Inventory.addItem("⛵");
-        
+
 
         this.CanRespown = true;
 
@@ -260,8 +262,8 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                     this._respawn();
                 }
             );
-            
-            const lostCoins = Math.floor(this.playerstatus.coins /2);
+
+            const lostCoins = Math.floor(this.playerstatus.coins / 2);
             this.playerstatus.coins = lostCoins;
 
             /* 例: 赤っぽい文字を頭上に 0.9 秒間表示 */
@@ -288,53 +290,82 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
 
         if (!this._isDead) {
-            /* ───────── 2. 入力ベクトル作成 ───────── */
-            let dx = (this.pressedKeys['d'] ? 1 : 0) - (this.pressedKeys['a'] ? 1 : 0);
-            let dy = (this.pressedKeys['s'] ? 1 : 0) - (this.pressedKeys['w'] ? 1 : 0);
-
-            /* ───────── 3. 斜め移動を等速化 ───────── */
-            if (dx && dy) {                // 斜め入力なら √2 で割る
-                const invLen = 1 / Math.SQRT2;
-                dx *= invLen;
-                dy *= invLen;
-            }
 
 
-            let acceleration = 0;
-            /* ───────── 4. 入力があるときだけ向きを更新 ───────── */
-            if (dx !== 0 || dy !== 0) {
-
-                const playerCenter = this.getPlayerCenter();
-                const dx = this.mouseX - playerCenter.x;
-                const dy = this.mouseY - playerCenter.y;
-                this.radian = Math.atan2(dy, dx);
-                this.setDir(this.radian);
+            /*==================================================
+                 *  ABSOLUTE MOVE (“画面座標どおり”モード)
+             *=================================================*/
+            if (GameConfig.moveAxisMode === "absolute") {
 
 
-                let forward = 0;
-                let strafe = 0;
+                const ix = (this.pressedKeys['d'] ? 1 : 0) -
+                    (this.pressedKeys['a'] ? 1 : 0);
+                const iy = (this.pressedKeys['s'] ? 1 : 0) -
+                    (this.pressedKeys['w'] ? 1 : 0);
 
-                if (this.pressedKeys['w']) forward += 1;
-                if (this.pressedKeys['s']) forward -= 1;
-                if (this.pressedKeys['d']) strafe += 1;
-                if (this.pressedKeys['a']) strafe -= 1;
+                /* 走り倍率（Shift）を入力値に反映 */
+                const runMul = this.pressedKeys['run'] ? 1.5 : 1.0;
 
-                if (this.pressedKeys['s']) {
-                    forward *= 0.5;
-                }
-                if (this.pressedKeys['run']) {
+                /* MoveBase へ渡す           */
+                this.moveBase.setDesiredDir(ix * runMul, iy * runMul);
 
-                    forward *= 3;
-                }
-                this.acceleration = forward;
-                this.strafe = strafe;
-            } else {
-
+                /* relative 用の加速／ストレーフは 0 に */
                 this.acceleration = 0;
                 this.strafe = 0;
-            }
-            this.setAcceleration(this.acceleration);
 
+                /* 慣性・フリクション計算 */
+                this.moveBase.moveUpdate(delta);
+
+                //return;   // relative-move ブロックをスキップ
+            } else {
+
+                /* ───────── 2. 入力ベクトル作成 ───────── */
+                let dx = (this.pressedKeys['d'] ? 1 : 0) - (this.pressedKeys['a'] ? 1 : 0);
+                let dy = (this.pressedKeys['s'] ? 1 : 0) - (this.pressedKeys['w'] ? 1 : 0);
+
+                /* ───────── 3. 斜め移動を等速化 ───────── */
+                if (dx && dy) {                // 斜め入力なら √2 で割る
+                    const invLen = 1 / Math.SQRT2;
+                    dx *= invLen;
+                    dy *= invLen;
+                }
+
+
+                let acceleration = 0;
+                /* ───────── 4. 入力があるときだけ向きを更新 ───────── */
+                if (dx !== 0 || dy !== 0) {
+
+                    const playerCenter = this.getPlayerCenter();
+                    const dx = this.mouseX - playerCenter.x;
+                    const dy = this.mouseY - playerCenter.y;
+                    this.radian = Math.atan2(dy, dx);
+                    this.setDir(this.radian);
+
+
+                    let forward = 0;
+                    let strafe = 0;
+
+                    if (this.pressedKeys['w']) forward += 1;
+                    if (this.pressedKeys['s']) forward -= 1;
+                    if (this.pressedKeys['d']) strafe += 1;
+                    if (this.pressedKeys['a']) strafe -= 1;
+
+                    if (this.pressedKeys['s']) {
+                        forward *= 0.5;
+                    }
+                    if (this.pressedKeys['run']) {
+
+                        forward *= 3;
+                    }
+                    this.acceleration = forward;
+                    this.strafe = strafe;
+                } else {
+
+                    this.acceleration = 0;
+                    this.strafe = 0;
+                }
+                this.setAcceleration(this.acceleration);
+            }
 
             // 各スロットのキー名
             const keyBindings = ['magic1', 'magic2', 'magic3', 'magic4',

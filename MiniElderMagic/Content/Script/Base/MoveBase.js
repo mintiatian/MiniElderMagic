@@ -1,4 +1,5 @@
 ﻿import {Wizard} from "../Character/Wizard.js";
+import {GameConfig} from "../Config.js";           // ★ 追加
 
 export class MoveBase {
 
@@ -7,15 +8,76 @@ export class MoveBase {
         this.vx = 0;
         this.vy = 0;
 
+        /* ★ 絶対入力用バッファ */
+        this._desiredX = 0;
+        this._desiredY = 0;
+
 // 加速度と減速率（お好みで調整）
         this.ACCEL = 1200; // px/s^2
         this.FRICTION = 800; // px/s^2
     }
 
+
+    /*==================================================
+     *  Wizard などが呼ぶ：-1～+1 の入力を保持
+     *=================================================*/
+    setDesiredDir(x, y) {
+        this._desiredX = x;
+        this._desiredY = y;
+    }
+
     moveUpdate(delta) {
+
+        /* =========================================================
+  *  A. 画面固定モード ("absolute")
+  * =======================================================*/
+
+        if (GameConfig.moveAxisMode === "absolute" && this.owner instanceof Wizard) {
+
+            /* 1) 入力強度・走り倍率 */
+            let inX = this._desiredX;
+            let inY = this._desiredY;
+
+            const len = Math.hypot(inX, inY);           // 0～√2
+            const inputMag = Math.min(1, len);          // 0～1
+
+            /* 走り（Shift 等）は Wizard 側が倍率込みで渡している想定
+― もしここで付けたいなら次行を有効化
+// if (this.owner instanceof Wizard && this.owner.pressedKeys?.['run'])
+//     { inX *= 1.5; inY *= 1.5; }
+*/
+
+            /* 2) 目標速度ベクトル */
+            let targetVx = 0, targetVy = 0;
+            if (len > 0) {
+                const max = this.owner.MaxSpeed;
+                targetVx = inX / len * max;
+                targetVy = inY / len * max;
+            }
+
+            /* 3) 加速度補間 */
+            const accelStep = this.ACCEL * inputMag * delta;
+            this.vx = this.moveToward(this.vx, targetVx, accelStep);
+            this.vy = this.moveToward(this.vy, targetVy, accelStep);
+
+            /* 4) フリクション */
+            if (len === 0) {
+                this.vx = this.moveToward(this.vx, 0, this.FRICTION * delta);
+                this.vy = this.moveToward(this.vy, 0, this.FRICTION * delta);
+            }
+
+            /* 5) オーナーへ反映 */
+            this.owner.moveX = this.vx * delta;
+            this.owner.moveY = this.vy * delta;
+            return;                       // ★ relative ルートをスキップ
+        }
+
+        /* =========================================================
+        *  B. 視線相対モード ("relative") ← 既存ロジックを残す
+        * =======================================================*/
         const mag = this.owner.acceleration ?? 0;
         const strafe = this.owner.strafe ?? 0;
-        //let isRunning = false; // runキーが押されてるか
+
 
         let runMultiplier = 0.5;       // お好みで倍率調整
 

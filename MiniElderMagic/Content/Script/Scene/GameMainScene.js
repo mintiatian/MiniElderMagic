@@ -196,7 +196,7 @@ export class GameMainScene extends BaseScene {
         );
         this.AddNewPawns.push(this.wizard);   // ★必須：更新ループに載せる
 
-        
+
         /* 4. ゲーム内管理配列と入力状態リセット */
         this.pawns = [];
         this.ExitPawns = [];
@@ -215,7 +215,7 @@ export class GameMainScene extends BaseScene {
             getSaveData: () => gameMainScene.exportState(),   // 取得
             applyLoadData: d => gameMainScene.importState(d)  // 復元
         });
-        
+
         this.debugUI = null;   // debugUI は onEnter() で toggle 用に生成
 
         /* 6. 任意：初期敵ポップやイベント設置
@@ -325,9 +325,14 @@ export class GameMainScene extends BaseScene {
             /* ── 汎用入力フラグ更新 ───────── */
             this.pressedKeys[k] = isDown;
 
-            /* Arrow ↔ WASD */
-            const dirMap = {arrowup: 'w', arrowdown: 's', arrowleft: 'a', arrowright: 'd'};
-            if (dirMap[k]) this.pressedKeys[dirMap[k]] = isDown;
+            {
+                const dirMap = {
+                    arrowup: 'w', arrowdown: 's',
+                    arrowleft: 'a', arrowright: 'd'
+                };
+                if (dirMap[k]) this.pressedKeys[dirMap[k]] = isDown;
+            }
+
 
             /* Shift → run */
             if (k === 'shift') this.pressedKeys.run = isDown;
