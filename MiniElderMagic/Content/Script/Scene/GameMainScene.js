@@ -370,6 +370,9 @@ export class GameMainScene extends BaseScene {
         /* 平均 FPS 用カウンタ初期化 */
         this._fpsSum = 0;
         this._fpsCount = 0;
+
+
+        SceneManagerInstance.audio.playBGM('town');
     }
 
     /* ---------- onExit() ---------- */

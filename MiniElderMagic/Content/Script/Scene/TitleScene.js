@@ -9,6 +9,7 @@ import {SaveManager} from '../Save/SaveManager.js';
 import {LoadManagerUI} from '../Save/LoadManagerUI.js';
 import { UILanguageSelector } from '../UI/UILanguageSelector.js';
 import {language, setLanguage} from '../Utils/DataTable.js';
+
 export class TitleScene extends BaseScene {
 
     /* -------------------------------------------------------------- */
@@ -37,7 +38,8 @@ export class TitleScene extends BaseScene {
             // 翻訳反映処理（未実装ならここに translatePage() など）
             console.log(`言語を切り替えました: ${language}`);
         });
-        
+
+        SceneManagerInstance.audio.playBGM('title');
         
         
         /* ----- タイトル DOM -------------------------------------- */
@@ -54,7 +56,15 @@ export class TitleScene extends BaseScene {
         /* ----- ボタン -------------------------------------------- */
         this.titleDiv.querySelector('#btn-new').onclick = () => this._startNewGame();
         this.titleDiv.querySelector('#btn-load').onclick = () => this.saveGui.show();
-
+        
+        /* === ここから追加（ホバー SE 再生） ====================== */
+        ['#btn-new', '#btn-load'].forEach(sel => {
+            const btn = this.titleDiv.querySelector(sel);
+            btn.addEventListener('pointerenter', () =>
+                SceneManagerInstance.audio.playSE('cursor')
+            );
+        });
+        
         /* ----- Esc で LoadGUI を閉じる --------------------------- */
         this._esc = e => {
             if (e.key === 'Escape' && this.saveGui && this.saveGui?.isVisible) {

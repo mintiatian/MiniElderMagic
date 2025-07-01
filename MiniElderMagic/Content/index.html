@@ -196,7 +196,8 @@
     gameTopArea.style.position = 'relative';   // もしくは 'relative' でも OK
     
     export const SceneManagerInstance = new SceneManager(gameTopArea, gameUiLayer);
-    SceneManagerInstance.change(new TitleScene(gameTopArea, gameUiLayer));
+    await SceneManagerInstance.init();
+    await SceneManagerInstance.change(new TitleScene(gameTopArea, gameUiLayer));
     
 </script>
 </body>
