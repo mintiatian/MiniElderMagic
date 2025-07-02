@@ -1,99 +1,124 @@
 ﻿/* ---------------------------------------------------------------------------
  *  SoundManager.js – Mini Elder Magic (Generic Audio Manager)
- *
+ * ---------------------------------------------------------------------------
  *  - Handles BGM (background music) and SE (sound effects).
  *  - BGM is lazy‑loaded (on first play) and fades out / in on change.
  *  - SE are pre‑loaded into memory and respect a configurable concurrent‑play limit.
+ *  - Complies with browser autoplay policies: AudioContext is resumed after
+ *    first user gesture (pointer or key). Calls issued before unlock are queued.
  *
- *  Usage:
- *      import { soundManager, SOUND_DEFS } from "./SoundManager.js";
- *      await soundManager.init();
- *      soundManager.playBGM("field");
- *      soundManager.playSE("cursor");
- *
- *  Edit SOUND_DEFS below to add / change your own audio files.
+ *  2025‑07‑02 updates:
+ *    • masterVolume / bgmVolume / seVolume exposed as direct properties
+ *    • SOUND_DEFS updated to latest asset list
  * ------------------------------------------------------------------------ */
 
-/*
+/* ------------------------------------------------------------------------
  * Pre‑declared audio definitions
  *   tag  : unique string id
  *   type : "BGM" | "SE"
  *   path : relative or absolute URL to the audio asset
- */
+ * --------------------------------------------------------------------- */
 export const SOUND_DEFS = {
     // BGM ---------------------------------------------------------
-    title:       { type: "BGM", path: "assets/bgm/xDeviruchi-TitleTheme.wav" },
-    field:       { type: "BGM", path: "assets/bgm/xDeviruchi-TitleTheme.wav" },
-    town:        { type: "BGM", path: "assets/bgm/xDeviruchi - And The Journey Begins .wav" },
-    boss:        { type: "BGM", path: "assets/bgm/xDeviruchi-TitleTheme.wav" },
+    title: { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
+    field: { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
+    town : { type: 'BGM', path: 'assets/bgm/xDeviruchi - And The Journey Begins .wav' },
+    boss : { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
 
     // SE ----------------------------------------------------------
-    cursor:      { type: "SE",  path: "assets/se/interfaces-and-media/NFF-accept.wav" },
-    ok:          { type: "SE",  path: "assets/se/interfaces-and-media/NFF-accept.wav" },
-    cancel:      { type: "SE",  path: "assets/se/interfaces-and-media/NFF-accept.wav" },
-    explosion:   { type: "SE",  path: "assets/se/interfaces-and-media/NFF-accept.wav" }
+    cursor    : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
+    ok        : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
+    cancel    : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
+    explosion : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
 };
 
 class SoundManager {
     constructor() {
         /** @type {AudioContext|null} */
-        this._ctx         = null;
-        this._masterGain  = null;
-        this._bgmGain     = null;
-        this._seGain      = null;
+        this._ctx = null;
 
-        // BGM 状態
-        this._currentBGM  = null;
-        this._bgmSource   = null;
-        this._fadeDur     = 1000;      // ms
+        /** Gain nodes */
+        this._masterGain = null;
+        this._bgmGain = null;
+        this._seGain = null;
 
-        // SE 状態
-        this._seBuffers   = new Map(); // tag → AudioBuffer
-        this._activeSE    = [];        // 再生中の BufferSource
-        this._seMax       = 8;
+        /** Volume variables (0‑1, mutable) */
+        this._masterVol = 0.75;
+        this._bgmVol = 0.75;
+        this._seVol = 0.75;
 
-        // Chrome などの自動再生制限を突破するためのフラグ
+        /* BGM state */
+        this._currentBGM = null;
+        this._bgmSource = null;
+        this._fadeDur = 1000; // ms
+
+        /* SE state */
+        this._seBuffers = new Map(); // tag → AudioBuffer
+        this._activeSE = []; // currently playing BufferSources
+        this._seMax = 8; // concurrent limit
+
+        /* Autoplay‑policy unlock */
         this._unlocked = false;
-        this._queue    = [];   // アンロック前に呼ばれた再生要求を保持
+        this._queue = []; // functions pending until unlock
 
-        // ユーザー操作を捕まえて context を resume
         const unlock = async () => {
-            await this._ensureContext(true);   // create + resume if suspended
+            await this._ensureContext(true);
             document.removeEventListener('pointerdown', unlock);
-            document.removeEventListener('keydown',     unlock);
+            document.removeEventListener('keydown', unlock);
             this._unlocked = true;
-            // キューされていた再生処理を実行
             for (const fn of this._queue) fn();
             this._queue.length = 0;
         };
         document.addEventListener('pointerdown', unlock, { passive: true, once: true });
-        document.addEventListener('keydown',     unlock, { passive: true, once: true });
+        document.addEventListener('keydown', unlock, { passive: true, once: true });
+
+        /* Dynamic volume properties (getter / setter) */
+        const defineVol = (prop, getter, setter) => Object.defineProperty(this, prop, {
+            enumerable: true,
+            get: getter,
+            set: v => setter.call(this, v),
+        });
+        defineVol('masterVolume', () => this._masterVol, this.setMasterVolume);
+        defineVol('bgmVolume', () => this._bgmVol, this.setBGMVolume);
+        defineVol('seVolume', () => this._seVol, this.setSEVolume);
     }
 
-    /* ====================================================================== */
-    /* public API                                                             */
-    /* ====================================================================== */
+    /* ==================================================================== */
+    /* public API                                                           */
+    /* ==================================================================== */
 
+    /** One‑time preload (must be awaited before first use to avoid lag) */
     async init() {
-        await this._ensureContext(false);          // context & gain 作成（resume はしない）
+        await this._ensureContext(false); // create context/gain but don't resume
 
-        // 事前に SE をロードして待ち時間をゼロに（BGM は都度 fetch で OK）
-        const seDefs = Object.entries(SOUND_DEFS).filter(([, def]) => def.type === 'SE');
-        await Promise.all(seDefs.map(async ([tag, def]) => {
-            const buf = await this._loadBuffer(def.path);
-            this._seBuffers.set(tag, buf);
-        }));
+        // Preload all SE buffers
+        const seDefs = Object.entries(SOUND_DEFS).filter(([, d]) => d.type === 'SE');
+        await Promise.all(
+            seDefs.map(async ([tag, def]) => {
+                const buf = await this._loadBuffer(def.path);
+                this._seBuffers.set(tag, buf);
+            })
+        );
     }
 
-    /* --------------------- 再生設定 -------------------------------------- */
+    /* --------------------- runtime settings ----------------------------- */
     setSEMaxConcurrent(n) { this._seMax = n; }
-    setFadeDuration(ms)   { this._fadeDur = ms; }
+    setFadeDuration(ms) { this._fadeDur = ms; }
 
-    setMasterVolume(v) { if (this._masterGain) this._masterGain.gain.value = v; }
-    setBGMVolume(v)   { if (this._bgmGain)    this._bgmGain.gain.value   = v; }
-    setSEVolume(v)    { if (this._seGain)     this._seGain.gain.value    = v; }
+    setMasterVolume(v) {
+        this._masterVol = Math.max(0, v);
+        if (this._masterGain) this._masterGain.gain.value = this._masterVol;
+    }
+    setBGMVolume(v) {
+        this._bgmVol = Math.max(0, v);
+        if (this._bgmGain) this._bgmGain.gain.value = this._bgmVol;
+    }
+    setSEVolume(v) {
+        this._seVol = Math.max(0, v);
+        if (this._seGain) this._seGain.gain.value = this._seVol;
+    }
 
-    /* --------------------- BGM ------------------------------------------- */
+    /* --------------------- BGM controls --------------------------------- */
     async playBGM(tag, { loop = true } = {}) {
         const action = () => this._doPlayBGM(tag, loop);
         if (!this._unlocked) { this._queue.push(action); return; }
@@ -114,24 +139,29 @@ class SoundManager {
         this._currentBGM = null;
     }
 
-    /* --------------------- SE -------------------------------------------- */
+    /* --------------------- SE controls ---------------------------------- */
     async playSE(tag) {
         const action = () => this._doPlaySE(tag);
         if (!this._unlocked) { this._queue.push(action); return; }
         return action();
     }
 
-    /* ====================================================================== */
-    /* internal helpers                                                      */
-    /* ====================================================================== */
+    /* ==================================================================== */
+    /* internal helpers                                                     */
+    /* ==================================================================== */
 
     async _ensureContext(resume) {
         if (!this._ctx) {
             this._ctx = new (window.AudioContext || window.webkitAudioContext)();
-            // Master → BGM / SE → destination
+
             this._masterGain = this._ctx.createGain();
-            this._bgmGain    = this._ctx.createGain();
-            this._seGain     = this._ctx.createGain();
+            this._bgmGain = this._ctx.createGain();
+            this._seGain = this._ctx.createGain();
+
+            // initial volumes
+            this._masterGain.gain.value = this._masterVol;
+            this._bgmGain.gain.value = this._bgmVol;
+            this._seGain.gain.value = this._seVol;
 
             this._bgmGain.connect(this._masterGain);
             this._seGain.connect(this._masterGain);
@@ -150,7 +180,7 @@ class SoundManager {
     }
 
     async _doPlayBGM(tag, loop) {
-        if (tag === this._currentBGM) return;          // 同一曲は無視
+        if (tag === this._currentBGM) return;
         const def = SOUND_DEFS[tag];
         if (!def || def.type !== 'BGM') {
             console.warn(`[SoundManager] BGM tag not found: ${tag}`);
@@ -159,8 +189,8 @@ class SoundManager {
 
         await this._ensureContext(true);
 
-        // フェードアウト現 BGM
         const now = this._ctx.currentTime;
+        // fade out existing bgm
         if (this._bgmSource) {
             this._bgmGain.gain.cancelScheduledValues(now);
             this._bgmGain.gain.setValueAtTime(this._bgmGain.gain.value, now);
@@ -169,17 +199,17 @@ class SoundManager {
         }
 
         const buffer = await this._loadBuffer(def.path);
-        const src    = this._ctx.createBufferSource();
+        const src = this._ctx.createBufferSource();
         src.buffer = buffer;
-        src.loop   = loop;
+        src.loop = loop;
         src.connect(this._bgmGain);
 
-        // フェードイン
+        // fade in
         this._bgmGain.gain.setValueAtTime(0, now + this._fadeDur / 1000);
-        this._bgmGain.gain.linearRampToValueAtTime(1, now + this._fadeDur * 2 / 1000);
+        this._bgmGain.gain.linearRampToValueAtTime(this._bgmVol, now + this._fadeDur * 2 / 1000);
 
         src.start(now + this._fadeDur / 1000);
-        this._bgmSource  = src;
+        this._bgmSource = src;
         this._currentBGM = tag;
     }
 
@@ -198,10 +228,10 @@ class SoundManager {
             this._seBuffers.set(tag, buf);
         }
 
-        // 同時再生数制限
+        // limit concurrent SE
         while (this._activeSE.length >= this._seMax) {
-            const src = this._activeSE.shift();
-            try { src.stop(); } catch {}
+            const oldSrc = this._activeSE.shift();
+            try { oldSrc.stop(); } catch {}
         }
 
         const src = this._ctx.createBufferSource();
@@ -216,17 +246,14 @@ class SoundManager {
         this._activeSE.push(src);
     }
 
-    /* --------------------- external unlock hook --------------------------- */
-    /**
-     * 任意のクリックハンドラ内で呼べば即 resume + キュー解放
-     */
+    /* --------------------- manual resume ------------------------------- */
     async resume() {
         await this._ensureContext(true);
         this._unlocked = true;
     }
 }
 
-// -------------------------------------------------------
-// シングルトンエクスポート
-// -------------------------------------------------------
+// ----------------------------------------------------------------------
+// Singleton export
+// ----------------------------------------------------------------------
 export const soundManager = new SoundManager();
