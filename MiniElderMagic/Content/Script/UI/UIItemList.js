@@ -4,6 +4,7 @@ import {eventDataTable, eventTileDataTable, itemDataTable} from '../Utils/DataTa
 import {gameMainScene} from "../Scene/GameMainScene.js";
 
 import {textDataTable} from "../Utils/DataTable.js";
+import {SceneManagerInstance} from "../Scene/SceneManager.js";
 
 /**
  * ショップ UI  ― タイトル／コイン表示／フィルターバー／アイテムグリッド
@@ -20,6 +21,7 @@ export class UIItemList extends UIBase {
         /* ───────── 購入コールバック ───────── */
         this.onItemClick = (item) => {
 
+            SceneManagerInstance.audio.playSE('buyItem');
             if (!this.sellmode) {
                 const cost = Number(item.shopcost);
                 if (this.wizard.playerstatus.coins >= cost) {

@@ -747,7 +747,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                 this.Inventory.addItem(DropItemData.emoji);
                 break;
             case "coin":
-                this.playerstatus.coins += parseInt(DropItemData.value);
+                this.playerstatus.addCoins(parseInt(DropItemData.value))
                 break;
             case "hp": {
                 let damage = parseInt(DropItemData.value);

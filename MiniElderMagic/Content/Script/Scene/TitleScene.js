@@ -7,7 +7,7 @@ import {GameMainScene} from './GameMainScene.js';
 import {SceneManagerInstance} from './SceneManager.js';
 import {SaveManager} from '../Save/SaveManager.js';
 import {LoadManagerUI} from '../Save/LoadManagerUI.js';
-import { UILanguageSelector } from '../UI/UILanguageSelector.js';
+import {UILanguageSelector} from '../UI/UILanguageSelector.js';
 import {language, setLanguage} from '../Utils/DataTable.js';
 
 export class TitleScene extends BaseScene {
@@ -29,8 +29,10 @@ export class TitleScene extends BaseScene {
 
     /* ==================== Scene Life-Cycle ========================= */
     onEnter() {
-        if (!this.saveGui.element.isConnected){ this.gameUiLayer.appendChild(this.saveGui.element); }
-        
+        if (!this.saveGui.element.isConnected) {
+            this.gameUiLayer.appendChild(this.saveGui.element);
+        }
+
         /* === 言語選択 UI を追加 === */
         this.langUI = new UILanguageSelector(this.gameUiLayer, newLang => {
             setLanguage(newLang);
@@ -40,8 +42,8 @@ export class TitleScene extends BaseScene {
         });
 
         SceneManagerInstance.audio.playBGM('title');
-        
-        
+
+
         /* ----- タイトル DOM -------------------------------------- */
         this.titleDiv = document.createElement('div');
         this.titleDiv.id = 'title-screen';
@@ -54,9 +56,14 @@ export class TitleScene extends BaseScene {
         this.gameUiLayer.appendChild(this.titleDiv);
 
         /* ----- ボタン -------------------------------------------- */
-        this.titleDiv.querySelector('#btn-new').onclick = () => this._startNewGame();
-        this.titleDiv.querySelector('#btn-load').onclick = () => this.saveGui.show();
-        
+        this.titleDiv.querySelector('#btn-new').onclick = () => {
+            this._startNewGame();
+            SceneManagerInstance.audio.playSE('ok');
+        }
+        this.titleDiv.querySelector('#btn-load').onclick = () => {
+            this.saveGui.show();
+            SceneManagerInstance.audio.playSE('ok');
+        }
         /* === ここから追加（ホバー SE 再生） ====================== */
         ['#btn-new', '#btn-load'].forEach(sel => {
             const btn = this.titleDiv.querySelector(sel);
@@ -64,15 +71,17 @@ export class TitleScene extends BaseScene {
                 SceneManagerInstance.audio.playSE('cursor')
             );
         });
-        
+
         /* ----- Esc で LoadGUI を閉じる --------------------------- */
         this._esc = e => {
             if (e.key === 'Escape' && this.saveGui && this.saveGui?.isVisible) {
                 this.saveGui.hide();
+
+                SceneManagerInstance.audio.playSE('cancel');
             }
         };
-        
-        
+
+
         window.addEventListener('keydown', this._esc);
     }
 

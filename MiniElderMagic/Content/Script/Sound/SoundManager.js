@@ -7,16 +7,17 @@
  *  - Complies with browser autoplay policies: AudioContext is resumed after
  *    first user gesture (pointer or key). Calls issued before unlock are queued.
  *
- *  2025‑07‑02 updates:
+ *  2025‑07‑03 updates:
  *    • masterVolume / bgmVolume / seVolume exposed as direct properties
- *    • SOUND_DEFS updated to latest asset list
+ *    • Per‑SE volume support (static "vol" in SOUND_DEFS + runtime override via setSEVolumeFor)
  * ------------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------------
  * Pre‑declared audio definitions
- *   tag  : unique string id
- *   type : "BGM" | "SE"
- *   path : relative or absolute URL to the audio asset
+ *   tag   : unique string id
+ *   type  : "BGM" | "SE"
+ *   path  : relative or absolute URL to the audio asset
+ *   vol   : (SE only) per‑sound volume multiplier (0‑1, default 1)
  * --------------------------------------------------------------------- */
 export const SOUND_DEFS = {
     // BGM ---------------------------------------------------------
@@ -25,11 +26,16 @@ export const SOUND_DEFS = {
     town : { type: 'BGM', path: 'assets/bgm/xDeviruchi - And The Journey Begins .wav' },
     boss : { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
 
-    // SE ----------------------------------------------------------
-    cursor    : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
-    ok        : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
-    cancel    : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
-    explosion : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav' },
+    // SE (vol = individual multiplier; 1 = 100 %) ----------------
+    cursor     : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav',            vol: 0.3 },
+    ok         : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-choice-good.wav',       vol: 1.0 },
+    cancel     : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-cancel-02.wav',         vol: 1.0 },
+    fire       : { type: 'SE', path: 'assets/se/action-and-game/NFF-fireball-02.wav',            vol: 0.3 },
+    getitem    : { type: 'SE', path: 'assets/se/action-and-game/NFF-steal.wav',                  vol: 1.0 },
+    getcoin    : { type: 'SE', path: 'assets/se/fantasy-and-magic/NFF-bonus.wav',                vol: 0.2 },
+    damage     : { type: 'SE', path: 'assets/se/action-and-game/NFF-boxing-punch.wav',           vol: 0.3 },
+    heal       : { type: 'SE', path: 'assets/se/action-and-game/NFF-chromatic-rise.wav',         vol: 1.0 },
+    buyItem    : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-complete.wav',          vol: 1.0 },
 };
 
 class SoundManager {
@@ -43,9 +49,9 @@ class SoundManager {
         this._seGain = null;
 
         /** Volume variables (0‑1, mutable) */
-        this._masterVol = 0.75;
-        this._bgmVol = 0.75;
-        this._seVol = 0.75;
+        this._masterVol = 0.5;
+        this._bgmVol = 0.5;
+        this._seVol = 0.5;
 
         /* BGM state */
         this._currentBGM = null;
@@ -56,6 +62,7 @@ class SoundManager {
         this._seBuffers = new Map(); // tag → AudioBuffer
         this._activeSE = []; // currently playing BufferSources
         this._seMax = 8; // concurrent limit
+        this._seOverrides = new Map(); // tag → volume override (0‑1)
 
         /* Autoplay‑policy unlock */
         this._unlocked = false;
@@ -103,19 +110,20 @@ class SoundManager {
 
     /* --------------------- runtime settings ----------------------------- */
     setSEMaxConcurrent(n) { this._seMax = n; }
-    setFadeDuration(ms) { this._fadeDur = ms; }
+    setFadeDuration(ms)   { this._fadeDur = ms; }
 
-    setMasterVolume(v) {
-        this._masterVol = Math.max(0, v);
-        if (this._masterGain) this._masterGain.gain.value = this._masterVol;
-    }
-    setBGMVolume(v) {
-        this._bgmVol = Math.max(0, v);
-        if (this._bgmGain) this._bgmGain.gain.value = this._bgmVol;
-    }
-    setSEVolume(v) {
-        this._seVol = Math.max(0, v);
-        if (this._seGain) this._seGain.gain.value = this._seVol;
+    /** Set global volumes (0‑1) */
+    setMasterVolume(v) { this._masterVol = Math.max(0, v); if (this._masterGain) this._masterGain.gain.value = this._masterVol; }
+    setBGMVolume(v)    { this._bgmVol    = Math.max(0, v); if (this._bgmGain)    this._bgmGain.gain.value    = this._bgmVol;    }
+    setSEVolume(v)     { this._seVol     = Math.max(0, v); if (this._seGain)     this._seGain.gain.value     = this._seVol;     }
+
+    /** Override volume for a specific SE tag at runtime (0‑1) */
+    setSEVolumeFor(tag, vol) {
+        if (!(tag in SOUND_DEFS) || SOUND_DEFS[tag].type !== 'SE') {
+            console.warn(`[SoundManager] setSEVolumeFor: invalid SE tag «${tag}»`);
+            return;
+        }
+        this._seOverrides.set(tag, Math.max(0, vol));
     }
 
     /* --------------------- BGM controls --------------------------------- */
@@ -155,13 +163,13 @@ class SoundManager {
             this._ctx = new (window.AudioContext || window.webkitAudioContext)();
 
             this._masterGain = this._ctx.createGain();
-            this._bgmGain = this._ctx.createGain();
-            this._seGain = this._ctx.createGain();
+            this._bgmGain    = this._ctx.createGain();
+            this._seGain     = this._ctx.createGain();
 
             // initial volumes
             this._masterGain.gain.value = this._masterVol;
-            this._bgmGain.gain.value = this._bgmVol;
-            this._seGain.gain.value = this._seVol;
+            this._bgmGain.gain.value    = this._bgmVol;
+            this._seGain.gain.value     = this._seVol;
 
             this._bgmGain.connect(this._masterGain);
             this._seGain.connect(this._masterGain);
@@ -201,7 +209,7 @@ class SoundManager {
         const buffer = await this._loadBuffer(def.path);
         const src = this._ctx.createBufferSource();
         src.buffer = buffer;
-        src.loop = loop;
+        src.loop   = loop;
         src.connect(this._bgmGain);
 
         // fade in
@@ -236,7 +244,14 @@ class SoundManager {
 
         const src = this._ctx.createBufferSource();
         src.buffer = buf;
-        src.connect(this._seGain);
+
+        // === Per‑sound gain chain ===
+        const gainNode = this._ctx.createGain();
+        const perVol = (this._seOverrides.get(tag) ?? def.vol ?? 1);
+        gainNode.gain.value = perVol;
+        src.connect(gainNode);
+        gainNode.connect(this._seGain);
+
         src.start();
 
         src.onended = () => {

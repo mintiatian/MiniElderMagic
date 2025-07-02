@@ -5,6 +5,7 @@ import {Wizard} from "../Character/Wizard.js";
 import {CollisionType, Pawn} from "../Base/Pawn.js";
 import {MoveBase} from "../Base/MoveBase.js";
 import { MagicDataTable } from '../Utils/DataTable.js';
+import {SceneManagerInstance} from "../Scene/SceneManager.js";
 
 
 export class MagicBase extends Character {
@@ -28,6 +29,7 @@ export class MagicBase extends Character {
         this.HomingTarget = []; // ← constructorで初期化しておく
         this.HomingTargetCurrent = null;
 
+        SceneManagerInstance.audio.playSE('fire');
     }
     setOwner(owner) {
         this.owner = owner;

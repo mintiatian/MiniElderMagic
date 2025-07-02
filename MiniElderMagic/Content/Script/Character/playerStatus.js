@@ -1,3 +1,5 @@
+import {SceneManagerInstance} from "../Scene/SceneManager.js";
+
 export class PlayerStatus {
     /**
      * @param {number} coins - 初期コイン数
@@ -23,6 +25,8 @@ export class PlayerStatus {
      * @param {number} amount - 追加するコイン数
      */
     addCoins(amount = 1) {
+
+        SceneManagerInstance.audio.playSE('getcoin');
         this.coins += amount;
     }
 

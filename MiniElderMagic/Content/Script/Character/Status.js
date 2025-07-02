@@ -1,3 +1,5 @@
+import {SceneManagerInstance} from "../Scene/SceneManager.js";
+
 export class Status {
     /**
      * @param {number} hp - プレイヤーや敵の体力
@@ -67,6 +69,8 @@ export class Status {
      * @param {number} damage - 受けるダメージ量
      */
     takeDamage(damage) {
+
+        SceneManagerInstance.audio.playSE('damage');
         let finalDamage = Math.max(0, damage - this.deffence);
         this.hp -= finalDamage;
 
@@ -80,6 +84,7 @@ export class Status {
      * @returns {number} - 実際に回復した量
      */
     heal(amount) {
+        SceneManagerInstance.audio.playSE('heal');
         const oldHp = this.hp;
         this.hp += amount;
 

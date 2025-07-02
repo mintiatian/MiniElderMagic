@@ -12,6 +12,7 @@
 
 import { UIBase } from './UIBase.js';
 import {gameMainScene} from "../Scene/GameMainScene.js";
+import {SceneManagerInstance} from "../Scene/SceneManager.js";
 
 export class UIHubInventory extends UIBase {
     /**
@@ -100,6 +101,10 @@ export class UIHubInventory extends UIBase {
 
     /** Add item (スタック) */
     addItem(emoji) {
+
+
+        SceneManagerInstance.audio.playSE('getitem');
+        
         // 既存スタックに追加
         let idx = this.items.findIndex(x => x && x.emoji === emoji && x.count < 10);
         if (idx !== -1) {
