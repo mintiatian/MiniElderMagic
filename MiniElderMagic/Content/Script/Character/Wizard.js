@@ -20,6 +20,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.lastPressedMagicIndex = 0;
 
 
+
         if (!this.playerstatus) {
             this.playerstatus = new PlayerStatus(0, 0);
             this.playerstatus.lastInnPos = {x: x, y: y};
@@ -160,8 +161,9 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         this.mouseX = mouseXWorld;
         this.mouseY = mouseYWorld;
 
-
-        this.radian = Math.atan2(dy, dx);
+        if (!globalThis.hasPad) {
+            this.radian = Math.atan2(dy, dx);
+        }
         this.setDir(this.radian);
     }
 
@@ -302,7 +304,12 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                     (this.pressedKeys['a'] ? 1 : 0);
                 const iy = (this.pressedKeys['s'] ? 1 : 0) -
                     (this.pressedKeys['w'] ? 1 : 0);
-
+                /* ★ 追加 ─ 進行方向をキャラクターの向きに反映 ────────── */
+                if (ix !== 0 || iy !== 0) {
+                    const dirRad = Math.atan2(iy, ix); // y, x の順
+                    this.radian = dirRad;
+                    this.setDir(dirRad);              // dirX / dirY も更新
+                }
                 /* 走り倍率（Shift）を入力値に反映 */
                 const runMul = this.pressedKeys['run'] ? 1.5 : 1.0;
 

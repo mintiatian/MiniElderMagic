@@ -113,6 +113,32 @@
     import { GameMainScene   } from './Script/Scene/GameMainScene.js';
     import { GameConfig, setRenderScale } from './Script/Config.js';
 
+    globalThis.hasPad  = false;  // ← 単なるフラグだけ欲しいなら
+    /* ── ❶ 初回タップ or クリックでだけ GamePad を遅延ロード ───────── */
+    window.addEventListener(
+        'pointerdown',
+        async function initPad(evt) {
+            // ─── マウス環境で非表示にしたい場合は coarse 判定を入れる ───
+            const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+            
+            //if (!isCoarse && evt.pointerType !== 'touch') return;   // PC 用に無視
+
+            window.removeEventListener('pointerdown', initPad, true);     // once
+            const { GamePad } = await import('./Script/Input/GamePad.js'); // パス要確認
+
+            /* ★ Windows でも動かしてみたいときは hideOnMouse:false を指定 */
+            new GamePad({
+                debug      : true,      // 左上にログ
+                hideOnMouse: false,     // マウス端末でも UI を表示
+                scale      : 1.1        // ボタンサイズ (任意)
+            });
+            console.log('[GamePad] lazy-loaded');
+
+            globalThis.hasPad  = true;  // ← 単なるフラグだけ欲しいなら
+        },
+        { once: true, capture: true, passive: false }                // ← cancel も拾う
+    );
+    
     /* ========== #game-area をワールド全体とし、サイズを倍率で決定 ========== */
 
     const gameTopArea = document.getElementById('game-area');
