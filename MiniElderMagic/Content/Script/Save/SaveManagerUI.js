@@ -1,8 +1,10 @@
-﻿/* SaveManagerUI.js — MiniElderMagic  (rev. “Neo-v20”) ==============================
+﻿/* SaveManagerUI.js — MiniElderMagic  (rev. “Neo‑v21”)
  * 3 列グリッド / 新規スロットは最上段 / 新しい順表示 / 内部スクロール / 右上固定
  * UIBase の isVisible, show, hide, toggle をそのまま利用（フラグの二重管理なし）
  * + Added global scale variable (opts.scale, CSS custom prop --sm-scale) to resize the
  *   entire panel uniformly from one place. Example: `new SaveManagerUI(parent, sm, {scale:1.5})`
+ * + NEW: Built‑in, stylable modal dialog (_showInfo / _showConfirm) to replace
+ *   window.alert / window.confirm.
  * ------------------------------------------------------------------------------ */
 
 import { UIBase }                from '../UI/UIBase.js';
@@ -116,6 +118,27 @@ export class SaveManagerUI extends UIBase {
             }
             .sm-btn--accent{background:var(--sm-accent); color:#000;}
             .sm-btn--danger{background:var(--sm-danger); color:#fff;}
+
+            /* === Modal ==================================================== */
+            .sm-modal-overlay{
+                position:fixed; inset:0;
+                width:100vw; height:100vh;
+                background:rgba(0,0,0,.5);
+                display:flex; justify-content:center; align-items:center;
+                z-index:10000;
+            }
+            .sm-modal{
+                background:var(--sm-bg);
+                border:1px solid rgba(255,255,255,.5);
+                border-radius:var(--sm-radius);
+                padding:calc(var(--sm-gap)*2) calc(var(--sm-gap)*2.5);
+                min-width:220px; max-width:80vw;
+                box-shadow:0 4px 12px rgba(0,0,0,.3);
+                display:flex; flex-direction:column; gap:var(--sm-gap);
+                font-size:.9rem; color:var(--sm-fg);
+            }
+            .sm-modal__body{white-space:pre-wrap;}
+            .sm-modal__btns{align-self:flex-end; display:flex; gap:var(--sm-gap);}        
         `;
         var style = document.createElement('style');
         style.id  = 'save-manager-ui-style';
@@ -146,12 +169,6 @@ export class SaveManagerUI extends UIBase {
     }
 
     /* =======================================================================
-     *  公開 API (UIBase の show/hide/toggle をそのまま使う)
-     * ===================================================================== */
-    // 追加のコードは不要。UIBase が element.style.display を切り替え、
-    // this.isVisible を管理しているため。
-
-    /* =======================================================================
      *  スロット生成
      * ===================================================================== */
     _refreshList(){
@@ -169,9 +186,9 @@ export class SaveManagerUI extends UIBase {
         var self = this;
         btnCreate.onclick = function(){
             var name = input.value.trim();
-            if (!name){ alert('Name!'); return; }
+            if (!name){ self._showInfo('Name required'); return; }
             var res  = self.saveManager.save(name, self.getSaveData());
-            alert('Saved v'+res.version);
+            self._showInfo('Saved v'+res.version);
             self._refreshList();
         };
 
@@ -184,14 +201,14 @@ export class SaveManagerUI extends UIBase {
             var row = this._ce('div','sm-slot',this.bodyEl);
 
             var title = this._ce('div','sm-slot__title',row,
-                (s.name||s.id)+'(v'+( (s.versions && s.versions.length) ? s.versions[s.versions.length-1].version : (s.version||0) )+')'
+                (s.name||s.id)+' (v '+( (s.versions && s.versions.length) ? s.versions[s.versions.length-1].version : (s.version||0) )+')'
             );
 
             var bSave = this._ce('button','sm-btn sm-btn--accent',row,'Save');
             bSave.onclick = (function(slot){
                 return function(){
                     var r = self.saveManager.save(slot.id||slot.name, self.getSaveData());
-                    alert('Saved v'+r.version);
+                    self._showInfo('Saved v'+r.version);
                     self._refreshList();
                 };
             })(s);
@@ -199,13 +216,64 @@ export class SaveManagerUI extends UIBase {
             var bDel  = this._ce('button','sm-btn sm-btn--danger',row,'Del');
             bDel.onclick = (function(slot){
                 return function(){
-                    if (confirm('Delete?')){
-                        self.saveManager.deleteSlot(slot.id||slot.name);
-                        self._refreshList();
-                    }
+                    self._showConfirm('Delete "'+(slot.name||slot.id)+'"?')
+                        .then(ok=>{
+                            if (!ok) return;
+                            self.saveManager.deleteSlot(slot.id||slot.name);
+                            self._refreshList();
+                        });
                 };
             })(s);
         }
+    }
+
+    /* =======================================================================
+     *  モーダルダイアログ
+     * ===================================================================== */
+
+    /**
+     * シンプルな情報用 OK モーダル
+     * @param {string} msg
+     */
+    _showInfo(msg){
+        return this._showModal({message:msg, buttons:[{label:'OK',style:'accent',value:true}]});
+    }
+
+    /**
+     * Yes / No 確認モーダル
+     * @param {string} msg
+     * @returns {Promise<boolean>} resolve(true) = Yes
+     */
+    _showConfirm(msg){
+        return this._showModal({message:msg, buttons:[
+                {label:'Yes',style:'accent',value:true},
+                {label:'No', style:'danger',value:false}
+            ]});
+    }
+
+    /**
+     * @param {{message:string, buttons:{label:string,style:'accent'|'danger'|'',value:any}[]}} opts
+     * @returns {Promise<*>}
+     */
+    _showModal(opts){
+        opts = opts || {};
+        const overlay = this._ce('div','sm-modal-overlay',document.body);
+        const modal   = this._ce('div','sm-modal',overlay);
+        this._ce('div','sm-modal__body',modal, opts.message||'');
+        const btnRow  = this._ce('div','sm-modal__btns',modal);
+
+        return new Promise(resolve=>{
+            (opts.buttons||[{label:'OK',style:'accent',value:true}]).forEach(b=>{
+                const btn = this._ce('button','sm-btn'+(b.style?` sm-btn--${b.style}`:''),btnRow,b.label);
+                btn.onclick = ()=>{
+                    overlay.remove();
+                    resolve(b.value);
+                };
+            });
+            /* Escape キーで閉じる */
+            const onKey = e=>{ if(e.key==='Escape'){ overlay.remove(); document.removeEventListener('keydown',onKey); resolve(false);} };
+            document.addEventListener('keydown',onKey);
+        });
     }
 
     /* =======================================================================

@@ -10,7 +10,7 @@
  *  - スロットのドラッグ＆ドロップで入れ替え。
  * ------------------------------------------------------------------------- */
 
-import { UIBase } from './UIBase.js';
+import {UIBase} from './UIBase.js';
 import {gameMainScene} from "../Scene/GameMainScene.js";
 import {SceneManagerInstance} from "../Scene/SceneManager.js";
 
@@ -20,6 +20,9 @@ export class UIHubInventory extends UIBase {
      */
     constructor(parentElement) {
         super(parentElement);
+        /* ===== 追加: グローバル拡大率 ===== */
+        this.scale =  1.5;      // デフォルト 1.0
+        this._commitScale();               // CSS 変数へ反映
 
         /** 表示状態 */
         this.expanded = false;            // false = 10 slots, true = 30 slots
@@ -34,7 +37,7 @@ export class UIHubInventory extends UIBase {
             position: 'absolute',
             left: '50%',
             bottom: '16px',
-            transform: 'translateX(-50%)',
+            transform: 'translateX(-50%) scale(var(--inv-scale))', // ← 拡大率反映
             gap: '8px',
             padding: '8px 12px',
             borderRadius: '10px',
@@ -61,7 +64,7 @@ export class UIHubInventory extends UIBase {
         /* ───────── キー入力 ───────── */
         this._onKeyDown = (ev) => {
             if (ev.repeat) return;
-            const idx = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9 }[ev.key];
+            const idx = {'1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9}[ev.key];
             if (idx !== undefined) {
                 const item = this.items[idx];
                 if (item) {
@@ -73,6 +76,17 @@ export class UIHubInventory extends UIBase {
         window.addEventListener('keydown', this._onKeyDown);
     }
 
+    /* --- 新規: CSS 変数 --inv-scale を設定 ------------------------ */
+    _commitScale() {
+        if (!document.getElementById('ui-hub-inv-style')) {
+            const st = document.createElement('style');
+            st.id = 'ui-hub-inv-style';
+            st.textContent = `:root{--inv-scale:1}`;
+            document.head.appendChild(st);
+        }
+        document.documentElement.style.setProperty('--inv-scale', this.scale);
+    }
+            
     handleKeyDown(event) {
         // Tabキーが押されたときの処理
         if (event.key === 'Tab') {
@@ -97,14 +111,17 @@ export class UIHubInventory extends UIBase {
         this.expanded = expanded;
         this._applyLayout();
     }
-    toggleExpanded() { this.setExpanded(!this.expanded); }
+
+    toggleExpanded() {
+        this.setExpanded(!this.expanded);
+    }
 
     /** Add item (スタック) */
     addItem(emoji) {
 
 
         SceneManagerInstance.audio.playSE('getitem');
-        
+
         // 既存スタックに追加
         let idx = this.items.findIndex(x => x && x.emoji === emoji && x.count < 10);
         if (idx !== -1) {
@@ -115,11 +132,14 @@ export class UIHubInventory extends UIBase {
         // 空スロット
         idx = this.items.findIndex(x => x === null);
         if (idx === -1) return -1;
-        this.items[idx] = { emoji, count: 1 };
+        this.items[idx] = {emoji, count: 1};
         this._updateSlotDisplay(idx);
         return idx;
     }
-    AddItem(emoji) { return this.addItem(emoji); }
+
+    AddItem(emoji) {
+        return this.addItem(emoji);
+    }
 
 
     /**
@@ -155,7 +175,7 @@ export class UIHubInventory extends UIBase {
         }
         return need === 0;                       // 減らし切れたら true
     }
-    
+
     /** スロット消費 */
     consume(index, dec = 1) {
         const data = this.items[index];
@@ -315,15 +335,26 @@ export class UIHubInventory extends UIBase {
         // Drag & Drop
         slot.addEventListener('dragstart', (ev) => {
             const idx = Number(slot.dataset.index);
-            if (!this.items[idx]) { ev.preventDefault(); return; }
+            if (!this.items[idx]) {
+                ev.preventDefault();
+                return;
+            }
             ev.dataTransfer.effectAllowed = 'move';
             ev.dataTransfer.setData('text/plain', String(idx));
             slot.style.opacity = '0.5';
         });
-        slot.addEventListener('dragend', () => { slot.style.opacity = ''; });
-        slot.addEventListener('dragover', (ev) => { ev.preventDefault(); });
-        slot.addEventListener('dragenter', () => { slot.style.background = 'rgba(255,255,255,.12)'; });
-        slot.addEventListener('dragleave', () => { slot.style.background = 'rgba(255,255,255,.05)'; });
+        slot.addEventListener('dragend', () => {
+            slot.style.opacity = '';
+        });
+        slot.addEventListener('dragover', (ev) => {
+            ev.preventDefault();
+        });
+        slot.addEventListener('dragenter', () => {
+            slot.style.background = 'rgba(255,255,255,.12)';
+        });
+        slot.addEventListener('dragleave', () => {
+            slot.style.background = 'rgba(255,255,255,.05)';
+        });
         slot.addEventListener('drop', (ev) => {
             ev.preventDefault();
             slot.style.background = 'rgba(255,255,255,.05)';
@@ -342,12 +373,12 @@ export class UIHubInventory extends UIBase {
             Object.assign(this.element.style, {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(10, 44px)', // ← ★ 10 列固定
-                gridTemplateRows:    'repeat(3, 44px)',  // ← ★ 3 行固定
-                justifyContent:      'center',           // 中央寄せ（任意）
-                gap:                 '8px',              // 余白
+                gridTemplateRows: 'repeat(3, 44px)',  // ← ★ 3 行固定
+                justifyContent: 'center',           // 中央寄せ（任意）
+                gap: '8px',              // 余白
                 /* ← ★ 以前付いていた property を上書き／無効化しておく */
-                gridAutoFlow:        'row',   // もしくは '' で削除
-                gridAutoColumns:     '',      // '' で完全クリア
+                gridAutoFlow: 'row',   // もしくは '' で削除
+                gridAutoColumns: '',      // '' で完全クリア
             });
         } else {
             Object.assign(this.element.style, {
@@ -379,7 +410,9 @@ export class UIHubInventory extends UIBase {
     _animateClick(slot) {
         if (slot._animTimeout) clearTimeout(slot._animTimeout);
         slot.style.transform = 'scale(0.85)';
-        slot._animTimeout = setTimeout(() => { slot.style.transform = ''; }, 120);
+        slot._animTimeout = setTimeout(() => {
+            slot.style.transform = '';
+        }, 120);
     }
 
     _swapItems(srcIdx, dstIdx) {

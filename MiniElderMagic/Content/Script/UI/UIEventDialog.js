@@ -5,6 +5,11 @@ import {eventDataTable, eventTileDataTable, textDataTable} from '../Utils/DataTa
 export class UIEventDialog extends UIBase {
     constructor(parentElement, opts = {}, thisHideStart = true, useExit = false) {
         super(parentElement);
+
+        /* ===== 追加: グローバル拡大率 ===== */
+        this.scale = opts.scale ?? 1.5;      // デフォルト 1.0
+        this._commitScale();               // CSS 変数へ反映
+
         this._applyOpts(opts);
         this._writerTimer = null;        // ← 追加：typewriter 用
         this._script = null;
@@ -18,6 +23,17 @@ export class UIEventDialog extends UIBase {
         if (this.thisHideStart) {
             this.hide();
         }
+    }
+
+    /* --- 新規: CSS 変数 --ed-scale を設定 ------------------------ */
+    _commitScale() {
+        if (!document.getElementById('ui-event-dialog-style')) {
+            const st = document.createElement('style');
+            st.id = 'ui-event-dialog-style';
+            st.textContent = `:root{--ed-scale:1}`;
+            document.head.appendChild(st);
+        }
+        document.documentElement.style.setProperty('--ed-scale', this.scale);
     }
 
     _applyOpts(opts) {
@@ -182,7 +198,7 @@ export class UIEventDialog extends UIBase {
             position: 'absolute',
             left: '50%',
             top: '50%',
-            transform: 'translate(-50%, -50%)',   // 初期は画面中央
+            transform: 'translate(-50%, -50%) scale(var(--ed-scale))', // 拡大率反映
             /* 横幅は 600 px を上限に、画面幅が狭ければ 90 % に縮む */
             width: 'min(600px, 90%)',
             /* 高さは内容で自動拡張。画面の 80 % を超えたら中だけスクロール */
@@ -308,10 +324,10 @@ export class UIEventDialog extends UIBase {
             this._writerResolver = res;
             this._textEl.textContent = '';
             let idx = 0;
-            if(this._writerTimer !== null){
-                clearInterval(this._writerTimer);   
+            if (this._writerTimer !== null) {
+                clearInterval(this._writerTimer);
             }
-            
+
             this._writerTimer = setInterval(() => {
                 console.log('UIEventDialog: typewriter', idx);
                 this._textEl.textContent += text[idx++];
@@ -396,7 +412,7 @@ export class UIEventDialog extends UIBase {
                     /* UIStatus の右端＋余白に合わせて再配置 */
                     this._winEl.style.left = `${rStatus.right + STATUS_GAP + window.scrollX}px`;
                     this._winEl.style.top = '50%';
-                    this._winEl.style.transform = 'translate(0, -50%)';
+                    this._winEl.style.transform = 'translate(0, -50%) scale(var(--ed-scale))';
                 } else {
                     /* 重なっていなければ中央へ戻す */
                     //this._winEl.style.left      = '50%';
