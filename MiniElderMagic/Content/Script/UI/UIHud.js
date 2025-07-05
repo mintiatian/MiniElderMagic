@@ -1,7 +1,8 @@
 /* UIHud.js --------------------------------------------------------------- */
 import {UIBase} from './UIBase.js';
 import {eventDataTable, eventTileDataTable} from "../Utils/DataTable.js";
-import {gameMainScene} from "../Scene/GameMainScene.js";        // ★ 追加
+import {gameMainScene} from "../Scene/GameMainScene.js";
+import {SceneManagerInstance} from "../Scene/SceneManager.js";        // ★ 追加
 /**
  * 画面左上にコイン枚数を表示する HUD
  */
@@ -54,7 +55,7 @@ export class UIHud extends UIBase {
         this.iconSpan = document.createElement('span');
         this.iconSpan.textContent = '🪙';
         this.iconSpan.style.marginRight = '4px';
-
+        this._lastEventKey = null;   // ← 直近イベントの「キー化した値」を保存
         this.textSpan = document.createElement('span');
 
         coinRow.append(this.iconSpan, this.textSpan);
@@ -168,19 +169,32 @@ export class UIHud extends UIBase {
         const coins = this.wizard?.playerstatus?.coins ?? 0;
         this.textSpan.textContent = ": " + String(coins);
 
-        const event = gameMainScene.background.getMapValue("event",this.wizard.x,this.wizard.y);
+        const event = gameMainScene.background.getMapValue("event", this.wizard.x, this.wizard.y);
         this.tabSpan.textContent = "TAB : Status";
-        if(event !== null) {
+        if (event !== null) {
             //console.log(event);
-            if(eventDataTable.table.has(event)){
+            if (eventDataTable.table.has(event)) {
                 const eventData = eventDataTable.get(event);
-                if(eventData.type === "exevent"){
-                    
-                }
-                else{
-                    this.tabSpan.textContent = "TAB : "+eventData.type+" - "+eventData.mode;
+                if (eventData.type === "exevent") {
+
+                    if (eventData.type !== this._lastEventKey) {
+                        SceneManagerInstance.audio.playSE('eventInfo');
+                    }
+                    this._lastEventKey = eventData.type;
+                } else {
+
+                    if (eventData.type !== this._lastEventKey) {
+                        SceneManagerInstance.audio.playSE('eventInfo');
+                    }
+
+                    this._lastEventKey = eventData.type;
+                    this.tabSpan.textContent = "TAB : " + eventData.type + " - " + eventData.mode;
+
                 }
             }
+        } else {
+
+            this._lastEventKey = "";
         }
         /*
         // プレイヤーがいま踏んでいるタイル絵文字
@@ -196,8 +210,8 @@ export class UIHud extends UIBase {
 
             this.tabSpan.textContent = "TAB : " + this.wizard.eventTile + " " + evtTile.title;
         }*/
-        
-        
+
+
         /* 敵出現数 (Background.CurrentPopCount) */
         const enemyCnt = gameMainScene?.background?.CurrentPopCount ?? 0;
         this.enemySpan.textContent = ": " + String(enemyCnt);

@@ -27,15 +27,16 @@ export const SOUND_DEFS = {
     boss : { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
 
     // SE (vol = individual multiplier; 1 = 100 %) ----------------
-    cursor     : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-accept.wav',            vol: 0.3 },
-    ok         : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-choice-good.wav',       vol: 1.0 },
-    cancel     : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-cancel-02.wav',         vol: 1.0 },
-    fire       : { type: 'SE', path: 'assets/se/action-and-game/NFF-fireball-02.wav',            vol: 0.3 },
-    getitem    : { type: 'SE', path: 'assets/se/action-and-game/NFF-steal.wav',                  vol: 1.0 },
-    getcoin    : { type: 'SE', path: 'assets/se/fantasy-and-magic/NFF-bonus.wav',                vol: 0.2 },
-    damage     : { type: 'SE', path: 'assets/se/action-and-game/NFF-boxing-punch.wav',           vol: 0.3 },
-    heal       : { type: 'SE', path: 'assets/se/action-and-game/NFF-chromatic-rise.wav',         vol: 1.0 },
-    buyItem    : { type: 'SE', path: 'assets/se/interfaces-and-media/NFF-complete.wav',          vol: 1.0 },
+    cursor     : { type: 'SE', path: 'assets/se/normalized/NFF-accept.wav',            vol: 0.3 },
+    ok         : { type: 'SE', path: 'assets/se/normalized/NFF-choice-good.wav',       vol: 1.0 },
+    cancel     : { type: 'SE', path: 'assets/se/normalized/NFF-cancel-02.wav',         vol: 1.0 },
+    fire       : { type: 'SE', path: 'assets/se/normalized/NFF-fireball-02.wav',            vol: 0.3 },
+    getitem    : { type: 'SE', path: 'assets/se/normalized/NFF-steal.wav',                  vol: 1.0 },
+    getcoin    : { type: 'SE', path: 'assets/se/normalized/NFF-bonus.wav',                vol: 0.2 },
+    damage     : { type: 'SE', path: 'assets/se/normalized/NFF-boxing-punch.wav',           vol: 0.3 },
+    heal       : { type: 'SE', path: 'assets/se/normalized/NFF-chromatic-rise.wav',         vol: 1.0 },
+    buyItem    : { type: 'SE', path: 'assets/se/normalized/NFF-complete.wav',          vol: 1.0 },
+    eventInfo  : { type: 'SE', path: 'assets/se/normalized/NFF-addressed.wav',          vol: 1.0 },
 };
 
 class SoundManager {
