@@ -1,6 +1,8 @@
-﻿/* SaveManagerUI.js — MiniElderMagic  (rev. “Neo-v19”) ==============================
+﻿/* SaveManagerUI.js — MiniElderMagic  (rev. “Neo-v20”) ==============================
  * 3 列グリッド / 新規スロットは最上段 / 新しい順表示 / 内部スクロール / 右上固定
  * UIBase の isVisible, show, hide, toggle をそのまま利用（フラグの二重管理なし）
+ * + Added global scale variable (opts.scale, CSS custom prop --sm-scale) to resize the
+ *   entire panel uniformly from one place. Example: `new SaveManagerUI(parent, sm, {scale:1.5})`
  * ------------------------------------------------------------------------------ */
 
 import { UIBase }                from '../UI/UIBase.js';
@@ -11,7 +13,8 @@ import { TitleScene }             from '../Scene/TitleScene.js';
  * @param {HTMLElement|Object=} parentOrOpts   親要素 または オプション一式
  * @param {SaveManager=}        saveManager    SaveManager インスタンス
  * @param {Object=}             opts           {getSaveData:Function, startVisible:Boolean,
- *                                             gameArea:HTMLElement, gameUiLayer:HTMLElement}
+ *                                             gameArea:HTMLElement, gameUiLayer:HTMLElement,
+ *                                             scale:Number}
  */
 export class SaveManagerUI extends UIBase {
 
@@ -29,6 +32,11 @@ export class SaveManagerUI extends UIBase {
         if (!saveManager) throw new Error('SaveManagerUI: saveManager is required');
 
         super(parentOrOpts);                 /* UIBase 初期化 → this.element を生成 */
+
+        /* ----- スケール ---------------------------------------------------- */
+        this.scale = opts.scale ?? 2;        // 1 = 100%
+        // set root CSS custom property (affects all instances)
+        document.documentElement.style.setProperty('--sm-scale', this.scale);
 
         this.saveManager  = saveManager;
         this.getSaveData  = opts.getSaveData || function(){ return {}; };
@@ -51,6 +59,7 @@ export class SaveManagerUI extends UIBase {
         if (document.getElementById('save-manager-ui-style')) return;  // 一度だけ
         var css = `
             :root {
+                --sm-scale  : 1;               /* ← JS で上書き */
                 --sm-bg     : rgba(31,31,31,.75);
                 --sm-fg     : #fafafa;
                 --sm-accent : #5ac8fa;
@@ -60,8 +69,11 @@ export class SaveManagerUI extends UIBase {
                 --sm-font   : .78rem;
             }
             #save-manager-ui{
-    position:fixed; top:10px; left:50%;
-    transform:translateX(-50%);
+                position:fixed;
+                top:calc(10px * var(--sm-scale));
+                left:50%;
+                transform:translateX(-50%) scale(var(--sm-scale));
+                transform-origin:top center;
                 display:none; z-index:9999;
                 font-size:var(--sm-font); color:var(--sm-fg);
             }

@@ -396,7 +396,10 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         if (this.isMouseDown) {
             // 左クリック押しっぱなし時の処理
         }
-        if (this.isRightMouseDown) {
+
+
+        const barrierActive = this.isRightMouseDown || this.pressedKeys?.['h'];
+        if (barrierActive) {
             // 右クリック押しっぱなし時の処理
 
             if (!this.BarrierId) {

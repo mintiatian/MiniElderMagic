@@ -84,7 +84,7 @@ export class UIStatus extends UIBase{
         const statusData = [
             { name: '⚔️'+textDataTable.get("stage").text,       value: this.wizard.status.shopBuyCount,                   color: 'white' },
             
-            { name: '❤️'+textDataTable.get("HP").text, value: `${this.wizard.status.hp} / ${this.wizard.status.maxHP}`, color: 'white' },
+            { name: '❤️'+textDataTable.get("HP").text, value: `${Math.floor(this.wizard.status.hp)} / ${this.wizard.status.maxHP}`, color: 'white' },
             { name: '💠'+textDataTable.get("MP").text, value: `${Math.floor(this.wizard.status.mp)} / ${this.wizard.status.maxMP}`, color: 'white' },
             { name: '🍷'+textDataTable.get("MPAutoRecovery").text, value: `${this.shosuu(this.wizard.status.mpregene,1)}`, color: 'white' },
             { name: '🗡️'+textDataTable.get("AttackPower").text, value: this.wizard.status.attack, color: 'white' },

@@ -120,9 +120,7 @@
         async function initPad(evt) {
             // ─── マウス環境で非表示にしたい場合は coarse 判定を入れる ───
             const isCoarse = window.matchMedia('(pointer: coarse)').matches;
-            
-            //if (!isCoarse && evt.pointerType !== 'touch') return;   // PC 用に無視
-
+            if (!isCoarse && evt.pointerType !== 'touch') return;    // PC ではロードしない
             window.removeEventListener('pointerdown', initPad, true);     // once
             const { GamePad } = await import('./Script/Input/GamePad.js'); // パス要確認
 

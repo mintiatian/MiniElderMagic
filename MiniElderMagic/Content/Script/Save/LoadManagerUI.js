@@ -1,15 +1,26 @@
-﻿/* LoadManagerUI.js — MiniElderMagic (Neo-v4)
+﻿/* LoadManagerUI.js — MiniElderMagic (Neo-v5)
  * 画面中央 / Close ボタン / 3 列グリッド / 内部スクロール
  * スロット行に「名前 (vX) 2025-06-17 15:42」のように保存日時を表示
+ * + Added global scale variable (opts.scale, CSS var --lm-scale) to resize the
+ *   whole UI uniformly. Example: `new LoadManagerUI(parent, sm, {scale:1.3})`
  * -------------------------------------------------------------------- */
 import { UIBase }      from '../UI/UIBase.js';
 import { SaveManager } from './SaveManager.js';
 
 export class LoadManagerUI extends UIBase {
 
+    /**
+     * @param {HTMLElement=} parent               親要素
+     * @param {SaveManager}   saveManager         SaveManager instance
+     * @param {Object=}       opts                {applyLoadData:Function, startVisible:Boolean, scale:Number}
+     */
     constructor(parent = document.body, saveManager, opts = {}) {
         if (!saveManager) throw new Error('LoadManagerUI: saveManager is required');
         super(parent);
+
+        /* ----- スケール ------------------------------------------------ */
+        this.scale = opts.scale ?? 3;           // 1 = 100%
+        document.documentElement.style.setProperty('--lm-scale', this.scale);
 
         this.saveManager   = saveManager;
         this.applyLoadData = opts.applyLoadData || function(){};
@@ -29,6 +40,7 @@ export class LoadManagerUI extends UIBase {
         style.id    = 'load-manager-ui-style';
         style.textContent = `
             :root {
+                --lm-scale  : 1;               /* Overwritten by JS per instance */
                 --lm-bg     : rgba(31,31,31,.75);
                 --lm-fg     : #fafafa;
                 --lm-accent : #5ac8fa;
@@ -38,7 +50,10 @@ export class LoadManagerUI extends UIBase {
                 --lm-font   : .78rem;
             }
             #load-manager-ui{
-                position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+                position:fixed;
+                top:50%; left:50%;
+                transform:translate(-50%,-50%) scale(var(--lm-scale));
+                transform-origin:center center;
                 display:none; z-index:9999;
                 font-size:var(--lm-font); color:var(--lm-fg);
             }
