@@ -67,6 +67,26 @@ export class GamePad {
             fontSize:`${base*1.2*0.4}px`
         });
 
+        /* ─ TAB pointer（keydown/up 合成） ─*/
+            tab.addEventListener('pointerdown', e=>{
+                    if (this._tabDown) return;
+                    e.preventDefault();
+                    e.stopPropagation();              // window へバブリングさせない
+                    tab.setPointerCapture(e.pointerId);
+                    this._emitKey('Tab','keydown');   // ★ 合成
+                    this._tabDown = true;
+                },{passive:false});
+        const tabEnd = e=>{
+                if (!this._tabDown) return;
+                e.preventDefault();
+                this._emitKey('Tab','keyup');     // ★ 合成
+                this._tabDown = false;
+                tab.releasePointerCapture(e.pointerId);
+            };
+        tab.addEventListener('pointerup',     tabEnd,{passive:false});
+        tab.addEventListener('pointercancel', tabEnd,{passive:false});
+        
+        
         /* ATTACK (mouse left) */
         const atk = this._btn('⚔', null, 'left');
         Object.assign(atk.style,{
