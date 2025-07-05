@@ -89,7 +89,9 @@ export class MagicBase extends Character {
                 
                 
                 this.HomingTarget.push(other);
-                this.HomingTargetCurrent = other;
+                if(this.HomingTargetCurrent == null){
+                    this.HomingTargetCurrent = other;
+                }
             }
     
 
