@@ -22,6 +22,7 @@ import { TimerManager } from './Utils/TimerManager.js';
 import {EnemyBase} from './Character/EnemyBase.js';
 import {CharacterDataTable} from './Utils/DataTable.js';
 import {gameMainScene} from "./Scene/GameMainScene.js";
+import {SceneManagerInstance} from "./Scene/SceneManager.js";
 
 // 下層レイヤにだけ描き、当たり判定も無視する “床” タイル
 const DECOR_TILES = new Set(['🟫', '👣', '🌉', '🏠', '🏡', '🏕️']);               // キャラの下 / 踏める
@@ -576,6 +577,9 @@ export class Background {
                                 break;
                             }
                     }
+                }
+                else if (eventData.type === "bgmchange") {
+                    SceneManagerInstance.audio.playBGM(eventData.mode);
                 }
             }
         }

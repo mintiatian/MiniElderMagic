@@ -1,5 +1,6 @@
-﻿/* TitleScene.js — MiniElderMagic (Neo-v3)
+﻿/* TitleScene.js — MiniElderMagic (Neo-v3+FS)
  * New Game / Load Game  +  LoadManagerUI 読込対応
+ * フルスクリーン切り替えボタンを追加
  * ------------------------------------------------------------------ */
 
 import {BaseScene} from './BaseScene.js';
@@ -36,13 +37,10 @@ export class TitleScene extends BaseScene {
         /* === 言語選択 UI を追加 === */
         this.langUI = new UILanguageSelector(this.gameUiLayer, newLang => {
             setLanguage(newLang);
-            //language = newLang;
-            // 翻訳反映処理（未実装ならここに translatePage() など）
             console.log(`言語を切り替えました: ${language}`);
         });
 
         SceneManagerInstance.audio.playBGM('title');
-
 
         /* ----- タイトル DOM -------------------------------------- */
         this.titleDiv = document.createElement('div');
@@ -50,22 +48,29 @@ export class TitleScene extends BaseScene {
         this.titleDiv.className = 'ts-wrap';
         this.titleDiv.innerHTML = `
             <h1 class="ts-logo">🧙 Mini Elder&nbsp;Magic</h1>
-            <button id="btn-new"  class="ts-btn ts-btn--primary">New&nbsp;Game</button>
-            <button id="btn-load" class="ts-btn">Load&nbsp;Game</button>
+            <button id="btn-new"   class="ts-btn ts-btn--primary">New&nbsp;Game</button>
+            <button id="btn-load"  class="ts-btn">Load&nbsp;Game</button>
+            <button id="btn-full"  class="ts-btn">Fullscreen</button>   <!-- ★ 追加 -->
         `;
         this.gameUiLayer.appendChild(this.titleDiv);
 
         /* ----- ボタン -------------------------------------------- */
-        this.titleDiv.querySelector('#btn-new').onclick = () => {
+        this.titleDiv.querySelector('#btn-new').onclick  = () => {
             this._startNewGame();
             SceneManagerInstance.audio.playSE('ok');
-        }
+        };
         this.titleDiv.querySelector('#btn-load').onclick = () => {
             this.saveGui.show();
             SceneManagerInstance.audio.playSE('ok');
-        }
-        /* === ここから追加（ホバー SE 再生） ====================== */
-        ['#btn-new', '#btn-load'].forEach(sel => {
+        };
+        /* === Fullscreen toggle ★ 追加 ============================ */
+        this.titleDiv.querySelector('#btn-full').onclick = () => {
+            this._toggleFullscreen();
+            SceneManagerInstance.audio.playSE('ok');
+        };
+
+        /* === Hover SE 再生 (3 つとも) ★ 変更 ==================== */
+        ['#btn-new', '#btn-load', '#btn-full'].forEach(sel => {
             const btn = this.titleDiv.querySelector(sel);
             btn.addEventListener('pointerenter', () =>
                 SceneManagerInstance.audio.playSE('cursor')
@@ -74,29 +79,20 @@ export class TitleScene extends BaseScene {
 
         /* ----- Esc で LoadGUI を閉じる --------------------------- */
         this._esc = e => {
-            if (e.key === 'Escape' && this.saveGui && this.saveGui?.isVisible) {
+            if (e.key === 'Escape' && this.saveGui?.isVisible) {
                 this.saveGui.hide();
-
                 SceneManagerInstance.audio.playSE('cancel');
             }
         };
-
-
         window.addEventListener('keydown', this._esc);
     }
 
     onExit() {
-        /* Esc リスナー解除 */
         window.removeEventListener('keydown', this._esc);
-
-        /* LoadManagerUI は隠すだけにして再利用 */
         this.saveGui?.hide();
-
-        /* DOM クリーンアップ */
         this.titleDiv.remove();
         this.gameArea.innerHTML = '';
         this.gameUiLayer.innerHTML = '';
-        //this.langUI?.remove();  // 言語UIも削除
     }
 
     /* ===================== Helpers ================================ */
@@ -119,6 +115,17 @@ export class TitleScene extends BaseScene {
                 alert('Load failed');
             })
             .finally(() => this.loadingDiv?.remove());
+    }
+
+    /* -------------------- Fullscreen ------------------------------ */
+    _toggleFullscreen() {                               // ★ 追加
+        const root = document.documentElement;          // ここを gameArea にしても OK
+        if (!document.fullscreenElement) {
+            root.requestFullscreen?.().catch(err =>
+                console.warn('Fullscreen failed:', err));
+        } else {
+            document.exitFullscreen?.();
+        }
     }
 
     /* -------------------- Loading Overlay ------------------------- */

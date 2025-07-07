@@ -22,9 +22,9 @@
 export const SOUND_DEFS = {
     // BGM ---------------------------------------------------------
     title: { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
-    field: { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
+    field: { type: 'BGM', path: 'assets/bgm/xDeviruchi - Exploring The Unknown.wav' },
     town : { type: 'BGM', path: 'assets/bgm/xDeviruchi - And The Journey Begins .wav' },
-    boss : { type: 'BGM', path: 'assets/bgm/xDeviruchi-TitleTheme.wav' },
+    boss : { type: 'BGM', path: 'assets/bgm/xDeviruchi - Decisive Battle.wav' },
 
     // SE (vol = individual multiplier; 1 = 100 %) ----------------
     cursor     : { type: 'SE', path: 'assets/se/normalized/NFF-accept.wav',            vol: 0.3 },
