@@ -69,6 +69,7 @@ class SoundManager {
         this._unlocked = false;
         this._queue = []; // functions pending until unlock
 
+        this._loadingBGM = null;    // ← ★追加
         const unlock = async () => {
             await this._ensureContext(true);
             document.removeEventListener('pointerdown', unlock);
@@ -188,38 +189,57 @@ class SoundManager {
         return new Promise((res, rej) => this._ctx.decodeAudioData(arr, res, rej));
     }
 
+
+    /* ================================================================== */
+    /* internal helpers                                                   */
+    /* ================================================================== */
     async _doPlayBGM(tag, loop) {
-        if (tag === this._currentBGM) return;
+        // ────────────────────────────────────────────────────────────
+        // すでに同じ曲を再生中 or ロード中なら何もしない
+        // ────────────────────────────────────────────────────────────
+        if (tag === this._currentBGM || tag === this._loadingBGM) return;
+
         const def = SOUND_DEFS[tag];
         if (!def || def.type !== 'BGM') {
             console.warn(`[SoundManager] BGM tag not found: ${tag}`);
             return;
         }
 
-        await this._ensureContext(true);
+        // ここからロード開始を宣言
+        this._loadingBGM = tag;
 
-        const now = this._ctx.currentTime;
-        // fade out existing bgm
-        if (this._bgmSource) {
-            this._bgmGain.gain.cancelScheduledValues(now);
-            this._bgmGain.gain.setValueAtTime(this._bgmGain.gain.value, now);
-            this._bgmGain.gain.linearRampToValueAtTime(0, now + this._fadeDur / 1000);
-            this._bgmSource.stop(now + this._fadeDur / 1000);
+        try {
+            await this._ensureContext(true);
+
+            const now = this._ctx.currentTime;
+            // フェードアウト
+            if (this._bgmSource) {
+                this._bgmGain.gain.cancelScheduledValues(now);
+                this._bgmGain.gain.setValueAtTime(this._bgmGain.gain.value, now);
+                this._bgmGain.gain.linearRampToValueAtTime(0, now + this._fadeDur / 1000);
+                this._bgmSource.stop(now + this._fadeDur / 1000);
+            }
+
+            // バッファ読み込み（await）
+            const buffer = await this._loadBuffer(def.path);
+
+            // 新しいソースをセットアップ
+            const src = this._ctx.createBufferSource();
+            src.buffer = buffer;
+            src.loop   = loop;
+            src.connect(this._bgmGain);
+
+            // フェードイン
+            this._bgmGain.gain.setValueAtTime(0, now + this._fadeDur / 1000);
+            this._bgmGain.gain.linearRampToValueAtTime(this._bgmVol, now + this._fadeDur * 2 / 1000);
+
+            src.start(now + this._fadeDur / 1000);
+            this._bgmSource  = src;
+            this._currentBGM = tag;
+        } finally {
+            // 必ずロード中フラグを解除
+            this._loadingBGM = null;
         }
-
-        const buffer = await this._loadBuffer(def.path);
-        const src = this._ctx.createBufferSource();
-        src.buffer = buffer;
-        src.loop   = loop;
-        src.connect(this._bgmGain);
-
-        // fade in
-        this._bgmGain.gain.setValueAtTime(0, now + this._fadeDur / 1000);
-        this._bgmGain.gain.linearRampToValueAtTime(this._bgmVol, now + this._fadeDur * 2 / 1000);
-
-        src.start(now + this._fadeDur / 1000);
-        this._bgmSource = src;
-        this._currentBGM = tag;
     }
 
     async _doPlaySE(tag) {
