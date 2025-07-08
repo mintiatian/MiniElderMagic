@@ -285,7 +285,6 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
     }
 
 
-
     /**
      * @desc 火球を発射する
      * @returns {boolean} 発射に成功したかどうか
@@ -295,10 +294,6 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         if (!this.playerTarget || this.status.hp <= 0) {
             return false;
         }
-
-        const attackRatios = [0.25, 0.5, 0.75, 1];  // 候補となる値を配列にまとめる
-        const randomIndex = Math.floor(Math.random() * attackRatios.length);    // 配列のインデックスをランダムに生成する (0, 1, 2, 3のいずれか)
-        this.status.AttackdirRatio = attackRatios[randomIndex];         // ランダムに選ばれた値を設定する
 
         // 現在の時間を取得
         const currentTime = Date.now();
@@ -312,23 +307,43 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         const dx = this.playerTarget.x - this.x;
         const dy = this.playerTarget.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
+        
         // 攻撃範囲内にプレイヤーがいるか確認
-        if (distance <= this.enemyAIData.attackRange) {
-            // 攻撃時間を更新
-            this.lastAttackTime = currentTime;
-
-            // プレイヤーの方向を計算（正規化）
-            const normalizedDx = dx / distance;
-            const normalizedDy = dy / distance;
-
-            this.radian = Math.atan2(normalizedDy, normalizedDx);
-            this.Fire(this.status.FireCnt1, this.getPosition());
-
-            return true;
+        if (distance > this.enemyAIData.attackRange) {
+            return false;
         }
 
-        return false;
+        
+        
+        let attackRatios = [0.025,0.05,0.075,0.1, 0.125, 0.15, 0.175,0.2];       // 候補となる値を配列にまとめる
+
+        if(this.status.FireCnt1>=5){
+            attackRatios = [0.05,0.1,0.15,0.2, 0.25, 0.3, 0.35,0.4];
+        }
+        else if(this.status.FireCnt1>=10){
+            attackRatios = [0.3,0.4,0.5,0.6, 0.7, 0.8, 0.9,1.0];
+        }
+        
+        const randomIndex = Math.floor(Math.random() * attackRatios.length);     // 配列のインデックスをランダムに生成する (0, 1, 2, 3のいずれか)
+        this.status.AttackdirRatio = attackRatios[randomIndex];         // ランダムに選ばれた値を設定する
+
+
+        // 攻撃時間を更新
+        this.lastAttackTime = currentTime;
+
+        // プレイヤーの方向を計算（正規化）
+        const normalizedDx = dx / distance;
+        const normalizedDy = dy / distance;
+
+        this.radian = Math.atan2(normalizedDy, normalizedDx);
+        this.Fire(this.status.FireCnt1, this.getPosition());
+
+        //this.status.AttackdirRatio = 0.05;
+        //this.Fire(5, this.getPosition());
+
+        return true;
+
+
     }
 
 
