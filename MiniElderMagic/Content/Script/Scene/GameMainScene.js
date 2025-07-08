@@ -262,11 +262,12 @@ export class GameMainScene extends BaseScene {
 
             ch.update?.(delta);                     // 各クラス固有ロジック
 
+
+            ch.updateMoveEnd?.();
+            
             for (const hitch of this.pawns) {
                 ch.isColliding(hitch);
             }
-
-            ch.updateMoveEnd?.();
         }
 
         // 削除Pawnがある時

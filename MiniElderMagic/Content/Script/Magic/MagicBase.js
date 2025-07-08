@@ -42,7 +42,7 @@ export class MagicBase extends Character {
         this.AddLifeTime = this.owner.status.AddLifeTime;
         this.addMaxSpeed = this.owner.status.AddMaxSpeed;
 
-        
+
         
         this.MagicData.lifeTime += this.AddLifeTime;
         this.MaxSpeed +=this.addMaxSpeed;

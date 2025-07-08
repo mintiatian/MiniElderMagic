@@ -434,12 +434,12 @@ export class Background {
 
         if (isBossLevel === 1) {
             // min 7
-            level *= 2;
-            level += 5;
+            level *= 3;
+            level += 8;
         } else if (isBossLevel === 2) {
             // min 12
-            level *= 2;
-            level += 10;
+            level *= 3;
+            level += 20;
         } else {
         }
 
@@ -450,12 +450,12 @@ export class Background {
         if (isBossLevel === 1) {
             enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
             enemy.setRatioSize(2);
-            enemy.enemyAIData.coinDropCount += 5;
+            enemy.enemyAIData.coinDropCount += 15;
             //enemy.status.AttackdirRatio = 14;
         } else if (isBossLevel === 2) {
             enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
             enemy.setRatioSize(8);
-            enemy.enemyAIData.coinDropCount += 10;
+            enemy.enemyAIData.coinDropCount += 30;
             //enemy.status.AttackdirRatio = 8;
         } else {
             enemy.setRatioSize(this.calcLevelSize(level));
