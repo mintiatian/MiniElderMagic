@@ -36,7 +36,7 @@ export const SOUND_DEFS = {
     damage     : { type: 'SE', path: 'assets/se/normalized/NFF-boxing-punch.wav',           vol: 0.3 },
     heal       : { type: 'SE', path: 'assets/se/normalized/NFF-chromatic-rise.wav',         vol: 1.0 },
     buyItem    : { type: 'SE', path: 'assets/se/normalized/NFF-complete.wav',          vol: 1.0 },
-    eventInfo  : { type: 'SE', path: 'assets/se/normalized/NFF-addressed.wav',          vol: 1.0 },
+    eventInfo  : { type: 'SE', path: 'assets/se/normalized/NFF-blip.wav',          vol: 0.1 },
 };
 
 class SoundManager {
@@ -51,7 +51,7 @@ class SoundManager {
 
         /** Volume variables (0‑1, mutable) */
         this._masterVol = 0.5;
-        this._bgmVol = 0.5;
+        this._bgmVol = 0.3;
         this._seVol = 0.5;
 
         /* BGM state */
@@ -70,6 +70,8 @@ class SoundManager {
         this._queue = []; // functions pending until unlock
 
         this._loadingBGM = null;    // ← ★追加
+        
+        // ここでサウンドの再生処理を行う
         const unlock = async () => {
             await this._ensureContext(true);
             document.removeEventListener('pointerdown', unlock);

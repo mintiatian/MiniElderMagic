@@ -318,7 +318,7 @@ export class EnemyBase extends EventEmitterMixin(CharacterBase) {
         let attackRatios = [0.025,0.05,0.075,0.1, 0.125, 0.15, 0.175,0.2];       // 候補となる値を配列にまとめる
 
         if(this.status.FireCnt1>=5){
-            attackRatios = [0.05,0.1,0.15,0.2, 0.25, 0.3, 0.35,0.4];
+            attackRatios = [0.2, 0.25, 0.35, 0.45, 0.5];
         }
         else if(this.status.FireCnt1>=10){
             attackRatios = [0.3,0.4,0.5,0.6, 0.7, 0.8, 0.9,1.0];

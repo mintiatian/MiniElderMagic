@@ -243,7 +243,10 @@ export class Background {
     }
 
     getGameDifficultyLevel() {
-        return (gameMainScene.wizard.status.shopBuyCount / 30);
+        return (gameMainScene.wizard.status.shopBuyCount / 75);
+    }
+    getGameDifficultyLevelPop() {
+        return (gameMainScene.wizard.status.shopBuyCount / 60);
     }
 
     popDoEnemyFromPawn(delta, Pawn) {
@@ -264,7 +267,7 @@ export class Background {
      * @param {number} y ワールド Y 座標
      */
     popDoEnemy(x, y) {
-        const MAX_POP_COUNT = this.MAXBASE_POP_COUNT * (1.0 + this.getGameDifficultyLevel());                         // 同時出現上限
+        const MAX_POP_COUNT = this.MAXBASE_POP_COUNT * (1.0 + this.getGameDifficultyLevelPop());                         // 同時出現上限
 
 
         if (this.CurrentPopCount >= MAX_POP_COUNT) return;
@@ -290,25 +293,6 @@ export class Background {
             else{
                 continue;
             }
-
-            /*
-            const enemyEmoji = this.getMapValue('enemyPop', spawnX, spawnY);   // ←★★ここ
-            
-            if (!enemyEmoji) continue;
-
-
-            const extraItemEmoji = this.getMapValue('itemDropPop', spawnX, spawnY);
-
-            // ItemデータからIDを取得する
-            const extraDropID = ItemDataTable.getIdByEmoji(extraItemEmoji);
-
-
-            // 生成に成功したらカウントを進めて終了
-            if (this.CreateEnemy(pos.row, pos.col, enemyEmoji, extraDropID)) {
-                ++this.CurrentPopCount;
-                break;
-            }
-            */
         }
     }
     
@@ -435,11 +419,19 @@ export class Background {
         if (isBossLevel === 1) {
             // min 7
             level *= 3;
-            level += 8;
+            level += 4;
         } else if (isBossLevel === 2) {
             // min 12
             level *= 3;
+            level += 10;
+        }else if (isBossLevel === 3) {
+            // min 12
+            level *= 3;
             level += 20;
+        }else if (isBossLevel === 4) {
+            // min 12
+            level *= 3;
+            level += 30;
         } else {
         }
 
@@ -454,8 +446,18 @@ export class Background {
             //enemy.status.AttackdirRatio = 14;
         } else if (isBossLevel === 2) {
             enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
-            enemy.setRatioSize(8);
+            enemy.setRatioSize(4);
             enemy.enemyAIData.coinDropCount += 30;
+            //enemy.status.AttackdirRatio = 8;
+        } else if (isBossLevel === 3) {
+            enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
+            enemy.setRatioSize(6);
+            enemy.enemyAIData.coinDropCount += 45;
+            //enemy.status.AttackdirRatio = 8;
+        } else if (isBossLevel === 4) {
+            enemy.status.AddLifeTime = Math.max(enemy.status.AddLifeTime, 1000);
+            enemy.setRatioSize(8);
+            enemy.enemyAIData.coinDropCount += 60;
             //enemy.status.AttackdirRatio = 8;
         } else {
             enemy.setRatioSize(this.calcLevelSize(level));

@@ -236,7 +236,7 @@ export class UIEventDialog extends UIBase {
     async _opPage(cmd) {
         this._titleEl.textContent = this.titleEmoji;
         await this._typeWriter(cmd.text ?? '');
-        await this._repositionIfOverlap();   // ← ここを追加
+//        await this._repositionIfOverlap();   // ← ここを追加
         this.element.style.pointerEvents = 'auto';
         await new Promise(resolve => {
             const clickHandler = () => {

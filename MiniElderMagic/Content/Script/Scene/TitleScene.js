@@ -40,7 +40,7 @@ export class TitleScene extends BaseScene {
             console.log(`言語を切り替えました: ${language}`);
         });
 
-        SceneManagerInstance.audio.playBGM('title');
+        //SceneManagerInstance.audio.playBGM('title');
 
         /* ----- タイトル DOM -------------------------------------- */
         this.titleDiv = document.createElement('div');
@@ -55,7 +55,7 @@ export class TitleScene extends BaseScene {
         this.gameUiLayer.appendChild(this.titleDiv);
 
         /* ----- ボタン -------------------------------------------- */
-        this.titleDiv.querySelector('#btn-new').onclick  = () => {
+        this.titleDiv.querySelector('#btn-new').onclick = () => {
             this._startNewGame();
             SceneManagerInstance.audio.playSE('ok');
         };
@@ -99,7 +99,10 @@ export class TitleScene extends BaseScene {
     _startNewGame() {
         this._showLoadingOverlay();
         const gm = new GameMainScene(this.gameArea, this.gameUiLayer);
-        SceneManagerInstance.change(gm).finally(() => this.loadingDiv?.remove());
+        SceneManagerInstance.change(gm).finally(() => {
+                this.loadingDiv?.remove();
+            }
+        );
     }
 
     _loadSaveData(data) {
@@ -114,7 +117,10 @@ export class TitleScene extends BaseScene {
                 console.error('Load failed', err);
                 alert('Load failed');
             })
-            .finally(() => this.loadingDiv?.remove());
+            .finally(() => {
+
+                this.loadingDiv?.remove();
+            });
     }
 
     /* -------------------- Fullscreen ------------------------------ */

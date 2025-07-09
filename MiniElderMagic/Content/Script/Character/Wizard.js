@@ -133,7 +133,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         //this.Inventory.addItem("🍄");
         //this.Inventory.addItem("🍞");
 
-        this.Inventory.addItem("⛵");
+        //this.Inventory.addItem("⛵");
 
 
         this.CanRespown = true;
