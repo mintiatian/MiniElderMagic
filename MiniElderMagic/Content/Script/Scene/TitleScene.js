@@ -24,7 +24,7 @@ export class TitleScene extends BaseScene {
         this.saveGui = new LoadManagerUI(gameUiLayer, this.saveMgr, {
             applyLoadData: d => this._loadSaveData(d)
         });
-
+        
         this._injectStyles();                      // 1 度だけ CSS 注入
     }
 

@@ -251,7 +251,7 @@ export class UIEventDialog extends UIBase {
     async _opDialog(cmd) {
         const mode = cmd.dialogMode ?? 'ok';
         this._btnArea.innerHTML = '';
-        await this._repositionIfOverlap();
+        //await this._repositionIfOverlap();
         this.element.style.pointerEvents = 'auto';
         const makeBtn = (label, value) => {
             const b = document.createElement('button');
@@ -324,8 +324,8 @@ export class UIEventDialog extends UIBase {
             this._writerResolver = res;
             this._textEl.textContent = '';
             let idx = 0;
+            clearInterval(this._writerTimer);
             if (this._writerTimer !== null) {
-                clearInterval(this._writerTimer);
             }
 
             this._writerTimer = setInterval(() => {
@@ -360,10 +360,33 @@ export class UIEventDialog extends UIBase {
             this._waiting = null;
         }
     }
+    /* ========= ★追加: 状態を初期化するユーティリティ ========= */
+    _resetState() {
 
+
+        if(this._writerTimer){
+            clearInterval(this._writerTimer);
+        }
+        
+        // 実行時ステート
+        this._writerTimer   = null;
+        this._writerResolver = null;
+        this._script        = null;
+        this._pc            = 0;
+        this._waiting       = null;
+        this._lastAnswer    = null;
+
+        // 表示/UI
+        if (this._textEl)   this._textEl.textContent = '';
+        if (this._titleEl)  this._titleEl.textContent = '';
+        if (this._btnArea)  this._btnArea.innerHTML  = '';
+        if (this.element)   this.element.style.pointerEvents = 'none';
+    }
     show() {
 
 
+        this._resetState();
+        
         const event = gameMainScene.background.getMapValue("event", gameMainScene.wizard.x, gameMainScene.wizard.y);
 
         if (event !== null) {

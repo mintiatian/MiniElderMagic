@@ -89,7 +89,7 @@ export class UIStatus extends UIBase{
             { name: '🍷'+textDataTable.get("MPAutoRecovery").text, value: `${this.shosuu(this.wizard.status.mpregene,1)}`, color: 'white' },
             { name: '🗡️'+textDataTable.get("AttackPower").text, value: this.wizard.status.attack, color: 'white' },
             { name: '🛡️'+textDataTable.get("Defensepower").text, value: `${this.shosuu(this.wizard.status.deffence,1)}`, color: 'white' },
-            { name: '🌀'+textDataTable.get("movementspeed").text, value: this.shosuu(this.wizard.status.MaxSpeed,1), color: 'white' },
+            { name: '🌀'+textDataTable.get("movementspeed").text, value: this.shosuu(this.wizard.status.MaxSpeed,2), color: 'white' },
 
 
 

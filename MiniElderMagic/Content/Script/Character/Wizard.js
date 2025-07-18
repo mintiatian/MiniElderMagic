@@ -265,6 +265,14 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                 }
             );
 
+            // MoveBase 側が保持している速度（vx, vy）と目標方向を 0 に
+            if (this.moveBase) {
+                /* setDesiredDir があればそれで。無ければ直接プロパティを触る */
+                this.moveBase.setDesiredDir?.(0, 0);
+                this.moveBase.vx = 0;
+                this.moveBase.vy = 0;
+            }
+
             const lostCoins = Math.floor(this.playerstatus.coins / 2);
             this.playerstatus.coins = lostCoins;
 
