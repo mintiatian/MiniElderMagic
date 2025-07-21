@@ -28,6 +28,8 @@ import {UIItemList} from "../UI/UIItemList.js";
 import {SceneManagerInstance} from './SceneManager.js';
 import {BaseScene} from './BaseScene.js';
 
+import { DataTableURLConfig } from '../Utils/DataTableURLConfig.js';
+
 export let gameMainScene = null;
 
 export class GameMainScene extends BaseScene {
@@ -116,23 +118,7 @@ export class GameMainScene extends BaseScene {
 
 
         /* ───── 非同期テーブル読込 ───── */
-        const urls = {
-            magic: 'https://docs.google.com/spreadsheets/d/14KPqmm0KQ-wlcgV-WMGqlqIwCCoz94hI8InyBMPmJdA/export?format=csv',
-            item: 'https://docs.google.com/spreadsheets/d/174mPJFw8fMOP5DAzL70FcuW549VnZK6FeVDcCkvfYfU/export?format=csv',
-            enemy: 'https://docs.google.com/spreadsheets/d/1v_q-56Nb_CtzkIZBThYEuBWScLzRIBaiQlI5mtugv9w/export?format=csv',
-            wizard: 'https://docs.google.com/spreadsheets/d/1CRTX72AUu4QXko0QUUq6X7LaNLxfy0YausEIx9zFBJA/export?format=csv',
-            enemyai: 'https://docs.google.com/spreadsheets/d/16F7ksDu0R-01dE1ik7vZOADMWYiyqbCecUDhTVzOO5c/export?format=csv',
-            mapChip: 'https://docs.google.com/spreadsheets/d/178l4JKlUGkUFAUFfU6Dt0yAyUwkOeCNQLc5tkn2BUSg/export?format=csv',
-            mapColor: 'https://docs.google.com/spreadsheets/d/1fa4ZvsC3VE6mrOywsCM2H_3H8dGRoskF0LHAEz8-_VY/export?format=csv',
-            mapEnemyPop: 'https://docs.google.com/spreadsheets/d/1tKr0LiD74U8PhFlnU6alooSWucwTK0qY6xmm6PnZ6Zc/export?format=csv',
-            mapEvent: 'https://docs.google.com/spreadsheets/d/1O08oReBUjC22NyOL-902NcZaZdeGtxj3FNRsBYbkDCY/export?format=csv',
-            mapDropPopItem: 'https://docs.google.com/spreadsheets/d/1vrdjApsk2xD-IaNrskusJPwARl7x0KazGLBTy7LTV3o/export?format=csv',
-            eventTile: 'https://docs.google.com/spreadsheets/d/1knfjOwpXSkw6HYBdZn7Ugkk73sc88cPSsGLuv1EeMx8/export?format=csv',
-            event: 'https://docs.google.com/spreadsheets/d/1Yz0RJs4WuimcoH2Af6c1JclQL46bgGOGj1QUqAnfXPc/export?format=csv',
-            text: 'https://docs.google.com/spreadsheets/d/1GzKK2-oFpGMc3kr1TYE6U-7_DeLjDN81zdQUGumimxo/export?format=csv',
-
-        };
-
+        const urls = DataTableURLConfig.get();
 
         this._loadedCount = 0;            // 進捗カウンター
         this._totalToLoad = Object.keys(urls).length;            // 期待ロード数
@@ -373,6 +359,13 @@ export class GameMainScene extends BaseScene {
         this._fpsCount = 0;
 
 
+        // フォーカス喪失時に全部クリア
+        this._blur = () => { this.pressedKeys = {}; };
+        window.addEventListener('blur', this._blur);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.pressedKeys = {};
+        });
+
         SceneManagerInstance.audio.playBGM('town');
     }
 
@@ -382,7 +375,9 @@ export class GameMainScene extends BaseScene {
         /* ── リスナー解除 ─────────────────────── */
         document.removeEventListener('keydown', this._down);
         document.removeEventListener('keyup', this._up);
-
+        // onExit() で忘れずに解除
+        window.removeEventListener('blur', this._blur);
+        
         /* ── UI / DOM を完全クリーンアップ ───── */
         this.fpsLabel?.remove();
         this.itemList?.remove?.();        // hide() でも可

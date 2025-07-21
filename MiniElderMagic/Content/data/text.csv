@@ -1,0 +1,21 @@
+id,text,en,zh-Hans,es,fr,de,pt-BR,ko,ru
+stage,ステージ,stage,阶段,escenario,scène,Bühne,estágio,무대,этап
+HP,HP,HP,惠普,HP,HP,HP,HP,HP,HP
+MP,MP,MP,议员,Diputado,député,Abgeordneter,deputado,MP,депутат
+MPAutoRecovery,MP自動回復,MP Auto Recovery,MP自动恢复,Recuperación automática de MP,Récupération automatique MP,MP Automatische Wiederherstellung,Recuperação automática de MP,MP 자동 복구,Автоматическое восстановление MP
+AttackPower,攻撃力,Attack Power,攻击强度,Poder de ataque,Puissance d'attaque,Angriffskraft,Poder de Ataque,공격력,Сила атаки
+Defensepower,防御力,Defense power,防御力,Poder de defensa,Puissance de défense,Verteidigungskraft,Poder de defesa,방어력,Оборонная мощь
+movementspeed,移動速度,movement speed,移动速度,velocidad de movimiento,vitesse de déplacement,Bewegungsgeschwindigkeit,velocidade de movimento,이동 속도,скорость движения
+MagicPierce,魔法貫通,Magic Pierce,魔法皮尔斯,Perforación mágica,Perçage magique,Magischer Durchbruch,Magic Pierce,마법 관통,Волшебный Пирс
+Inductionrange,誘導範囲,Induction range,感应炉灶,cocina de inducción,cuisinière à induction,Induktionsherd,Faixa de indução,유도 범위,Диапазон индукции
+Inductioncorrection,誘導補正,Induction correction,感应校正,Corrección por inducción,Correction par induction,Induktionskorrektur,Correção de indução,유도 보정,Коррекция индукции
+Range,射程,Range,范围,Rango,Gamme,Reichweite,Faixa,사거리,Диапазон
+MagicCount,魔法個数,Magic Count,魔法计数,Conde mágico,Compte magique,Magische Zählung,Contagem Mágica,마법 개수,Волшебный счет
+magicspeed,魔法速度,magic speed,神奇速度,velocidad mágica,vitesse magique,magische Geschwindigkeit,velocidade mágica,마법 속도,магическая скорость
+Magicpowerused,使用魔力,Magic power used,使用的魔力,Poder mágico utilizado,Pouvoir magique utilisé,Verwendete magische Kraft,Poder mágico usado,사용 마력,Использованная магическая сила
+Resistance,耐性,Resistance,反抗,Resistencia,Résistance,Widerstand,Resistência,내성,Сопротивление
+YES,はい,yes,是的,Sí,Oui,Ja,sim,예,да
+NO,いいえ,no,不,No,Non,NEIN,não,아니오,нет
+OK,OK,OK,好的,DE ACUERDO,D'ACCORD,OK,OK,OK,ХОРОШО
+Purchase,買取,Purchase,购买,Compra,Achat,Kaufen,Comprar,구매,Покупка
+PurchasePrice,買取価格,Purchase price,购买价格,Precio de compra,Prix d'achat,Kaufpreis,Preço de compra,구매 가격,Цена покупки

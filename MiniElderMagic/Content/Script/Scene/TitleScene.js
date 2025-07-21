@@ -1,6 +1,6 @@
-﻿/* TitleScene.js — MiniElderMagic (Neo-v3+FS)
- * New Game / Load Game  +  LoadManagerUI 読込対応
- * フルスクリーン切り替えボタンを追加
+﻿/* TitleScene.js — MiniElderMagic (Neo‑v3+FS+DataSrcDlg+ModeLabel+Profile)
+ * New Game / Load Game + LoadManagerUI 読込対応
+ * フルスクリーン切替 + Data‑Table Source 切替ダイアログ + 現在モード＆プロファイル表示
  * ------------------------------------------------------------------ */
 
 import {BaseScene} from './BaseScene.js';
@@ -9,6 +9,8 @@ import {SceneManagerInstance} from './SceneManager.js';
 import {SaveManager} from '../Save/SaveManager.js';
 import {LoadManagerUI} from '../Save/LoadManagerUI.js';
 import {UILanguageSelector} from '../UI/UILanguageSelector.js';
+import {UIDatatableSourceDialog} from '../UI/UIDatatableSourceDialog.js';
+import {DataTableURLConfig} from '../Utils/DataTableURLConfig.js';
 import {language, setLanguage} from '../Utils/DataTable.js';
 
 export class TitleScene extends BaseScene {
@@ -16,7 +18,7 @@ export class TitleScene extends BaseScene {
     /* -------------------------------------------------------------- */
     constructor(gameArea, gameUiLayer) {
         super();
-        this.gameArea = gameArea;
+        this.gameArea    = gameArea;
         this.gameUiLayer = gameUiLayer;
 
         /* Save / Load ------------------------------------------------ */
@@ -24,11 +26,22 @@ export class TitleScene extends BaseScene {
         this.saveGui = new LoadManagerUI(gameUiLayer, this.saveMgr, {
             applyLoadData: d => this._loadSaveData(d)
         });
-        
-        this._injectStyles();                      // 1 度だけ CSS 注入
+
+        /* Data‑Source Config ダイアログ ----------------------------- */
+        this.dataSrcDlg = new UIDatatableSourceDialog(gameUiLayer);
+        this.dataSrcDlg.hide();          // 起動時は非表示
+
+        /* ダイアログが閉じたらモード表示を更新 ------------------- */
+        const origHide = this.dataSrcDlg.hide.bind(this.dataSrcDlg);
+        this.dataSrcDlg.hide = (...args) => {
+            origHide(...args);
+            this._updateDsModeLabel?.();
+        };
+
+        this._injectStyles();            // 1 度だけ CSS 注入
     }
 
-    /* ==================== Scene Life-Cycle ========================= */
+    /* ==================== Scene Life‑Cycle ========================= */
     onEnter() {
         if (!this.saveGui.element.isConnected) {
             this.gameUiLayer.appendChild(this.saveGui.element);
@@ -40,8 +53,6 @@ export class TitleScene extends BaseScene {
             console.log(`言語を切り替えました: ${language}`);
         });
 
-        //SceneManagerInstance.audio.playBGM('title');
-
         /* ----- タイトル DOM -------------------------------------- */
         this.titleDiv = document.createElement('div');
         this.titleDiv.id = 'title-screen';
@@ -50,9 +61,16 @@ export class TitleScene extends BaseScene {
             <h1 class="ts-logo">🧙 Mini Elder&nbsp;Magic</h1>
             <button id="btn-new"   class="ts-btn ts-btn--primary">New&nbsp;Game</button>
             <button id="btn-load"  class="ts-btn">Load&nbsp;Game</button>
-            <button id="btn-full"  class="ts-btn">Fullscreen</button>   <!-- ★ 追加 -->
+            <button id="btn-full"  class="ts-btn">Fullscreen</button>
+            <button id="btn-data-src" class="ts-btn">Data&nbsp;Source</button>
         `;
         this.gameUiLayer.appendChild(this.titleDiv);
+
+        /* ==== Data Source Mode Label =============================== */
+        this.dsModeLabel = document.createElement('div');
+        this.dsModeLabel.className = 'ts-dsmode';
+        this.titleDiv.appendChild(this.dsModeLabel);
+        this._updateDsModeLabel();
 
         /* ----- ボタン -------------------------------------------- */
         this.titleDiv.querySelector('#btn-new').onclick = () => {
@@ -63,24 +81,31 @@ export class TitleScene extends BaseScene {
             this.saveGui.show();
             SceneManagerInstance.audio.playSE('ok');
         };
-        /* === Fullscreen toggle ★ 追加 ============================ */
         this.titleDiv.querySelector('#btn-full').onclick = () => {
             this._toggleFullscreen();
             SceneManagerInstance.audio.playSE('ok');
         };
+        this.titleDiv.querySelector('#btn-data-src').onclick = () => {
+            this.dataSrcDlg.show();
+            SceneManagerInstance.audio.playSE('ok');
+        };
 
-        /* === Hover SE 再生 (3 つとも) ★ 変更 ==================== */
-        ['#btn-new', '#btn-load', '#btn-full'].forEach(sel => {
+        /* === Hover SE (4 ボタン) ================================== */
+        ['#btn-new', '#btn-load', '#btn-full', '#btn-data-src'].forEach(sel => {
             const btn = this.titleDiv.querySelector(sel);
             btn.addEventListener('pointerenter', () =>
                 SceneManagerInstance.audio.playSE('cursor')
             );
         });
 
-        /* ----- Esc で LoadGUI を閉じる --------------------------- */
+        /* ----- Esc で GUI を閉じる ------------------------------- */
         this._esc = e => {
-            if (e.key === 'Escape' && this.saveGui?.isVisible) {
+            if (e.key !== 'Escape') return;
+            if (this.saveGui?.isVisible) {
                 this.saveGui.hide();
+                SceneManagerInstance.audio.playSE('cancel');
+            } else if (this.dataSrcDlg?.isVisible) {
+                this.dataSrcDlg.hide();
                 SceneManagerInstance.audio.playSE('cancel');
             }
         };
@@ -90,6 +115,7 @@ export class TitleScene extends BaseScene {
     onExit() {
         window.removeEventListener('keydown', this._esc);
         this.saveGui?.hide();
+        this.dataSrcDlg?.hide();
         this.titleDiv.remove();
         this.gameArea.innerHTML = '';
         this.gameUiLayer.innerHTML = '';
@@ -100,9 +126,8 @@ export class TitleScene extends BaseScene {
         this._showLoadingOverlay();
         const gm = new GameMainScene(this.gameArea, this.gameUiLayer);
         SceneManagerInstance.change(gm).finally(() => {
-                this.loadingDiv?.remove();
-            }
-        );
+            this.loadingDiv?.remove();
+        });
     }
 
     _loadSaveData(data) {
@@ -118,19 +143,46 @@ export class TitleScene extends BaseScene {
                 alert('Load failed');
             })
             .finally(() => {
-
                 this.loadingDiv?.remove();
             });
     }
 
     /* -------------------- Fullscreen ------------------------------ */
-    _toggleFullscreen() {                               // ★ 追加
-        const root = document.documentElement;          // ここを gameArea にしても OK
+    _toggleFullscreen() {
+        const root = document.documentElement;
         if (!document.fullscreenElement) {
             root.requestFullscreen?.().catch(err =>
                 console.warn('Fullscreen failed:', err));
         } else {
             document.exitFullscreen?.();
+        }
+    }
+
+    /* -------------------- Data Source Label Update ---------------- */
+    _getCurrentProfileName() {
+        try {
+            const raw = localStorage.getItem('MEM_DataTableSrcProfiles');
+            if (!raw) return null;
+            const { last = null } = JSON.parse(raw);
+            return last || null;
+        } catch (e) {
+            console.warn('Profile parse error', e);
+            return null;
+        }
+    }
+
+    _updateDsModeLabel() {
+        if (!this.dsModeLabel) return;
+        const mode = DataTableURLConfig.MODE;
+        if (mode === 'custom') {
+            const prof = this._getCurrentProfileName();
+            if (prof) {
+                this.dsModeLabel.textContent = `Data Source: custom (${prof})`;
+            } else {
+                this.dsModeLabel.textContent = 'Data Source: custom';
+            }
+        } else {
+            this.dsModeLabel.textContent = `Data Source: ${mode}`;
         }
     }
 
@@ -148,51 +200,17 @@ export class TitleScene extends BaseScene {
     _injectStyles() {
         if (document.getElementById('title-scene-style')) return;
         const css = `
-            /* ===== Title Scene (ts-*) ============================== */
-            .ts-wrap{
-                position:absolute; inset:0; display:flex; flex-direction:column;
-                justify-content:center; align-items:center; gap:24px;
-                font-family:'Segoe UI',sans-serif; color:#fafafa; text-align:center;
-                animation:ts-fade 1s ease-out forwards;
-            }
-            @keyframes ts-fade{0%{opacity:0;transform:scale(.95);}
-                               100%{opacity:1;transform:scale(1);} }
-            .ts-logo{
-                font-size:72px; margin:0 0 32px;
-                background:linear-gradient(135deg,#5ac8fa 10%,#a862ff 90%);
-                -webkit-background-clip:text; color:transparent;
-                text-shadow:0 4px 12px rgba(0,0,0,.4);
-                animation:ts-float 4s ease-in-out infinite;
-            }
-            @keyframes ts-float{0%,100%{transform:translateY(-4px);}
-                                50%     {transform:translateY(4px);} }
-            .ts-btn{
-                font-size:28px; padding:12px 64px;
-                background:rgba(255,255,255,.1); color:#fafafa;
-                border:1px solid rgba(255,255,255,.4);
-                border-radius:50px; cursor:pointer; transition:all .2s;
-                backdrop-filter:blur(4px);
-            }
-            .ts-btn:hover{
-                transform:translateY(-4px);
-                box-shadow:0 6px 16px rgba(0,0,0,.35);
-            }
-            .ts-btn--primary{ background:#5ac8fa; color:#000; }
-
-            /* ===== Loading Overlay ================================= */
-            .ts-loading{
-                position:absolute; inset:0; display:flex; align-items:center;
-                justify-content:center; gap:16px;
-                background:rgba(0,0,0,.55); z-index:9998;
-                font-size:28px; color:#fff;
-            }
-            .ts-spinner{
-                width:40px; height:40px; border-radius:50%;
-                border:5px solid #fff; border-top-color:transparent;
-                animation:spin 1s linear infinite;
-            }
-            @keyframes spin{0%{transform:rotate(0);}
-                            100%{transform:rotate(360deg);} }
+            .ts-wrap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:24px;font-family:'Segoe UI',sans-serif;color:#fafafa;text-align:center;animation:ts-fade 1s ease-out forwards;}
+            @keyframes ts-fade{0%{opacity:0;transform:scale(.95);}100%{opacity:1;transform:scale(1);}}
+            .ts-logo{font-size:72px;margin:0 0 32px;background:linear-gradient(135deg,#5ac8fa 10%,#a862ff 90%);-webkit-background-clip:text;color:transparent;text-shadow:0 4px 12px rgba(0,0,0,.4);animation:ts-float 4s ease-in-out infinite;}
+            @keyframes ts-float{0%,100%{transform:translateY(-4px);}50%{transform:translateY(4px);}}
+            .ts-btn{font-size:28px;padding:12px 64px;background:rgba(255,255,255,.1);color:#fafafa;border:1px solid rgba(255,255,255,.4);border-radius:50px;cursor:pointer;transition:all .2s;backdrop-filter:blur(4px);}
+            .ts-btn:hover{transform:translateY(-4px);box-shadow:0 6px 16px rgba(0,0,0,.35);}
+            .ts-btn--primary{background:#5ac8fa;color:#000;}
+            .ts-dsmode{font-size:14px;margin-top:12px;opacity:.85;user-select:none;}
+            .ts-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.55);z-index:9998;font-size:28px;color:#fff;}
+            .ts-spinner{width:40px;height:40px;border-radius:50%;border:5px solid #fff;border-top-color:transparent;animation:spin 1s linear infinite;}
+            @keyframes spin{0%{transform:rotate(0);}100%{transform:rotate(360deg);}}
         `;
         const st = document.createElement('style');
         st.id = 'title-scene-style';
