@@ -291,10 +291,10 @@ export class GameMainScene extends BaseScene {
         /* 共通ハンドラ */
         this._handleKey = (e, isDown) => {
             const k = e.key.toLowerCase();
-            if (k === 'escape' && isDown) {
-                SceneManagerInstance.change(new TitleScene(this.gameArea, this.gameUiLayer));
-                return;
-            }
+//            if (k === 'escape' && isDown) {
+//                SceneManagerInstance.change(new TitleScene(this.gameArea, this.gameUiLayer));
+//                return;
+//            }
 
             /* ── 特殊キー ───────────────── */
             if (k === 'tab') {              // Tab はブラウザのフォーカス移動を止める

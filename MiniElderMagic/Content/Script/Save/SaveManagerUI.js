@@ -1,27 +1,23 @@
-﻿/* SaveManagerUI.js — MiniElderMagic  (rev. “Neo‑v21”)
- * 3 列グリッド / 新規スロットは最上段 / 新しい順表示 / 内部スクロール / 右上固定
- * UIBase の isVisible, show, hide, toggle をそのまま利用（フラグの二重管理なし）
- * + Added global scale variable (opts.scale, CSS custom prop --sm-scale) to resize the
- *   entire panel uniformly from one place. Example: `new SaveManagerUI(parent, sm, {scale:1.5})`
- * + NEW: Built‑in, stylable modal dialog (_showInfo / _showConfirm) to replace
- *   window.alert / window.confirm.
- * ------------------------------------------------------------------------------ */
+﻿/* SaveManagerUI.js — MiniElderMagic  (rev. “Neo-v25”)
+ * 固定 1 スロット (Save1)・名前入力なし
+ * バージョン番号を正しく表示 (v0 → v1 → v2 …)
+ * ─────────────────────────────────────────────────────────────────────────── */
 
-import { UIBase }                from '../UI/UIBase.js';
-import { SceneManagerInstance }   from '../Scene/SceneManager.js';
-import { TitleScene }             from '../Scene/TitleScene.js';
+import { UIBase }               from '../UI/UIBase.js';
+import { SceneManagerInstance } from '../Scene/SceneManager.js';
+import { TitleScene }           from '../Scene/TitleScene.js';
 
 /**
- * @param {HTMLElement|Object=} parentOrOpts   親要素 または オプション一式
- * @param {SaveManager=}        saveManager    SaveManager インスタンス
- * @param {Object=}             opts           {getSaveData:Function, startVisible:Boolean,
- *                                             gameArea:HTMLElement, gameUiLayer:HTMLElement,
- *                                             scale:Number}
+ * @param {HTMLElement|Object=} parentOrOpts 親要素 または オプション一式
+ * @param {SaveManager=}        saveManager  SaveManager インスタンス
+ * @param {Object=}             opts         {getSaveData:Function, startVisible:Boolean,
+ *                                           gameArea:HTMLElement, gameUiLayer:HTMLElement,
+ *                                           scale:Number}
  */
 export class SaveManagerUI extends UIBase {
 
     constructor(parentOrOpts, saveManager, opts) {
-        /* --- 可変長引数を整理（旧 API 互換） -------------------------------- */
+        /* --- 可変長引数を整理（旧 API 互換） ---------------------------- */
         if (arguments.length === 1 && parentOrOpts && !parentOrOpts.nodeType) {
             /* new SaveManagerUI({parent, saveManager, ...}) */
             opts         = parentOrOpts;
@@ -35,17 +31,16 @@ export class SaveManagerUI extends UIBase {
 
         super(parentOrOpts);                 /* UIBase 初期化 → this.element を生成 */
 
-        /* ----- スケール ---------------------------------------------------- */
+        /* ----- スケール -------------------------------------------------- */
         this.scale = opts.scale ?? 2;        // 1 = 100%
-        // set root CSS custom property (affects all instances)
         document.documentElement.style.setProperty('--sm-scale', this.scale);
 
         this.saveManager  = saveManager;
-        this.getSaveData  = opts.getSaveData || function(){ return {}; };
-        this.gameArea     = opts.gameArea     || null;   // タイトル復帰用
-        this.gameUiLayer  = opts.gameUiLayer  || null;   // タイトル復帰用
-        this.element.id   = 'save-manager-ui';           /* 識別用 ID 付与 */
-        this._opts        = opts;                        /* _buildDom で利用 */
+        this.getSaveData  = opts.getSaveData || (() => ({}));
+        this.gameArea     = opts.gameArea    || null;   // タイトル復帰用
+        this.gameUiLayer  = opts.gameUiLayer || null;   // タイトル復帰用
+        this.element.id   = 'save-manager-ui';
+        this._opts        = opts;
 
         this._injectStyles();
         this._buildDom();
@@ -54,14 +49,14 @@ export class SaveManagerUI extends UIBase {
         if (opts.startVisible) this.show();
     }
 
-    /* =======================================================================
+    /* ======================================================================
      *  CSS
-     * ===================================================================== */
+     * ==================================================================== */
     _injectStyles() {
         if (document.getElementById('save-manager-ui-style')) return;  // 一度だけ
-        var css = `
+        const css = `
             :root {
-                --sm-scale  : 1;               /* ← JS で上書き */
+                --sm-scale  : 1;
                 --sm-bg     : rgba(31,31,31,.75);
                 --sm-fg     : #fafafa;
                 --sm-accent : #5ac8fa;
@@ -91,22 +86,19 @@ export class SaveManagerUI extends UIBase {
             }
             .sm-header{
                 padding:var(--sm-gap);
-                display:flex; justify-content:space-between; align-items:center;
+                display:flex; align-items:center; gap:var(--sm-gap);
             }
             .sm-header h2{margin:0; font-size:.9rem;}
 
             .sm-body{
                 flex:1 1 auto; overflow-y:auto; max-height:120px;
                 padding:0 var(--sm-gap) var(--sm-gap);
-                display:grid; grid-template-columns:repeat(3,1fr);
+                display:grid; grid-template-columns:repeat(1,1fr); /* 1 列 */
                 gap:var(--sm-gap);
             }
-            .sm-slot,.sm-new-slot{
+            .sm-slot{
                 background:#2a2a2a; border-radius:var(--sm-radius);
                 padding:4px; display:flex; align-items:center; gap:4px;
-            }
-            .sm-new-slot{
-                border:1px dashed var(--sm-fg); grid-column:1/-1;
             }
             .sm-slot__title{
                 flex:1 1 auto; font-weight:600; font-size:.78rem;
@@ -138,27 +130,26 @@ export class SaveManagerUI extends UIBase {
                 font-size:.9rem; color:var(--sm-fg);
             }
             .sm-modal__body{white-space:pre-wrap;}
-            .sm-modal__btns{align-self:flex-end; display:flex; gap:var(--sm-gap);}        
+            .sm-modal__btns{align-self:flex-end; display:flex; gap:var(--sm-gap);}
         `;
-        var style = document.createElement('style');
+        const style = document.createElement('style');
         style.id  = 'save-manager-ui-style';
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    /* =======================================================================
+    /* ======================================================================
      *  DOM
-     * ===================================================================== */
+     * ==================================================================== */
     _buildDom() {
-        var panel  = this._ce('div','sm-panel', this.element);
-        var header = this._ce('div','sm-header', panel);
+        const panel  = this._ce('div','sm-panel', this.element);
+        const header = this._ce('div','sm-header', panel);
 
         this._ce('h2','',header,'Save Game');
 
-        /* ----- タイトルに戻る ボタン ------------------------------------ */
-        var btnBack = this._ce('button','sm-btn sm-btn--accent',header,'Return to Title');
+        /* ----- タイトルに戻る ------------------------------------------ */
+        const btnBack = this._ce('button','sm-btn sm-btn--accent',header,'Return to Title');
         btnBack.onclick = () => {
-            // gameArea / gameUiLayer が未指定なら DOM から推測
             const area    = this.gameArea    || document.getElementById('game-area');
             const uiLayer = this.gameUiLayer || document.getElementById('game-ui-layer') || document.body;
             SceneManagerInstance.change(new TitleScene(area, uiLayer));
@@ -168,87 +159,80 @@ export class SaveManagerUI extends UIBase {
         this.bodyEl = this._ce('div','sm-body', panel);
     }
 
-    /* =======================================================================
+    /* ======================================================================
      *  スロット生成
-     * ===================================================================== */
-    _refreshList(){
+     * ==================================================================== */
+    _refreshList() {
         if (typeof this.saveManager.listSlots !== 'function'){
             this.bodyEl.innerHTML = '<p style="opacity:.6">No saves</p>';
             return;
         }
-        this.bodyEl.textContent = '';             // クリア
+        this.bodyEl.textContent = '';
 
-        /* --- Create 行 (最上段) ---------------------------------------- */
-        var newRow = this._ce('div','sm-new-slot',this.bodyEl);
-        var input  = this._ce('input','sm-input',newRow);
-        input.placeholder = 'name';
-        var btnCreate = this._ce('button','sm-btn sm-btn--accent',newRow,'Save');
-        var self = this;
-        btnCreate.onclick = function(){
-            var name = input.value.trim();
-            if (!name){ self._showInfo('Name required'); return; }
-            var res  = self.saveManager.save(name, self.getSaveData());
-            self._showInfo('Saved v'+res.version);
-            self._refreshList();
+        /* 固定 1 スロット (Save1) */
+        const name = 'Save1';
+        const list = Array.isArray(this.saveManager.listSlots())
+            ? this.saveManager.listSlots()
+            : Object.values(this.saveManager.listSlots());
+
+        const slot = list.find(s => (s.name || s.id) === name) || null;
+
+        const row  = this._ce('div','sm-slot',this.bodyEl);
+
+        const latestVer = slot
+            ? (slot.versions && slot.versions.length
+                ? slot.versions[slot.versions.length - 1].version
+                : (slot.version || 0))
+            : 0;
+
+        this._ce('div','sm-slot__title',row, `${name} (v ${latestVer})`);
+
+        /* --- Save ------------------------------------------------------- */
+        const bSave = this._ce('button','sm-btn sm-btn--accent',row,'Save');
+        bSave.onclick = () => {
+            const res = this.saveManager.save(name, this.getSaveData());
+            this._showInfo('Saved v' + res.version);
+            this._refreshList();
         };
 
-        /* --- 既存スロット (新→旧) ------------------------------------- */
-        var raw   = this.saveManager.listSlots();
-        var list  = Array.isArray(raw) ? raw.slice() : Object.values(raw);
-        list.reverse();
-        for (var i=0;i<list.length;i++){
-            var s   = list[i];
-            var row = this._ce('div','sm-slot',this.bodyEl);
-
-            var title = this._ce('div','sm-slot__title',row,
-                (s.name||s.id)+' (v '+( (s.versions && s.versions.length) ? s.versions[s.versions.length-1].version : (s.version||0) )+')'
-            );
-
-            var bSave = this._ce('button','sm-btn sm-btn--accent',row,'Save');
-            bSave.onclick = (function(slot){
-                return function(){
-                    var r = self.saveManager.save(slot.id||slot.name, self.getSaveData());
-                    self._showInfo('Saved v'+r.version);
-                    self._refreshList();
-                };
-            })(s);
-
-            var bDel  = this._ce('button','sm-btn sm-btn--danger',row,'Del');
-            bDel.onclick = (function(slot){
-                return function(){
-                    self._showConfirm('Delete "'+(slot.name||slot.id)+'"?')
-                        .then(ok=>{
-                            if (!ok) return;
-                            self.saveManager.deleteSlot(slot.id||slot.name);
-                            self._refreshList();
-                        });
-                };
-            })(s);
+        /* --- Delete ----------------------------------------------------- */
+        const bDel  = this._ce('button','sm-btn sm-btn--danger',row,'Del');
+        if (!slot) {                 // 空スロットなら削除不可
+            bDel.disabled = true;
+            bDel.style.opacity = 0.4;
+        } else {
+            bDel.onclick = () => {
+                this._showConfirm(`Delete "${name}"?`)
+                    .then(ok => {
+                        if (!ok) return;
+                        this.saveManager.deleteSlot(name);
+                        this._refreshList();
+                    });
+            };
         }
     }
 
-    /* =======================================================================
+    /* ======================================================================
      *  モーダルダイアログ
-     * ===================================================================== */
+     * ==================================================================== */
 
-    /**
-     * シンプルな情報用 OK モーダル
-     * @param {string} msg
-     */
+    /** シンプルな情報用 OK モーダル */
     _showInfo(msg){
-        return this._showModal({message:msg, buttons:[{label:'OK',style:'accent',value:true}]});
+        return this._showModal({
+            message : msg,
+            buttons : [{label:'OK', style:'accent', value:true}]
+        });
     }
 
-    /**
-     * Yes / No 確認モーダル
-     * @param {string} msg
-     * @returns {Promise<boolean>} resolve(true) = Yes
-     */
+    /** Yes / No 確認モーダル */
     _showConfirm(msg){
-        return this._showModal({message:msg, buttons:[
-                {label:'Yes',style:'accent',value:true},
-                {label:'No', style:'danger',value:false}
-            ]});
+        return this._showModal({
+            message : msg,
+            buttons : [
+                {label:'Yes', style:'accent', value:true},
+                {label:'No',  style:'danger', value:false}
+            ]
+        });
     }
 
     /**
@@ -259,30 +243,41 @@ export class SaveManagerUI extends UIBase {
         opts = opts || {};
         const overlay = this._ce('div','sm-modal-overlay',document.body);
         const modal   = this._ce('div','sm-modal',overlay);
-        this._ce('div','sm-modal__body',modal, opts.message||'');
-        const btnRow  = this._ce('div','sm-modal__btns',modal);
 
-        return new Promise(resolve=>{
-            (opts.buttons||[{label:'OK',style:'accent',value:true}]).forEach(b=>{
-                const btn = this._ce('button','sm-btn'+(b.style?` sm-btn--${b.style}`:''),btnRow,b.label);
-                btn.onclick = ()=>{
+        this._ce('div','sm-modal__body',modal, opts.message || '');
+
+        const btnRow = this._ce('div','sm-modal__btns',modal);
+
+        return new Promise(resolve => {
+            (opts.buttons || [{label:'OK',style:'accent',value:true}]).forEach(b => {
+                const btn = this._ce('button',
+                    'sm-btn' + (b.style ? ` sm-btn--${b.style}` : ''),
+                    btnRow, b.label);
+                btn.onclick = () => {
                     overlay.remove();
                     resolve(b.value);
                 };
             });
+
             /* Escape キーで閉じる */
-            const onKey = e=>{ if(e.key==='Escape'){ overlay.remove(); document.removeEventListener('keydown',onKey); resolve(false);} };
-            document.addEventListener('keydown',onKey);
+            const onKey = e => {
+                if (e.key === 'Escape'){
+                    overlay.remove();
+                    document.removeEventListener('keydown', onKey);
+                    resolve(false);
+                }
+            };
+            document.addEventListener('keydown', onKey);
         });
     }
 
-    /* =======================================================================
-     *  ヘルパー
-     * ===================================================================== */
+    /* ======================================================================
+     *  DOM ヘルパー
+     * ==================================================================== */
     _ce(tag, cls, parent, text){
-        var el = document.createElement(tag);
-        if (cls)  el.className  = cls;
-        if (text!==undefined) el.textContent = text;
+        const el = document.createElement(tag);
+        if (cls)       el.className   = cls;
+        if (text !== undefined) el.textContent = text;
         parent.appendChild(el);
         return el;
     }
