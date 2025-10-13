@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no"/>
+    <title>Emoji Wizard Dodge — Turret Mode (Boss on 10 Upgrades) + Aura/Fairy/AutoNova</title>
+    <style>
+        :root {
+            --btn-bg: #1b2440;
+            --btn-border: #2c3868;
+            --btn-text: #e6e9f0;
+            /* afford (coin gold) */
+            --btn-afford-bg: #8a6b14;
+            --btn-afford-border: #f0c94a;
+            --btn-afford-text: #fff5d1;
+            --btn-afford-shadow: rgba(240, 201, 74, .55);
+        }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: #0b1020;
+            color: #e6e9f0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", "Yu Gothic", sans-serif;
+            touch-action: none;
+            overscroll-behavior: none;
+            overflow: hidden;
+        }
+
+        .hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            user-select: none;
+            background: linear-gradient(180deg, rgba(8, 12, 28, .9), rgba(8, 12, 28, .6));
+            border-bottom: 1px solid #243058;
+            z-index: 10;
+        }
+
+        .hud .title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: .3px
+        }
+
+        .hud .stats {
+            font-size: 13px;
+            opacity: .95;
+            white-space: nowrap;
+        }
+
+        #wrap {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            display: block;
+            background: radial-gradient(60% 60% at 50% 50%, #121b39, #0b1020 70%);
+            border-radius: 16px;
+            box-shadow: 0 10px 36px rgba(0, 0, 0, .4);
+        }
+
+        .panel {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: max(env(safe-area-inset-bottom), 12px);
+            background: rgba(10, 14, 30, .96);
+            border: 1px solid #334;
+            border-radius: 14px;
+            padding: 12px;
+            width: min(96vw, 760px);
+            z-index: 9;
+        }
+
+        .panel h3 {
+            margin: 6px 0 8px;
+            font-size: 16px;
+        }
+
+        .btns {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--btn-border);
+            font-weight: 800;
+            cursor: pointer;
+            min-width: 140px;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .note {
+            font-size: 13px;
+            opacity: .9;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, .55);
+            padding: 12px;
+            z-index: 20;
+        }
+
+        .modal .box {
+            background: rgba(12, 16, 36, .98);
+            border: 1px solid #2f3a67;
+            border-radius: 16px;
+            width: min(96vw, 820px);
+            padding: 12px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+        }
+
+        .choices {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        @media (min-width: 720px) {
+            .choices {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .card {
+            border: 1px solid #3a4678;
+            border-radius: 14px;
+            padding: 12px;
+            background: linear-gradient(180deg, #151c38, #0f1530);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .card h4 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .card p {
+            margin: 0;
+            opacity: .95;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .price {
+            font-weight: 700;
+            opacity: .95;
+        }
+
+        .card button {
+            margin-top: auto;
+        }
+
+        .disabled {
+            opacity: .55;
+            filter: grayscale(0.3);
+            pointer-events: none;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border: 1px solid #3d5;
+            border-radius: 999px;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .shopBtnWrap {
+            position: static;
+        }
+
+        .shopBtnWrap .btn {
+            min-width: auto;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .cmBtnWrap {
+            position: static;
+        }
+
+        .cmBtnWrap .btn {
+            min-width: auto;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+        .actionBtnGroup {
+            position: fixed;
+            right: 12px;
+            top: 64px;
+            display: flex;
+            gap: 8px;      /* ボタン間のすき間 */
+            z-index: 8;    /* 既存ボタンと同じ重なり優先度 */
+        }
+
+        .hint {
+            position: fixed;
+            right: 12px;
+            top: 100px;
+            font-size: 12px;
+            opacity: .85;
+        }
+
+        /* 🛒 afford highlight */
+        .btn.afford {
+            background: var(--btn-afford-bg);
+            border-color: var(--btn-afford-border);
+            color: var(--btn-afford-text);
+            box-shadow: 0 0 0 0 var(--btn-afford-shadow);
+            animation: shopPulse 1.4s ease-out infinite;
+        }
+
+        @keyframes shopPulse {
+            0% {
+                box-shadow: 0 0 0 0 var(--btn-afford-shadow);
+                transform: translateY(0);
+            }
+            60% {
+                box-shadow: 0 0 0 12px rgba(0, 0, 0, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+            }
+        }
+
+        60
+        %
+        {
+            box-shadow: 0 0 0 12px rgba(63, 191, 115, 0)
+        ;
+        }
+        100
+        %
+        {
+            box-shadow: 0 0 0 0 rgba(63, 191, 115, 0)
+        ;
+        }
+        }
+
+    </style>
+</head>
+<body>
+<div class="hud">
+    <div class="title">🧙</div>
+    <div class="stats" id="stats"></div>
+</div>
+<div id="wrap">
+    <canvas id="game"></canvas>
+</div>
+
+<div id="adModal" class="modal" role="dialog" aria-modal="true">
+    <div class="box">
+        <div class="topbar">
+            <div style="font-size:18px;font-weight:800">📺 広告を見てコインGET</div>
+            
+            <div class="topbar-right" style="margin-left:auto">
+                <button class="btn" id="btnAddWishlist" style="min-width:auto;padding:8px">⭐</button>
+                <button class="btn" id="btnCloseAd" style="min-width:auto;padding:8px">✖️</button>
+            </div>
+        </div>
+        <div style="opacity:.85;font-size:13px;margin:12px 0">
+            広告を見て<span id="adCoinReward"></span>コインを獲得できます
+        </div>
+        <div class="btns">
+            
+            <button class="btn" id="btnWatchAd" disabled>見る(準備中)</button>
+        </div>
+        
+
+    </div>
+</div>
+
+<!-- Title panel WITHOUT param controls and no FIRE UI -->
+<div id="titlePanel" class="panel">
+    <h3>Emoji Wizard Dodge</h3>
+    <div class="note">🛒で強化（手動）。</div>
+    <div id="lastScore" class="note" style="display:none"></div>
+    <div class="btns">
+        <button class="btn" id="btnStart">▶️ Start</button>
+    </div>
+</div>
+
+<div id="upgradeModal" class="modal" role="dialog" aria-modal="true">
+    <div class="box">
+        <div class="topbar">
+            <div style="font-size:18px;font-weight:800">🔼 強化を選んで購入</div>
+            <div class="price">
+                所持コイン: <span id="haveCoins"></span> ｜
+                必要コイン: <span id="price"></span> <span id="afford" class="pill">購入可</span>
+            </div>
+        </div>
+        <div style="opacity:.85;font-size:13px;margin-top:6px">3つの候補から1つだけ選べます（ランダム）。</div>
+        <div class="choices" id="choices"></div>
+        <div class="btns">
+            <button class="btn" id="btnSkip">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<div class="actionBtnGroup">
+    <div class="shopBtnWrap">
+        <button class="btn" id="btnOpenShop">🛒強化</button>
+    </div>
+    <div class="cmBtnWrap">
+        <button class="btn" id="btnOpenCm">📺</button>
+    </div>
+</div>
+<div class="hint" id="hint"></div>
+
+<script>
+    (() => {
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d', {alpha: false});
+        let dpr = 1, gameW = 0, gameH = 0;
+
+        function fitCanvas() {
+            const w = Math.floor(window.innerWidth);
+            const h = Math.floor(window.innerHeight - 56);
+            dpr = Math.min(2, Math.max(1, Math.round((window.devicePixelRatio || 1) * 100) / 100));
+            canvas.width = Math.max(320, w) * dpr;
+            canvas.height = Math.max(360, h) * dpr;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            gameW = canvas.width / dpr;
+            gameH = canvas.height / dpr;
+        }
+
+        addEventListener('resize', fitCanvas);
+        fitCanvas();
+
+        const statsEl = document.getElementById('stats');
+        const titlePanel = document.getElementById('titlePanel');
+        const lastScoreEl = document.getElementById('lastScore');
+        const btnStart = document.getElementById('btnStart');
+        const btnOpenShop = document.getElementById('btnOpenShop');
+        const btnOpenCm = document.getElementById('btnOpenCm');
+        const upgradeModal = document.getElementById('upgradeModal');
+        const choicesEl = document.getElementById('choices');
+        const priceEl = document.getElementById('price');
+        const haveCoinsEl = document.getElementById('haveCoins');
+        const affordEl = document.getElementById('afford');
+        const btnSkip = document.getElementById('btnSkip');
+        const hintEl = document.getElementById('hint');
+
+        // Ad reward coins (make 500 configurable here)
+        const adCoinRewardEl = document.getElementById('adCoinReward');
+
+        // 報酬情報オブジェクト（初期100・倍率1.25）
+        const AD = {reward: 100, scale: 1.25};
+        
+        function updateAdRewardText() {
+            if (adCoinRewardEl) adCoinRewardEl.textContent = String(AD.reward);
+        }
+        updateAdRewardText();
+
+        // Highlight 🛒 when player can afford
+        function updateShopButton() {
+            const can = G.playing && (G.score >= G.shop.price);
+            btnOpenShop.classList.toggle('afford', !!can);
+            btnOpenShop.textContent = can ? '🛒強化 できる！' : '🛒強化';
+        }
+
+
+        // --- Fixed configuration (auto-fire ON internally; no UI) ---
+        const G = {
+            playing: false, paused: false,
+            time: 0, score: 0, totaleScore: 0, high: parseInt(localStorage.getItem('wizard_high') || '0', 10),
+            spawnTimer: 0, enemies: [], shots: [], particles: [],
+            cfg: {
+                shotCd: 0.60,
+                atkBase: 1.0,
+                spawnMul: 1.0,
+                enemyHpMode: 'normal',
+                playerHp: 6,
+                autoFire: true,
+                coinRatio: 1.0,
+            },
+            shop: {price: 30, priceScale: 1.25,cmpriceScale: 1.25},
+            perk: {
+                firerate: 0, hpBonus: 0, pierce: 0, multishot: 0, shotSpeed: 0, power: 0,
+                aura: 0,      // 🔵 オーラLv
+                fairy: 0,     // 🧚 フェアリー数（最大3）
+                autoNova: 0   // 💥 自動ノヴァLv
+            },
+            perf: {particleScale: (window.innerWidth < 600 ? 0.6 : 1.0)},
+            upgradesBought: 0,
+            nextBossAt: 10,
+            boss: null,
+
+            // 新規
+            fairies: [],        // {ang, r, cd, drawX, drawY}
+            timers: {aura: 0, nova: 0}
+        };
+
+        const U = {
+            rand(n) {
+                return Math.random() * n;
+            },
+            randRange(a, b) {
+                return a + Math.random() * (b - a);
+            },
+            sample3(arr) {
+                const a = arr.slice();
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = (Math.random() * (i + 1)) | 0;
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a.slice(0, 3);
+            },
+            clamp(x, a, b) {
+                return Math.max(a, Math.min(b, x));
+            },
+            dist(ax, ay, bx, by) {
+                const dx = ax - bx, dy = ay - by;
+                return Math.hypot(dx, dy);
+            },
+        };
+
+        const P = {x: 0, y: 0, r: 18, hp: 6, inv: 0, cd: 0, emoji: '🧙'};
+
+        function maxHp() {
+            return G.cfg.playerHp + G.perk.hpBonus;
+        }
+
+        function shotInterval() {
+            return Math.max(0.06, G.cfg.shotCd * Math.pow(0.9, G.perk.firerate));
+        }
+
+        function shotSpeed() {
+            return 440 * (1 + 0.15 * G.perk.shotSpeed);
+        }
+
+        function atk() {
+            return +(G.cfg.atkBase * (1 + 0.10 * G.perk.power)).toFixed(2);
+        }
+
+        function toTitle(summaryText) {
+            G.playing = false;
+            G.paused = false;
+            G.boss = null;
+            G.upgradesBought = 0;
+            G.nextBossAt = 10;
+            titlePanel.style.display = 'block';
+            lastScoreEl.style.display = summaryText ? 'block' : 'none';
+            if (summaryText) lastScoreEl.textContent = summaryText;
+            statsEl.textContent = `Coin: 0　Best: ${G.high}`;
+        }
+
+        function startGame() {
+            P.x = gameW / 2;
+            P.y = gameH / 2;
+            P.hp = maxHp();
+            P.inv = 0;
+            P.cd = 0;
+            G.playing = true;
+            G.paused = false;
+            G.time = 0;
+            G.score = 0;
+            G.spawnTimer = 0;
+            G.enemies.length = 0;
+            G.shots.length = 0;
+            G.particles.length = 0;
+            G.perk = {
+                firerate: 0,
+                hpBonus: 0,
+                pierce: 0,
+                multishot: 0,
+                shotSpeed: 0,
+                power: 0,
+                aura: 0,
+                fairy: 0,
+                autoNova: 0
+            };
+            G.shop.price = 30;
+            G.upgradesBought = 0;
+            G.nextBossAt = 10;
+            G.boss = null;
+
+            // 新規初期化
+            G.fairies.length = 0;
+            G.timers = {aura: 0, nova: 0};
+
+            titlePanel.style.display = 'none';
+            closeShop();
+            updateShopButton();
+        }
+
+        btnStart.addEventListener('click', startGame);
+        addEventListener('keydown', (e) => {
+            if (!G.playing && (e.key === ' ' || e.key === 'Enter')) {
+                e.preventDefault();
+                startGame();
+            }
+        });
+
+        function enemyHpBase(mode) {
+            if (mode === 'arcade') return U.randRange(0.8, 1.4);
+            if (mode === 'rogue') return U.randRange(1.6, 2.6);
+            return U.randRange(1.0, 2.0);
+        }
+
+        function spawnEnemy() {
+            const side = (Math.random() * 4) | 0;
+            let x = 0, y = 0;
+            if (side === 0) {
+                x = 0;
+                y = U.rand(gameH);
+            }
+            if (side === 1) {
+                x = gameW;
+                y = U.rand(gameH);
+            }
+            if (side === 2) {
+                x = U.rand(gameW);
+                y = 0;
+            }
+            if (side === 3) {
+                x = U.rand(gameW);
+                y = gameH;
+            }
+            const speed = U.randRange(60, 110) + G.score * 0.02;
+            const hp = enemyHpBase(G.cfg.enemyHpMode) + Math.min(3, G.totaleScore / 250);
+            const maxHp = hp;
+            G.enemies.push({type: 'mob', x, y, r: 18, speed, hp, maxHp, emoji: hp > 2 ? '😈' : '👾'});
+        }
+
+        function spawnBoss() {
+            if (G.boss) return;
+            const side = (Math.random() * 4) | 0;
+            let x = 0, y = 0;
+            if (side === 0) {
+                x = 0;
+                y = U.rand(gameH);
+            }
+            if (side === 1) {
+                x = gameW;
+                y = U.rand(gameH);
+            }
+            if (side === 2) {
+                x = U.rand(gameW);
+                y = 0;
+            }
+            if (side === 3) {
+                x = U.rand(gameW);
+                y = gameH;
+            }
+            const hp = 20 + G.upgradesBought * 4 + Math.min(10, G.score / 150);
+            const maxHp = hp;
+            const speed = 35 + G.score * 0.005;
+            const r = 34;
+            const boss = {type: 'boss', x, y, r, speed, hp, maxHp, emoji: '👹'};
+            G.boss = boss;
+            G.enemies.push(boss);
+            showHint('👹 ボス出現！');
+        }
+
+        // shooting without any FIRE UI (auto-fire always on)
+        function shoot() {
+            if (P.cd > 0) return;
+            P.cd = shotInterval();
+            let tx = P.x, ty = P.y - 1, best = null, bestD = 1 / 0;
+            if (G.boss) {
+                best = G.boss;
+                bestD = U.dist(P.x, P.y, best.x, best.y);
+            }
+            for (const e of G.enemies) {
+                if (e.type === 'boss') continue;
+                const d = U.dist(P.x, P.y, e.x, e.y);
+                if (d < bestD) {
+                    bestD = d;
+                    best = e;
+                }
+            }
+            if (best) {
+                tx = best.x;
+                ty = best.y;
+            }
+            const baseAng = Math.atan2(ty - P.y, tx - P.x);
+            const spd = shotSpeed();
+            const count = 1 + G.perk.multishot;
+            const spread = Math.min(Math.PI / 6, 0.18 + 0.04 * (count - 1));
+            const damage = atk();
+            for (let i = 0; i < count; i++) {
+                const t = count === 1 ? 0 : (i / (count - 1) - 0.5);
+                const ang = baseAng + t * spread;
+                G.shots.push({
+                    x: P.x,
+                    y: P.y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    life: 1.2,
+                    r: 6,
+                    pierce: G.perk.pierce,
+                    dmg: damage
+                });
+            }
+            const n = Math.round(5 * G.perf.particleScale);
+            for (let i = 0; i < n; i++) {
+                const a = baseAng + U.randRange(-0.6, 0.6), v = U.randRange(50, 120);
+                G.particles.push({
+                    x: P.x,
+                    y: P.y,
+                    vx: Math.cos(a) * v,
+                    vy: Math.sin(a) * v,
+                    life: U.randRange(.18, .4),
+                    r: 2,
+                    col: 'rgba(124,211,255,0.9)'
+                });
+            }
+        }
+
+        // ===== 新規: ノヴァ共通関数 =====
+        function spawnNovaFrom(x, y, count, pierceAdj = 0, life = 1.0) {
+            const spd = shotSpeed();
+            for (let i = 0; i < count; i++) {
+                const ang = i * 2 * Math.PI / count;
+                G.shots.push({
+                    x, y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    life,
+                    r: 6,
+                    pierce: Math.max(0, G.perk.pierce + pierceAdj),
+                    dmg: atk()
+                });
+            }
+        }
+
+        // ===== 既存 + 追加アップグレード =====
+        const ALL_UPGRADES = [
+            {
+                id: 'power', name: '攻撃力UP', desc: '弾ダメージ +10%', apply: () => {
+                    G.perk.power += 1;
+                }
+            },
+            {
+                id: 'firerate', name: '連射速度UP', desc: 'ショット間隔 -10%', apply: () => {
+                    G.perk.firerate += 1;
+                }
+            },
+            {
+                id: 'hp', name: '最大HP+1', desc: '最大HP +1（全回復）', apply: () => {
+                    G.perk.hpBonus += 1;
+                    P.hp = maxHp();
+                }
+            },
+            {
+                id: 'pierce', name: '貫通ショット', desc: 'ショットが +1 体 貫通', apply: () => {
+                    G.perk.pierce += 1;
+                }
+            },
+            {
+                id: 'multishot', name: 'マルチショット', desc: '+1本の追加弾（拡散）', apply: () => {
+                    G.perk.multishot = Math.min(6, G.perk.multishot + 1);
+                }
+            },
+            {
+                id: 'shotspeed', name: '弾速UP', desc: 'ショット速度 +15%', apply: () => {
+                    G.perk.shotSpeed += 1;
+                }
+            },
+            {
+                id: 'nova', name: 'ノヴァ一斉射', desc: '購入時のみ、周囲へ一斉射（12発）', apply: () => {
+                    for (let i = 0; i < 12; i++) {
+                        const ang = i * 2 * Math.PI / 12;
+                        const spd = shotSpeed();
+                        G.shots.push({
+                            x: P.x,
+                            y: P.y,
+                            vx: Math.cos(ang) * spd,
+                            vy: Math.sin(ang) * spd,
+                            life: 1.0,
+                            r: 6,
+                            pierce: Math.max(0, G.perk.pierce - 1),
+                            dmg: atk()
+                        });
+                    }
+                }
+            },
+
+            // 🔵 追加: オーラ攻撃
+            {
+                id: 'aura', name: 'オーラ攻撃',
+                desc: '周囲に継続ダメージ（Lvで範囲/威力UP）',
+                apply: () => {
+                    G.perk.aura += 1;
+                }
+            },
+            // 🧚 追加: 召喚フェアリー
+            {
+                id: 'fairy', name: '召喚：フェアリー',
+                desc: '味方が1体ついて自動射撃（最大3体）',
+                apply: () => {
+                    if (G.perk.fairy < 3) {
+                        G.perk.fairy += 1;
+                        const idx = G.fairies.length;
+                        G.fairies.push({ang: (idx / 3) * Math.PI * 2, r: 42 + idx * 8, cd: 0, drawX: 0, drawY: 0});
+                    }
+                }
+            },
+            // 💥 追加: 自動ノヴァ
+            {
+                id: 'autonova', name: '自動ノヴァ',
+                desc: '一定間隔でノヴァ発動（Lvで間隔短縮＆弾数UP）',
+                apply: () => {
+                    G.perk.autoNova += 1;
+                    G.timers.nova = Math.max(3.0, getNovaInterval());
+                }
+            },
+        ];
+
+        function openCm() {
+
+            const adModal = document.getElementById('adModal');
+            adModal.style.display = 'flex';
+            G.paused = true;
+
+
+            document.getElementById('btnWatchAd').onclick = () => {
+                // Display Steam Store URL
+                window.open('https://store.steampowered.com/app/2713820/Elder_Magic_Squad/', '_blank');
+
+
+                AddCoin(AD.reward, true);          // 現在の報酬を付与
+                AD.reward = Math.ceil(AD.reward * AD.scale); // 次回用に増額
+                updateAdRewardText();              // 表示更新
+                adModal.style.display = 'none';
+                G.paused = false;
+            };
+
+            document.getElementById('btnAddWishlist').onclick = () => {
+                window.open('https://store.steampowered.com/app/2713820/Elder_Magic_Squad/', '_blank');
+                adModal.style.display = 'none';
+                G.paused = false;
+                AddCoin(100, true);          // 現在の報酬を付与
+            };
+        }
+        
+        
+
+        function openShop(force = false) {
+            if (!G.playing) return;
+            G.paused = true;
+            upgradeModal.style.display = 'flex';
+            const picks = U.sample3(ALL_UPGRADES);
+            choicesEl.innerHTML = '';
+            
+            
+            picks.forEach(up => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `<h4>${up.name}</h4><p>${up.desc}</p><div class="price">コイン: ${G.shop.price}</div>`;
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.textContent = '購入';
+                if (G.score < G.shop.price) card.classList.add('disabled');
+                btn.addEventListener('click', () => {
+                    if (G.score >= G.shop.price) {
+                        G.score -= G.shop.price;
+                        up.apply();
+                        G.shop.price = Math.ceil(G.shop.price * G.shop.priceScale);
+                        G.upgradesBought += 1;
+                        if (G.upgradesBought >= G.nextBossAt && !G.boss) {
+                            spawnBoss();
+                            G.nextBossAt += 10;
+                        }
+                        updateShopButton();
+
+                        if (G.score >= G.shop.price) {
+                            openShop();
+                        } else {
+                            closeShop();
+                        }
+                    }
+                });
+                card.appendChild(btn);
+                choicesEl.appendChild(card);
+            });
+            priceEl.textContent = String(G.shop.price);
+            if (haveCoinsEl) haveCoinsEl.textContent = String(G.score);
+            affordEl.style.display = (G.score >= G.shop.price) ? 'inline-block' : 'none';
+        }
+
+        function closeShop() {
+            upgradeModal.style.display = 'none';
+            G.paused = false;
+            updateShopButton();
+        }
+
+        btnOpenShop.addEventListener('click', () => openShop(true));
+        btnOpenCm.addEventListener('click', () => openCm(true));
+        btnSkip.addEventListener('click', closeShop);
+
+        function showHint(msg) {
+            hintEl.textContent = msg;
+            hintEl.style.opacity = '1';
+            setTimeout(() => {
+                hintEl.style.opacity = '0';
+            }, 1600);
+        }
+
+        function boom(x, y, n = 10) {
+            const k = Math.round(n * G.perf.particleScale);
+            for (let i = 0; i < k; i++) {
+                const a = Math.random() * Math.PI * 2, v = U.randRange(70, 160);
+                G.particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(a) * v,
+                    vy: Math.sin(a) * v,
+                    life: U.randRange(.25, .6),
+                    r: 3,
+                    col: 'rgba(255,160,64,0.9)'
+                });
+            }
+        }
+
+        // ===== 自動ノヴァ用の補助 =====
+        function getNovaInterval() {
+            const lv = G.perk.autoNova; // 基本15秒、Lv↑で短縮（下限 ~8.6s）
+            return Math.max(8.6, 15 / (1 + 0.35 * (lv - 1)));
+        }
+
+        function getNovaCount() {
+            // 基本12発、Lv毎+2（最大20）
+            return Math.min(20, 12 + 2 * (G.perk.autoNova));
+        }
+
+        // ===== フェアリー用ターゲット選択 =====
+        function fairyPickTarget() {
+            let target = G.boss || null;
+            let bestD = target ? Math.hypot((gameW / 2) - target.x, (gameH / 2) - target.y) : Infinity;
+            for (const e of G.enemies) {
+                if (e.type === 'boss') continue;
+                const d = Math.hypot((gameW / 2) - e.x, (gameH / 2) - e.y);
+                if (d < bestD) {
+                    bestD = d;
+                    target = e;
+                }
+            }
+            return target;
+        }
+
+        function AddCoin(value,NotAddTotale = false) {
+            G.score += value * G.cfg.coinRatio;
+            if (!NotAddTotale) {
+                G.totaleScore += value * G.cfg.coinRatio;
+            }
+            updateShopButton();
+        }
+
+        function update(dt) {
+            P.x = gameW / 2;
+            P.y = gameH / 2;
+
+            G.time += dt;
+            P.inv = Math.max(0, P.inv - dt);
+            P.cd = Math.max(0, P.cd - dt);
+
+            // Auto-fire always ON, no UI
+            shoot();
+
+            G.spawnTimer -= dt;
+            const baseInterval = (1.1 - Math.min(0.85, G.score / 1000)) / G.cfg.spawnMul;
+            if (G.spawnTimer <= 0) {
+                if (!G.boss || G.enemies.length < 18) spawnEnemy();
+                G.spawnTimer = Math.max(0.10, baseInterval);
+            }
+
+            for (const e of G.enemies) {
+                const a = Math.atan2(P.y - e.y, P.x - e.x);
+                e.x += Math.cos(a) * e.speed * dt;
+                e.y += Math.sin(a) * e.speed * dt;
+            }
+
+            for (const s of G.shots) {
+                s.x += s.vx * dt;
+                s.y += s.vy * dt;
+                s.life -= dt;
+            }
+            G.shots = G.shots.filter(s => s.life > 0 && s.x > -80 && s.x < gameW + 80 && s.y > -80 && s.y < gameH + 80);
+
+            for (const p of G.particles) {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+            }
+            G.particles = G.particles.filter(p => p.life > 0);
+
+            // ===== 弾の当たり判定 =====
+            for (const s of G.shots) {
+                for (const e of G.enemies) {
+                    const d = Math.hypot(s.x - e.x, s.y - e.y);
+                    if (d < e.r + s.r) {
+                        e.hp -= s.dmg;
+                        boom(s.x, s.y, e.type === 'boss' ? 12 : 7);
+                        if (e.hp <= 0) {
+                            AddCoin(e.type === 'boss' ? 300 : 10);
+                            boom(e.x, e.y, e.type === 'boss' ? 28 : 12);
+                            e.dead = true;
+                            if (e.type === 'boss') {
+                                G.boss = null;
+                                showHint('🎉 ボス討伐！ +300');
+                            }
+                        }
+                        if (s.pierce > 0) {
+                            s.pierce -= 1;
+                        } else {
+                            s.life = 0;
+                        }
+                    }
+                }
+            }
+            G.enemies = G.enemies.filter(e => !e.dead);
+
+            // ===== プレイヤー接触 =====
+            for (const e of G.enemies) {
+                const d = Math.hypot(P.x - e.x, P.y - e.y);
+                if (d < e.r + P.r) {
+                    if (P.inv <= 0) {
+                        P.hp -= 1;
+                        P.inv = 1.0;
+                        boom(P.x, P.y, 16);
+                        if (P.hp <= 0) {
+                            onGameOver();
+                            break;
+                        }
+                    }
+                    e.dead = true;
+                }
+            }
+            G.enemies = G.enemies.filter(e => !e.dead);
+
+            // ===== オーラDoT =====
+            if (G.perk.aura > 0) {
+                G.timers.aura -= dt;
+                if (G.timers.aura <= 0) {
+                    G.timers.aura = 0.33; // tick
+                    const r = 70 + 18 * (G.perk.aura - 1);
+                    const dmg = +(atk() * (0.18 + 0.10 * (G.perk.aura - 1))).toFixed(2);
+                    for (const e of G.enemies) {
+                        const d = Math.hypot((gameW / 2) - e.x, (gameH / 2) - e.y);
+                        if (d <= r + e.r) {
+                            e.hp -= dmg;
+                            G.particles.push({
+                                x: e.x,
+                                y: e.y,
+                                vx: 0,
+                                vy: 0,
+                                life: 0.22,
+                                r: 3,
+                                col: 'rgba(120,210,255,0.9)'
+                            });
+                            if (e.hp <= 0) {
+                                AddCoin(e.type === 'boss' ? 300 : 10);
+                                boom(e.x, e.y, e.type === 'boss' ? 28 : 12);
+                                e.dead = true;
+                                if (e.type === 'boss') {
+                                    G.boss = null;
+                                    showHint('🎉 ボス討伐！ +300');
+                                }
+                            }
+                        }
+                    }
+                    G.enemies = G.enemies.filter(e => !e.dead);
+                    // オーラ輪のさりげない演出
+                    const n = Math.round(12 * G.perf.particleScale);
+                    for (let i = 0; i < n; i++) {
+                        const ang = (i / n) * 2 * Math.PI;
+                        G.particles.push({
+                            x: gameW / 2 + Math.cos(ang) * r,
+                            y: gameH / 2 + Math.sin(ang) * r,
+                            vx: 0,
+                            vy: 0,
+                            life: 0.22,
+                            r: 2,
+                            col: 'rgba(124,211,255,0.45)'
+                        });
+                    }
+                }
+            }
+
+            // ===== 自動ノヴァ =====
+            if (G.perk.autoNova > 0) {
+                G.timers.nova -= dt;
+                if (G.timers.nova <= 0) {
+                    spawnNovaFrom(gameW / 2, gameH / 2, getNovaCount(), -1, 1.0);
+                    G.timers.nova = getNovaInterval();
+                    showHint('💥 自動ノヴァ！');
+                }
+            }
+
+            // ===== フェアリーの周回＆自動射撃 =====
+            for (let i = 0; i < G.fairies.length; i++) {
+                const f = G.fairies[i];
+                f.ang += dt * (0.9 + i * 0.1);
+                const fx = gameW / 2 + Math.cos(f.ang) * f.r;
+                const fy = gameH / 2 + Math.sin(f.ang) * f.r;
+
+                f.cd = Math.max(0, f.cd - dt);
+                if (f.cd <= 0) {
+                    const tgt = fairyPickTarget();
+                    if (tgt) {
+                        const ang = Math.atan2(tgt.y - fy, tgt.x - fx);
+                        G.shots.push({
+                            x: fx, y: fy,
+                            vx: Math.cos(ang) * shotSpeed() * 0.9,
+                            vy: Math.sin(ang) * shotSpeed() * 0.9,
+                            life: 1.0,
+                            r: 5,
+                            pierce: Math.max(0, G.perk.pierce - 1),
+                            dmg: +(atk() * 0.75).toFixed(2)
+                        });
+                        f.cd = 0.55;
+                        G.particles.push({x: fx, y: fy, vx: 0, vy: 0, life: 0.18, r: 2, col: 'rgba(180,220,255,0.9)'});
+                    }
+                }
+                f.drawX = fx;
+                f.drawY = fy;
+            }
+
+            statsEl.textContent = `${G.boss ? '👹BOSS ' : ''}Coin: ${G.score}　HP: ${'❤️'.repeat(P.hp)}　🛒${G.shop.price}`;
+        }
+
+        function onGameOver() {
+            G.high = Math.max(G.high, G.score);
+            localStorage.setItem('wizard_high', String(G.high));
+            toTitle(`Game Over: Coin ${G.score} / Best ${G.high}`);
+            closeShop();
+        }
+
+        function emoji(e, x, y, size) {
+            const fonts = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Noto Emoji","EmojiOne Color","Twemoji Mozilla","Segoe UI Symbol",sans-serif`;
+            ctx.font = fonts;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(e, x, y);
+        }
+
+        function drawHpBar(e) {
+            if (e.type === 'boss') {
+                const p = Math.max(0, Math.min(1, e.hp / e.maxHp));
+                const pad = 8, w = gameW - pad * 2, h = 10;
+                const x = pad, y = pad + 2;
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.fillRect(x, y, w, h);
+                ctx.fillStyle = '#f24a4a';
+                ctx.fillRect(x, y, w * p, h);
+                ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+                ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+                ctx.globalAlpha = 0.16;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.r + 14, 0, Math.PI * 2);
+                ctx.fillStyle = '#f24a4a';
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            } else {
+                if (e.hp >= e.maxHp) return;
+                const w = 26, h = 4;
+                const px = e.x - w / 2, py = e.y - e.r - 10;
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                ctx.fillRect(px, py, w, h);
+                const ratio = Math.max(0, Math.min(1, e.hp / e.maxHp));
+                ctx.fillStyle = '#ff6a6a';
+                ctx.fillRect(px, py, w * ratio, h);
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.strokeRect(px + .5, py + .5, w - 1, h - 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, gameW, gameH);
+            ctx.globalAlpha = 0.10;
+            for (let i = 0; i < 18; i++) {
+                const x = (i * 153 + (G.time * 18) % gameW) % gameW;
+                const y = (i * 81 + (G.time * 33) % gameH) % gameH;
+                emoji('🌟', x, y, 14);
+            }
+            ctx.globalAlpha = 1;
+
+            for (const p of G.particles) {
+                ctx.globalAlpha = Math.max(0, p.life * 1.6);
+                ctx.fillStyle = p.col || 'rgba(255,200,120,0.9)';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            ctx.fillStyle = '#d8ecff';
+            for (const s of G.shots) {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            for (const e of G.enemies) {
+                emoji(e.emoji, e.x, e.y, e.type === 'boss' ? 44 : 26);
+                drawHpBar(e);
+            }
+
+            // 🧚 draw fairies
+            for (const f of G.fairies) {
+                if (f.drawX !== undefined) {
+                    emoji('🧚', f.drawX, f.drawY, 20);
+                    ctx.globalAlpha = 0.06;
+                    ctx.beginPath();
+                    ctx.arc(gameW / 2, gameH / 2, f.r, 0, Math.PI * 2);
+                    ctx.fillStyle = '#7cd3ff';
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            if (Math.floor(performance.now() / 80) % 2 === 0 || P.inv <= 0) {
+                emoji(P.emoji, gameW / 2, gameH / 2, 30);
+                ctx.globalAlpha = 0.12;
+                ctx.beginPath();
+                ctx.arc(gameW / 2, gameH / 2, P.r + 18, 0, Math.PI * 2);
+                ctx.fillStyle = '#7cd3ff';
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            if (!G.playing) {
+                ctx.fillStyle = 'rgba(0,0,0,.28)';
+                ctx.fillRect(0, 0, gameW, gameH);
+                ctx.fillStyle = '#e6e9f0';
+                ctx.font = '18px system-ui,sans-serif';
+                ctx.textAlign = 'center';
+            }
+        }
+
+        let last = performance.now();
+
+        function frame(now) {
+            const dt = Math.min(0.033, (now - last) / 1000);
+            last = now;
+            if (G.playing && !G.paused) update(dt);
+            draw();
+            requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
+
+        toTitle();
+    })();
+</script>
+</body>
+</html>

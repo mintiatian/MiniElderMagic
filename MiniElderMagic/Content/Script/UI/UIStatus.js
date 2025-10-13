@@ -1,68 +1,80 @@
-﻿import {UIBase} from "./UIBase.js";
-import {textDataTable} from "../Utils/DataTable.js";
+﻿/* UIStatus.js ─ MiniElderMagic
+ * プレイヤーの各種ステータスを一覧表示するウィンドウ
+ * 数値が変化したときは色付き＋スケールアップで 0.6 秒フラッシュ
+ * ------------------------------------------------------------------ */
+import { UIBase }       from "./UIBase.js";
+import { textDataTable} from "../Utils/DataTable.js";
 
-export class UIStatus extends UIBase{
+export class UIStatus extends UIBase {
     /**
-     * @param {HTMLElement} parentElement - ステータスUIを表示する親要素
-     * @param {Object} player - プレイヤーオブジェクト
+     * @param {HTMLElement} parentElement – ステータス UI を配置する親要素
+     * @param {Wizard}      player        – 対応するプレイヤー（Wizard）
      */
     constructor(parentElement, player) {
         super(parentElement);
         this.wizard = player;
-        
-        this.element.classList.add('status-element');
-        
-        // ── 位置指定 ──────────────────────────────
-        this.element.style.position  = 'absolute';  // 画面 or 親要素基準
-        this.element.style.left      = '1%';       // 横 1/4（25 %）ライン
-        this.element.style.top       = '50%';       // 縦 1/2（50 %）ライン
-        this.element.style.transform = 'translate(0%, -50%)';  // 要素自身の中心を基準点に合わせる
-        
-        this.element.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        this.element.style.padding = '20px';
-        this.element.style.borderRadius = '10px';
-        this.element.style.boxShadow = '0 0 15px rgba(100, 149, 237, 0.7)'; // 青色の光
-        this.element.style.zIndex = '1000';
-        this.element.style.display = 'none';
-        this.element.style.flexDirection = 'column';
-        this.element.style.alignItems = 'center';
-        this.element.style.minWidth = '300px';
-        this.element.style.color = 'white';
-        this.element.style.fontFamily = 'Arial, sans-serif';
-        
-        // タイトル
-        const title = document.createElement('h2');
-        title.textContent = 'Player Status';
-        title.style.color = 'cornflowerblue';
-        title.style.marginBottom = '20px';
-        title.style.fontFamily = 'Arial, sans-serif';
-        title.style.textAlign = 'center';
+
+        /* ========= 一度だけアニメーション用 CSS を注入 ========= */
+        if (!document.getElementById("ui-status-anim-style")) {
+            const css = `
+@keyframes flashUp   { 0% {color:#6f6;transform:scale(3);} 100% {color:inherit;transform:scale(1);} }
+@keyframes flashDown { 0% {color:#f66;transform:scale(3);} 100% {color:inherit;transform:scale(1);} }
+.value-flash-up   { animation: flashUp   0.6s ease; }
+.value-flash-down { animation: flashDown 0.6s ease; }`;
+            const style = document.createElement("style");
+            style.id = "ui-status-anim-style";
+            style.textContent = css;
+            document.head.appendChild(style);
+        }
+
+        /* ========= 基本レイアウト ========= */
+        this.element.classList.add("status-element");
+        Object.assign(this.element.style, {
+            position:   "absolute",
+            left:       "1%",
+            top:        "50%",
+            transform:  "translate(0%,-50%)",
+            background: "rgba(0,0,0,0.8)",
+            padding:    "20px",
+            borderRadius: "10px",
+            boxShadow:  "0 0 15px rgba(100,149,237,0.7)",
+            zIndex:     1000,
+            display:    "none",
+            flexDirection: "column",
+            alignItems: "center",
+            minWidth:   "300px",
+            color:      "white",
+            fontFamily: "Arial, sans-serif",
+        });
+
+        /* ---------- タイトル ---------- */
+        const title = document.createElement("h2");
+        title.textContent   = "Player Status";
+        title.style.color   = "cornflowerblue";
+        title.style.margin  = "0 0 20px 0";
+        title.style.textAlign = "center";
         this.element.appendChild(title);
-        
-        // ステータス情報を表示するテーブル
-        this.statusTable = document.createElement('table');
-        this.statusTable.style.width = '100%';
-        //this.statusTable.style.borderCollapse = 'collapse';
-        this.statusTable.style.marginBottom = '15px';
+
+        /* ---------- ステータス表 ---------- */
+        this.statusTable           = document.createElement("table");
+        this.statusTable.style.width  = "100%";
+        this.statusTable.style.marginBottom = "15px";
         this.element.appendChild(this.statusTable);
-        
-        // コンテナを親要素に追加
+
+        /* ---------- DOM へ追加 ---------- */
         this.parentElement.appendChild(this.element);
-        //document.body.appendChild(this.element);
-        this.element.style.display = 'none';
-        this.element.style.position = 'fixed';     // カメラに流されない
-        this.element.style.zIndex  = 1000;         // ゲーム画より前面
+        this.element.style.position = "fixed";        // カメラ移動と独立
+        this.element.style.display  = "none";
+
+        /* ---------- 前回値のキャッシュ ---------- */
+        this._prevValues = Object.create(null);
     }
 
-
-
-
-
-
-    shosuu(value,kurai){
-        return (Math.ceil(value * 100) / 100).toFixed(kurai)
+    /* ========= ユーティリティ ========= */
+    shosuu(value, kurai) {
+        return (Math.ceil(value * 100) / 100).toFixed(kurai);
     }
-    
+
     hide() {
         super.hide();
         this.wizard.IsActive = true;
@@ -73,105 +85,116 @@ export class UIStatus extends UIBase{
     }
 
     /**
-     * @desc ステータス表示を更新する
+     * ステータス表示を更新（変動時はアニメーション）
      */
     updateDisplay() {
         super.updateDisplay();
-        // テーブルの内容をクリア
-        this.statusTable.innerHTML = '';
-        
-        // プレイヤーのステータスデータを取得
+        this.statusTable.innerHTML = "";
+
+        /* ---------- 表示するステータス配列 ---------- */
+        const s = this.wizard.status;
+        const T = (key) => textDataTable.get(key).text;
         const statusData = [
-            { name: '⚔️'+textDataTable.get("stage").text,       value: this.wizard.status.shopBuyCount,                   color: 'white' },
-            
-            { name: '❤️'+textDataTable.get("HP").text, value: `${Math.floor(this.wizard.status.hp)} / ${this.wizard.status.maxHP}`, color: 'white' },
-            { name: '💠'+textDataTable.get("MP").text, value: `${Math.floor(this.wizard.status.mp)} / ${this.wizard.status.maxMP}`, color: 'white' },
-            { name: '🍷'+textDataTable.get("MPAutoRecovery").text, value: `${this.shosuu(this.wizard.status.mpregene,1)}`, color: 'white' },
-            { name: '🗡️'+textDataTable.get("AttackPower").text, value: this.wizard.status.attack, color: 'white' },
-            { name: '🛡️'+textDataTable.get("Defensepower").text, value: `${this.shosuu(this.wizard.status.deffence,1)}`, color: 'white' },
-            { name: '🌀'+textDataTable.get("movementspeed").text, value: this.shosuu(this.wizard.status.MaxSpeed,2), color: 'white' },
+            { name:`⚔️${T("stage")}`,              value:s.shopBuyCount                      },
+            { name:`❤️${T("HP")}`,                value:`${Math.floor(s.hp)} / ${s.maxHP}`  },
+            { name:`💠${T("MP")}`,                value:`${Math.floor(s.mp)} / ${s.maxMP}`  },
+            { name:`🍷${T("MPAutoRecovery")}`,    value:this.shosuu(s.mpregene,1)            },
+            { name:`🗡️${T("AttackPower")}`,       value:s.attack                             },
+            { name:`🛡️${T("Defensepower")}`,      value:this.shosuu(s.deffence,1)            },
+            { name:`🌀${T("movementspeed")}`,     value:this.shosuu(s.MaxSpeed,2)            },
 
+            { name:`🏹${T("MagicPierce")}`,        value:this.shosuu(s.attackPierceCount,1)   },
+            { name:`🎯${T("Inductionrange")}`,     value:s.HomingRadius                      },
+            { name:`🧲${T("Inductioncorrection")}`,value:this.shosuu(s.HomingPower,1)        },
+            { name:`📡${T("Range")}`,             value:s.AddLifeTime                       },
+            { name:`📒${T("MagicCount")}`,        value:s.FireCnt1                           },
 
+            { name:`🚀${T("magicspeed")}`,        value:this.shosuu(s.AddMaxSpeed,1)         },
+            { name:`🔋${T("Magicpowerused")}`,    value:s.UseMP                              },
 
-
-            { name: '🏹'+textDataTable.get("MagicPierce").text,       value: `${this.shosuu(this.wizard.status.attackPierceCount,1)}`,       color: 'white' },
-            { name: '🎯'+textDataTable.get("Inductionrange").text,       value: `${this.wizard.status.HomingRadius}`,            color: 'white' },
-            { name: '🧲'+textDataTable.get("Inductioncorrection").text,       value: `${this.shosuu(this.wizard.status.HomingPower,1)}`,             color: 'white' },
-            { name: '📡'+textDataTable.get("Range").text, value: `${this.wizard.status.AddLifeTime}`, color: 'white' },
-            { name: '📒'+textDataTable.get("MagicCount").text, value: (this.wizard.status.FireCnt1), color: 'white' },
-
-            { name: '🚀'+textDataTable.get("magicspeed").text,       value: `${this.shosuu(this.wizard.status.AddMaxSpeed,1)}`,             color: 'white' },
-            { name: '🔋'+textDataTable.get("Magicpowerused").text,       value: `${this.wizard.status.UseMP}`,                  color: 'white' },
-            
-            { name: '🔥'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistFIREBALL,2)}`, color: 'white' },
-            { name: '❄️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistICE,2)}`, color: 'white' },
-            { name: '⚡'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistLIGHTNING,2)}`, color: 'white' },
-            { name: '🌪️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistLIGHTNING,2)}`, color: 'white' },
-            { name: '☄️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistMETEOR,2)}`, color: 'white' },
-            { name: '💥'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistEXPLOSION,2)}`, color: 'white' },
-            { name: '💨'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistGUST,2)}`, color: 'white' },
-            { name: '🫧'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistBUBBLE,2)}`, color: 'white' },
-            { name: '🌈'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistRAINBOW,2)}`, color: 'white' },
-            { name: '🕸️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistWEB,2)}`, color: 'white' },
-            { name: '🦂'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistPOISONSTING,2)}`, color: 'white' },
-            { name: '🗡️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistSWORDSLASH,2)}`, color: 'white' },
-            { name: '🪓'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistGREATAxe,2)}`, color: 'white' },
-            { name: '🔨'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistHAMMERCRUSH,2)}`, color: 'white' },
-            { name: '🔱'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistTRIDENTTHRUST,2)}`, color: 'white' },
-            { name: '🛡️'+textDataTable.get("Resistance").text, value: `${this.shosuu(this.wizard.status.RegistSHIELDBASH,2)}`, color: 'white' },
-
+            { name:`🔥${T("Resistance")}`, value:this.shosuu(s.RegistFIREBALL,2)     },
+            { name:`❄️${T("Resistance")}`, value:this.shosuu(s.RegistICE,2)          },
+            { name:`⚡${T("Resistance")}`, value:this.shosuu(s.RegistLIGHTNING,2)     },
+            { name:`🌪️${T("Resistance")}`, value:this.shosuu(s.RegistTORNADO,2)      },
+            { name:`☄️${T("Resistance")}`, value:this.shosuu(s.RegistMETEOR,2)       },
+            { name:`💥${T("Resistance")}`, value:this.shosuu(s.RegistEXPLOSION,2)    },
+            { name:`💨${T("Resistance")}`, value:this.shosuu(s.RegistGUST,2)         },
+            { name:`🫧${T("Resistance")}`, value:this.shosuu(s.RegistBUBBLE,2)       },
+            { name:`🌈${T("Resistance")}`, value:this.shosuu(s.RegistRAINBOW,2)      },
+            { name:`🕸️${T("Resistance")}`, value:this.shosuu(s.RegistWEB,2)         },
+            { name:`🦂${T("Resistance")}`, value:this.shosuu(s.RegistPOISONSTING,2)  },
+            { name:`🗡️${T("Resistance")}`, value:this.shosuu(s.RegistSWORDSLASH,2)  },
+            { name:`🪓${T("Resistance")}`, value:this.shosuu(s.RegistGREATAxe,2)     },
+            { name:`🔨${T("Resistance")}`, value:this.shosuu(s.RegistHAMMERCRUSH,2) },
+            { name:`🔱${T("Resistance")}`, value:this.shosuu(s.RegistTRIDENTTHRUST,2)},
+            { name:`🛡️${T("Resistance")}`, value:this.shosuu(s.RegistSHIELDBASH,2)  },
         ];
 
-        // ② 2 つずつ取り出して 1 行にまとめる
+        /* ---------- 2 つずつ 1 行にまとめて描画 ---------- */
         for (let i = 0; i < statusData.length; i += 2) {
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
+            const row = document.createElement("tr");
+            row.style.borderBottom = "1px solid rgba(255,255,255,0.2)";
 
-            // 内部ヘルパー
+            /* 内部ヘルパー – 片側セルを生成 */
             const addCellPair = (item) => {
-                const nameTd  = document.createElement('td');
-                const valueTd = document.createElement('td');
+                const nameTd  = document.createElement("td");
+                const valueTd = document.createElement("td");
 
-                nameTd.textContent  = item?.name  ?? '';
-                valueTd.textContent = item?.value ?? '';
+                /* --- 空セル処理 --- */
+                if (!item) {
+                    nameTd.style.padding  =
+                        valueTd.style.padding = "8px 10px";
+                    row.append(nameTd, valueTd);
+                    return;
+                }
 
-                // スタイル共通
-                nameTd.style.padding  =
-                    valueTd.style.padding = '8px 10px';
-                nameTd.style.fontWeight = 'bold';
-                nameTd.style.textAlign  = 'left';
-                valueTd.style.textAlign = 'right';
-                valueTd.style.color     = item?.color ?? 'inherit';
+                nameTd.textContent  = item.name;
+                nameTd.style.fontWeight = "bold";
+                nameTd.style.textAlign  = "left";
 
-                row.appendChild(nameTd);
-                row.appendChild(valueTd);
+                /* === 変化検出 & アニメ付与 === */
+                const curVal  = String(item.value);
+                const prevVal = this._prevValues[item.name];
+
+                if (prevVal !== undefined && prevVal !== curVal) {
+                    /* 両方数値なら大小比較、そうでなければ単純差分 */
+                    const numCur  = parseFloat(curVal);
+                    const numPrev = parseFloat(prevVal);
+                    const isUp =
+                        !isNaN(numCur) && !isNaN(numPrev)
+                            ? numCur > numPrev
+                            : curVal > prevVal;
+
+                    valueTd.classList.add(
+                        isUp ? "value-flash-up" : "value-flash-down"
+                    );
+                    /* アニメ終了後にクラスを外す */
+                    setTimeout(
+                        () =>
+                            valueTd.classList.remove(
+                                "value-flash-up",
+                                "value-flash-down"
+                            ),
+                        600
+                    );
+                }
+
+                valueTd.textContent = curVal;
+                this._prevValues[item.name] = curVal;    // キャッシュ更新
+
+                /* --- 共通スタイル --- */
+                [nameTd, valueTd].forEach((td) => {
+                    td.style.padding = "8px 10px";
+                });
+                valueTd.style.textAlign = "right";
+                valueTd.style.color     = item.color ?? "inherit";
+
+                row.append(nameTd, valueTd);
             };
 
-            addCellPair(statusData[i]);           // 左列
-            addCellPair(statusData[i + 1]);       // 右列（要素が無ければ空セル）
-
+            addCellPair(statusData[i]);       // 左側
+            addCellPair(statusData[i + 1]);   // 右側（無い場合は空セル）
             this.statusTable.appendChild(row);
         }
-
-        /*
-        // バージョン情報を追加
-        const versionRow = document.createElement('tr');
-        const versionNameCell = document.createElement('td');
-        versionNameCell.textContent = 'バージョン';
-        versionNameCell.style.padding = '8px 10px';
-        versionNameCell.style.textAlign = 'left';
-        versionNameCell.style.fontWeight = 'bold';
-        versionNameCell.style.opacity = '0.7';
-        
-        const versionValueCell = document.createElement('td');
-        versionValueCell.textContent = 'v1.0.0';
-        versionValueCell.style.padding = '8px 10px';
-        versionValueCell.style.textAlign = 'right';
-        versionValueCell.style.opacity = '0.7';
-        
-        versionRow.appendChild(versionNameCell);
-        versionRow.appendChild(versionValueCell);
-        this.statusTable.appendChild(versionRow);
-        */
     }
 }

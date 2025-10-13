@@ -34,8 +34,8 @@ export class CharacterBase extends Character {
      * @param {object} staffPos - 発射する初期位置 {x, y}。
      */
     Fire(totalBullets, staffPos) {
-        if (this.status.mp >= this.MagicData.useMP + this.status.UseMP) {
-            this.status.useMP(this.MagicData.useMP + this.status.UseMP);
+        if (this.status.mp >= this.MagicData.useMP + this.status.UseMP ) {
+            this.status.useMP(this.MagicData.useMP + this.status.UseMP );
         } else {
             return;
         }
@@ -53,6 +53,7 @@ export class CharacterBase extends Character {
 
         const MAX_SPREAD_ANGLE = Math.PI * 2; // 例: 90度
         const ratio = Math.max(0, Math.min(1, this.status.AttackdirRatio));
+//        const ratio = Math.max(0, Math.min(1, 0.25));
 
         // 1つのループで全ての弾を生成・発射
         for (let i = 0; i < totalBullets; i++) {
@@ -102,17 +103,17 @@ export class CharacterBase extends Character {
             this.status.deffence = this.charaData.deffence * ratio;
             this.status.attack  = this.charaData.attack * ratio;
 
-            this.status.MaxSpeed = this.charaData.MaxSpeed * this.mapRangeClamped(ratio, 1, 10, 1.0, 1.5);
+            this.status.MaxSpeed = this.charaData.MaxSpeed * this.mapRangeClamped(ratio, 1, 10, 1.0, 1.2);
             this.MaxSpeed = this.status.MaxSpeed;
 
             this.status.attackPierceCount = this.charaData.attackPierceCount * ratio;
             this.status.HomingRadius = this.charaData.HomingRadius * ratio;
             this.status.HomingPower = this.charaData.HomingPower * ratio;
             this.status.AddLifeTime = this.charaData.AddLifeTime * ratio;
-            this.status.FireCnt1 = this.charaData.FireCnt1 * ratio;
+            this.status.FireCnt1 = this.charaData.FireCnt1 * (ratio/2);
 
             this.status.UseMP = this.charaData.UseMP;
-            this.status.AddMaxSpeed = this.charaData.AddMaxSpeed * ratio;
+            this.status.AddMaxSpeed = this.charaData.AddMaxSpeed * this.mapRangeClamped(ratio, 1, 10, 1.0, 1.2);
 
 
             this.status.RegistFIREBALL = this.charaData.RegistFIREBALL;

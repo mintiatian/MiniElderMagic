@@ -9,6 +9,8 @@ import {gameMainScene} from "../Scene/GameMainScene.js";
 import {UIHubInventory} from '../UI/UIHubInventory.js';
 import {TimerManager} from "../Utils/TimerManager.js";
 import {CollisionType} from "../Base/Pawn.js";
+import {UIAttackDirGauge} from '../UI/UIAttackDirGauge.js';
+
 
 export class Wizard extends RangeCircleMixin(CharacterBase) {
     constructor(x, y, parentElement, charaData) {
@@ -18,7 +20,6 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         // 攻撃用の配列を追加
         this.attacks = [];
         this.lastPressedMagicIndex = 0;
-
 
 
         if (!this.playerstatus) {
@@ -122,6 +123,9 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         //this.CircleCreate(gameMainScene.background.MinPopRadius, '2px dashed rgba(0,255,255,0.5)');
         //this.CircleCreate(gameMainScene.background.MaxPopRadius, '2px dashed rgba(0,255,255,0.5)');
 
+        // #game-ui-layer が他 UI と同じ親要素
+        const uiLayer = document.getElementById('game-ui-layer');
+        this.attackDirGauge = new UIAttackDirGauge(uiLayer, this);
 
         this.Inventory = new UIHubInventory(gameMainScene.gameUiLayer);
         this.Inventory.show();
@@ -145,6 +149,15 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
         //this.changeShip();
 
         this.setInnPosition();
+
+        this.IsActive = false;
+        /*──────────────────────────────────────────────
+         *  ▶ 開始 2 秒間は入力・移動・攻撃を無効化
+         *──────────────────────────────────────────────*/
+        this.spawnDelayTimer = setTimeout(() => {
+            this.IsActive = true;          // 通常操作を許可
+            this.spawnDelayTimer = null;   // 参照を解放
+        }, 1500);  // ← ミリ秒指定（= 2 秒）
     }
 
     UpdateMove() {
@@ -165,6 +178,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             this.radian = Math.atan2(dy, dx);
         }
         this.setDir(this.radian);
+        
     }
 
     SettingMagicData() {
@@ -691,6 +705,14 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
             this.playerHPGage.hide();
         }
 
+
+        // ─── スポーン猶予タイマーをキャンセル ───
+        if (this.spawnDelayTimer !== null) {
+            clearTimeout(this.spawnDelayTimer);
+            this.spawnDelayTimer = null;
+        }
+        
+        
         super.ExitStart();
     }
 
@@ -797,6 +819,7 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
             case "attack":
                 this.status.attack += parseInt(DropItemData.value);
+                this.status.UseMP += parseInt(DropItemData.value);
                 break;
             case "deffence":
                 this.status.deffence += parseFloat(DropItemData.value);
@@ -809,21 +832,28 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
             case "attackPierceCount":
                 this.status.attackPierceCount += parseInt(DropItemData.value);
+                this.status.UseMP += 5;
                 break;
             case "HomingRadius":
                 this.status.HomingRadius += parseInt(DropItemData.value);
+                this.status.UseMP += 3;
                 break;
             case "HomingPower":
                 this.status.HomingPower += parseInt(DropItemData.value);
+                this.status.UseMP += 3;
                 break;
             case "AddLifeTime":
                 this.status.AddLifeTime += parseInt(DropItemData.value);
+
+                this.status.UseMP += 5;
                 break;
 
             case "FireCnt":
                 for (let i = 0; i < parseInt(DropItemData.value); i++) {
                     this.status.addMagicLevelUp();
                 }
+
+                this.status.UseMP += 20;
                 break;
 
 
@@ -847,52 +877,52 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
 
 
             case "RegistFIREBALL":
-                this.status.RegistFIREBALL += parseFloat(DropItemData.value);
+                this.status.RegistFIREBALL = Math.max(0.25, this.status.RegistFIREBALL + parseFloat(DropItemData.value));
                 break;
             case "RegistICE":
-                this.status.RegistICE += parseFloat(DropItemData.value);
+                this.status.RegistICE = Math.max(0.25, this.status.RegistICE + parseFloat(DropItemData.value));
                 break;
             case "RegistLIGHTNING":
-                this.status.RegistLIGHTNING += parseFloat(DropItemData.value);
+                this.status.RegistLIGHTNING = Math.max(0.25, this.status.RegistLIGHTNING + parseFloat(DropItemData.value));
                 break;
             case "RegistTORNADO":
-                this.status.RegistTORNADO += parseFloat(DropItemData.value);
+                this.status.RegistTORNADO = Math.max(0.25, this.status.RegistTORNADO + parseFloat(DropItemData.value));
                 break;
             case "RegistMETEOR":
-                this.status.RegistMETEOR += parseFloat(DropItemData.value);
+                this.status.RegistMETEOR = Math.max(0.25, this.status.RegistMETEOR + parseFloat(DropItemData.value));
                 break;
             case "RegistEXPLOSION":
-                this.status.RegistEXPLOSION += parseFloat(DropItemData.value);
+                this.status.RegistEXPLOSION = Math.max(0.25, this.status.RegistEXPLOSION + parseFloat(DropItemData.value));
                 break;
             case "RegistGUST":
-                this.status.RegistGUST += parseFloat(DropItemData.value);
+                this.status.RegistGUST = Math.max(0.25, this.status.RegistGUST + parseFloat(DropItemData.value));
                 break;
             case "RegistBUBBLE":
-                this.status.RegistBUBBLE += parseFloat(DropItemData.value);
+                this.status.RegistBUBBLE = Math.max(0.25, this.status.RegistBUBBLE + parseFloat(DropItemData.value));
                 break;
             case "RegistRAINBOW":
-                this.status.RegistRAINBOW += parseFloat(DropItemData.value);
+                this.status.RegistRAINBOW = Math.max(0.25, this.status.RegistRAINBOW + parseFloat(DropItemData.value));
                 break;
             case "RegistWEB":
-                this.status.RegistWEB += parseFloat(DropItemData.value);
+                this.status.RegistWEB = Math.max(0.25, this.status.RegistWEB + parseFloat(DropItemData.value));
                 break;
             case "RegistPOISONSTING":
-                this.status.RegistPOISONSTING += parseFloat(DropItemData.value);
+                this.status.RegistPOISONSTING = Math.max(0.25, this.status.RegistPOISONSTING + parseFloat(DropItemData.value));
                 break;
             case "RegistSWORDSLASH":
-                this.status.RegistSWORDSLASH += parseFloat(DropItemData.value);
+                this.status.RegistSWORDSLASH = Math.max(0.25, this.status.RegistSWORDSLASH + parseFloat(DropItemData.value));
                 break;
             case "RegistGREATAxe":
-                this.status.RegistGREATAxe += parseFloat(DropItemData.value);
+                this.status.RegistGREATAxe = Math.max(0.25, this.status.RegistGREATAxe + parseFloat(DropItemData.value));
                 break;
             case "RegistHAMMERCRUSH":
-                this.status.RegistHAMMERCRUSH += parseFloat(DropItemData.value);
+                this.status.RegistHAMMERCRUSH = Math.max(0.25, this.status.RegistHAMMERCRUSH + parseFloat(DropItemData.value));
                 break;
             case "RegistTRIDENTTHRUST":
-                this.status.RegistTRIDENTTHRUST += parseFloat(DropItemData.value);
+                this.status.RegistTRIDENTTHRUST = Math.max(0.25, this.status.RegistTRIDENTTHRUST + parseFloat(DropItemData.value));
                 break;
             case "RegistSHIELDBASH":
-                this.status.RegistSHIELDBASH += parseFloat(DropItemData.value);
+                this.status.RegistSHIELDBASH = Math.max(0.25, this.status.RegistSHIELDBASH + parseFloat(DropItemData.value));
                 break;
 
         }
@@ -966,6 +996,9 @@ export class Wizard extends RangeCircleMixin(CharacterBase) {
                 this.status.AttackdirRatio -= 0.1;
             }
             this.status.AttackdirRatio = Math.max(0, Math.min(1, this.status.AttackdirRatio));
+
+            // ここで UI へ反映
+            this.attackDirGauge?.update();
         } else {
             if (evt.deltaY < 0) {
                 // 上スクロール（マジックインデックスを1つ前へ）

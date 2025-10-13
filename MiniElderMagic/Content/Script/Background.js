@@ -243,7 +243,7 @@ export class Background {
     }
 
     getGameDifficultyLevel() {
-        return (gameMainScene.wizard.status.shopBuyCount / 75);
+        return (gameMainScene.wizard.status.shopBuyCount / 100);
     }
     getGameDifficultyLevelPop() {
         return (gameMainScene.wizard.status.shopBuyCount / 60);

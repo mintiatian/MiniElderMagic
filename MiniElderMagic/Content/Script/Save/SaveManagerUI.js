@@ -6,6 +6,7 @@
 import { UIBase }               from '../UI/UIBase.js';
 import { SceneManagerInstance } from '../Scene/SceneManager.js';
 import { TitleScene }           from '../Scene/TitleScene.js';
+import {soundManager} from "../Sound/SoundManager.js";
 
 /**
  * @param {HTMLElement|Object=} parentOrOpts 親要素 または オプション一式
@@ -152,6 +153,9 @@ export class SaveManagerUI extends UIBase {
         btnBack.onclick = () => {
             const area    = this.gameArea    || document.getElementById('game-area');
             const uiLayer = this.gameUiLayer || document.getElementById('game-ui-layer') || document.body;
+            
+            soundManager.stopBGM();
+            
             SceneManagerInstance.change(new TitleScene(area, uiLayer));
         };
 

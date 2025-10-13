@@ -54,7 +54,7 @@ export class Status {
         this.RegistTRIDENTTHRUST = 0;
         this.RegistSHIELDBASH = 0;
 
-        this.AttackdirRatio = 1;
+        this.AttackdirRatio = 0;
         
         this.shopBuyCount = 0;
     }    

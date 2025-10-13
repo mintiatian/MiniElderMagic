@@ -17,6 +17,8 @@
     /**
      * @desc キー入力のハンドラ
      * @param {KeyboardEvent} event - キーボードイベント
+     * 
+     * tabキーの処理を個別処理する場合はオーバーロードしてください
      */
     handleKeyDown(event) {
         // Tabキーが押されたときの処理
